@@ -41,19 +41,19 @@ CONFIG = {
     },
     "model_b": {
         "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_1", ""),
+        "api_key": os.environ.get("GROQ_KEY_1", "").strip(),
         "model": "llama-3.3-70b-versatile",
         "system_prompt_path": "prompts/model_b_system.txt"
     },
     "model_c": {
         "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_2", ""),
+        "api_key": os.environ.get("GROQ_KEY_2", "").strip(),
         "model": "llama-3.3-70b-versatile",
         "system_prompt_path": "prompts/model_c_system.txt"
     },
     "projenius": {
         "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_3", ""),
+        "api_key": os.environ.get("GROQ_KEY_3", "").strip(),
         "model": "llama-3.3-70b-versatile",
         "system_prompt_path": "prompts/projenius_system.txt"
     }
