@@ -1,11 +1,11 @@
-"""
+'''
 Ontinuity Web App — Backend
 app.py
 Run with: python app.py
 Then open http://localhost:5000 in your browser.
 Install dependencies first:
 pip install flask flask-socketio requests eventlet
-“””
+'''
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 import threading
