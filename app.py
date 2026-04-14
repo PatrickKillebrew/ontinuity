@@ -530,10 +530,10 @@ def handle_stop_session(data):
 def handle_get_status(data):
     emit('status', {
         'running': active_session["running"],
-        'cycle': active_session["cycle"],
+        'cycle': active_session["cycle],
         'waiting_for_input': active_session["waiting_for_input"],
         'input_type': active_session["input_type"]
     })
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=int(os.eviron.get('PORT', 5000)), debug=FALSE, allow_unsafe_werkzeug=True) 
