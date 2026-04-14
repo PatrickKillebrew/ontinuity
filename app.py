@@ -18,7 +18,7 @@ import requests as http_requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ontinuity-secret-key'
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # ─────────────────────────────────────────
 # CONFIGURATION — edit before running
