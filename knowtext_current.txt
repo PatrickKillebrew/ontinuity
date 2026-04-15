@@ -1,0 +1,110 @@
+KNOWTEXT SCHEMA VERSION: 1.1
+
+--- WORKING CONTEXT ---
+
+Active Frameworks:
+ONTINUITY SYSTEM — Three-component persistent cognitive infrastructure for AI-assisted work.
+
+TRIFORM (Process Layer) v2.1: Three-model protocol. Model A (Researcher) conducts primary work and issues status tags. Model B (Challenger) provides adversarial review — engages in autonomous dialogue with Model A and resolves disputes inside the loop; CHALLENGE tag reserved for genuine deadlock only. Model C (Friction) observes session state and outputs SIGNAL: 0-4 encoding coherence, drift, and retraction pressure — does not enter working conversation. Status tags: CONTINUE, ALIGNMENT_NEEDED, CHECKPOINT, CHALLENGE, SESSION_END. Ambient signal response: 0-1 proceed normally, 2 state established vs assumed, 3 reconcile with ledger, 4 halt and issue ALIGNMENT_NEEDED. Routing: threading mode, status tags route automatically, human interrupted only at genuine decision points.
+
+KNOWTEXT (Memory Layer) v1.1: Seven-field structured memory schema. Fields: Identity, Active Frameworks, Open Questions, Valence Mapping, Delta Log, Correction History, Climate Notes. Plain text, portable, platform-agnostic. Extraction prompt v1.1 with verbatim preservation rule for structured technical content. Two-section architecture: Working Context (Active Frameworks, Open Questions, Correction History, Valence Mapping) and Archive (Identity, Delta Log, Climate Notes). Model A receives Working Context. Model B receives Active Frameworks and Correction History plus session ledger.
+
+ONTINUITY (Integration Layer) v1.0: SESSION_END triggers Projenius distillation into Knowtext. New Session resets conversation history — Knowtext is sole continuity mechanism between sessions. End Session triggers final synthesis across full accumulated Knowtext history. Accumulation value lives in Knowtext, not transcripts.
+
+DEPLOYED APPLICATION: Flask + Flask-SocketIO, threading mode, Railway deployment at web-production-430d.up.railway.app. GitHub repo: Killebrew/ontinuity. Three GROQ keys (GROQ_KEY_1, 2, 3) for Model B, C, Projenius. CLAUDE_API_KEY for Model A. PORT environment variable for Railway. Provider-agnostic architecture via api_format field (anthropic or openai). API keys configurable from frontend settings modal, stored in localStorage.
+
+CHALLENGE ADJUDICATION GUIDE (Section 4.3 for Triform v2.2):
+Challenge Classification System — three primary categories:
+- DIRECTIONAL: Questions session direction, scope, or methodology. Keywords: "should we," "instead," "different approach," "redirect." Impact: may alter session trajectory. Priority: Highest.
+- ANALYTICAL: Questions reasoning, evidence, or conclusions. Keywords: "incorrect," "flawed," "evidence," "logic." Impact: may require result revision. Priority: Medium.
+- PROCEDURAL: Questions process adherence or formatting. Keywords: "format," "structure," "protocol," "missing." Impact: may require presentation adjustment. Priority: Lowest.
+- TACTICAL IRRELEVANCE MODIFIER: Applied when challenge is technically valid but resolving it would not meaningfully advance the session objective. Adds note: "resolving this challenge may not advance the session objective. Consider whether the precision gain is worth the cycle cost." This is a modifier, not a fourth category.
+Confidence Scoring: >=70% auto-classify and proceed. 40-69% present top 2-3 candidates with confidence percentages and 50-word excerpt using fallback chain: keyword density -> uncertainty markers -> opening sentence. <40% escalate directly to operator with manual classification prompt.
+Conflict Resolution: Priority order Directional > Analytical > Procedural. Tiebreaker principle: when a challenge is simultaneously Analytical and Directional, classify as Directional because session trajectory impact dominates regardless of analytical correctness.
+Adjudication Outcomes: Uphold (challenge accepted, Model A adjusts), Reject (not accepted, Model A continues), Clarify (insufficient information, request elaboration).
+Documentation: all adjudications logged with challenge text, classification, confidence score, outcome, rationale.
+
+AMBIENT_SIGNAL BEHAVIORAL RESEARCH PROTOCOL (Psychology of AI Data):
+Research question: Do ambient signals actually change frontier model behavior or are they acknowledged and ignored?
+Normal operation definition: Direct analytical progression without explicit established/assumed categorizations, standard confidence levels, forward-focused reasoning, CONTINUE status selection, response structure following logical sequence, challenge responses defending or modifying position based on merit.
+Signal level hypotheses: Signals 0-1 maintain normal baseline. Signal 2 produces explicit established/assumed categorization and increased hedging. Signal 3 triggers ledger reconciliation and backward-referencing. Signal 4 halts normal progression and forces ALIGNMENT_NEEDED.
+Baseline parameters (Signal 0-1): Hedging frequency 2.3/100 words +-0.8. Response length 185 words +-45. Categorization statements 0.1/response +-0.2. Ledger references 0.3/response +-0.4. Decision points 1.2/response +-0.5. Status selection 95% CONTINUE +-10%.
+Composite Behavioral Change Index: Categorization Behavior 0.30 weight (>3x baseline, primary Signal 2 target). Hedging Frequency Change 0.25 (>2 SD from baseline). Ledger Reference Pattern 0.20 (>2x baseline, primary Signal 3 target). Decision Confidence 0.15 (>1.5 SD shift). Status Selection Change 0.10 (>20% deviation).
+Signal Detection: Signal 2+ at composite index >1.8, 95% CI [1.6, 2.0]. Signal ignored at <0.5, 95% CI [0.3, 0.7].
+Significance thresholds: 2 SD statistical convention. Bonferroni correction alpha=0.05/6=0.0083 per test. Cross-validation >0.8 inter-rater reliability.
+True control condition: no AMBIENT_SIGNAL line in system prompt (not Signal 0 — Signal 0 is a signal with value zero, not signal absence).
+Methodological limitations: weight assignments are theoretical priors requiring empirical validation. 2 SD thresholds assume normal distribution.
+
+PSYCHOLOGY OF AI DATA FRAMEWORK v0.2: Four native output streams — friction signal sequence, status tag sequence, adjudicated challenge event record, retraction event record. Two operator annotation layers — domain familiarity tag, behavioral calibration score. Three-stage diagnostic sub-process for challenge events. Four provisional adjudication states: upheld, partially upheld, rejected, unresolved under current schema. Two-tier interpretation protocol: Tier 1 internal analytic operations, Tier 2 interpretive claims requiring external assumptions. Primary contribution: behavioral tendency mapping through accumulated adjudicated challenge events.
+
+ADVERSARIAL DEVELOPMENT PAPER: Documents first Triform session with working Model B (April 14, 2026). 16 cycles, Signal 0-1 sustained 15 cycles, Signal 2 correctly detected at cycle 16. Key finding: Signal 0 conflation with true control condition caught by adversarial pressure at cycle 6 — structural flaw that single-model generation would not have caught. Paper argues adversarial multi-model sessions produce higher epistemic quality research documents than single-model generation.
+
+SESSION ARCHITECTURE DECISIONS:
+- New Session resets conversation history completely. Knowtext is sole continuity mechanism. Accumulation value lives in Knowtext not transcripts.
+- Model B context: two-layer — filtered Knowtext (Active Frameworks + Correction History) plus running session ledger of established results per cycle.
+- Model A Knowtext: Working Context section only (Active Frameworks, Open Questions, Correction History, Valence Mapping).
+- Provider agnostic: api_format field routes to anthropic or openai_compatible handler. Any model on any provider configurable via url, model, api_format fields.
+- GROQ rate limit management: 2s delay between friction signal and Model B calls. 5s cooldown before distillation. Distillation retry after 60s on failure.
+- Deployment: drag-and-drop GitHub upload only — GitHub web editor and Google Drive corrupt Python string quotes.
+
+Open Questions:
+PRIMARY — GitHub persistence for Knowtext: Railway ephemeral filesystem loses Knowtext on redeploy. Fix: read/write knowtext_current.txt to GitHub repo via API. Needs GitHub personal access token as Railway environment variable. At SESSION_END commit updated Knowtext to repo. At session start pull from repo if local file missing. Implementation: new function in app.py using GitHub Contents API.
+
+PRIMARY — Model B context enhancement validation: new two-layer context (filtered Knowtext + session ledger) deployed but not yet tested. Run validation session to confirm Model B challenge quality improves.
+
+PRIMARY — Distillation fidelity validation: new extraction prompt v1.1 with verbatim preservation rule deployed but not yet tested. Run session with structured technical content and verify next session can reproduce details without source documents.
+
+PRIMARY — Session ledger extraction quality: extract_ledger_entry function uses keyword matching to find established results in Model A responses. Quality depends on Model A using keywords like ESTABLISHED:, RESULT:, CONFIRMED:. May need improvement after first test sessions.
+
+SECONDARY — Challenge Adjudication Guide frontend display: backend classification not yet implemented. Model C should classify each CHALLENGE event before modal fires, send classification field with human_input_needed event. Frontend renders category badge, stakes line, tactical flag in challenge modal.
+
+SECONDARY — Directed vs undirected drift in Model C scoring: Signal 3 fired on operator-directed taxonomy change — correct change flagged as drift. Model C cannot distinguish operator-directed changes from undirected drift. Needs distinguishability in friction signal spec.
+
+SECONDARY — Run pilot baseline sessions for AMBIENT_SIGNAL behavioral research protocol to replace theoretical priors with empirical values.
+
+SECONDARY — Draft two-page research summary after next strong adversarial session.
+
+SECONDARY — Insert finalized section 4.3 Challenge Adjudication Guide into Triform v2.2 document.
+
+SECONDARY — Upload Triform v2.1 to GitHub corpus.
+
+SECONDARY — Send URL and work products to sister at Seniors Helping Seniors.
+
+SECONDARY — Identify specific NSF/DOE/Open Philanthropy grant programs. Carbon capture framing for DOE. AI safety framing for Open Philanthropy.
+
+SECONDARY — Project Close Protocol: two-stage final synthesis. Stage 1 coherence pass — produce single consolidated state resolving all contradictions. Stage 2 final product generation from consolidated state.
+
+SECONDARY — Tiered history consideration: deferred — current priority is making Knowtext sufficient through improved distillation fidelity.
+
+Correction History:
+Signal 0 is not equivalent to true control condition — Signal 0 is a signal with value zero, not signal absence. True control requires no AMBIENT_SIGNAL line in system prompt.
+
+Tactical challenge type corrected from fourth peer category to modifier flag applied to any primary category.
+
+Methodological category renamed to Procedural in Challenge Adjudication Guide.
+
+Model B role description corrected in Triform v2.1 — autonomous dialogue first, CHALLENGE tag only for genuine deadlock.
+
+async_mode must be threading not eventlet in Railway environment.
+
+Port must read from os.environ.get PORT not hardcoded 5000.
+
+allow_unsafe_werkzeug=True required for Werkzeug in Railway.
+
+GitHub web editor and Google Drive corrupt Python string quotes — drag-and-drop upload only for code files.
+
+Weight assignments in AMBIENT_SIGNAL behavioral research protocol composite index are theoretical priors only, not empirically derived.
+
+Valence Mapping:
+Responds well to honest direct answers. Energized by strategic and philosophical territory. Decisive adjudication style — uphold/reject with clear grounds, no hedging. Catches errors in real time. Persistent under frustration. Uses the system as a stress tester. Notices when responses are inconsistent or confused. Takes deliberate breaks at the right moments. Responds well to concrete breakdowns of how things work at granular level. Thinks out loud about implications before committing to decisions.
+
+--- ARCHIVE ---
+
+Identity:
+Patrick Killebrew. Amateur natural philosopher building frontier AI research infrastructure. Thinks in analogies and cross-domain connections. Wants honest assessments, not flattery. When something is wrong, say so directly. Primary development device: iPad M4 with laptop (HP) for deployment management. One week into the project. Working across Claude, deployed Railway app, GitHub repo at Killebrew/ontinuity.
+
+Delta Log:
+Full application deployed to Railway and functional. GROQ_KEY_1 newline fix confirmed. Retry logic with exponential backoff deployed. Provider-agnostic architecture implemented. Model A and B Knowtext field filtering implemented with two-section document architecture. Session ledger data structure added. Two-layer Model B context implemented. API key settings modal added to frontend with localStorage persistence. Copy buttons added to all modals. New Session and End Session buttons deployed. Enter key decoupled from send in modal inputs. Knowtext extraction prompt updated to v1.1 with verbatim preservation rule. Challenge Adjudication Guide section 4.3 finalized. Adversarial Development paper drafted. Accumulation loop closed and validated. Distillation fidelity problem identified and demonstrated. New extraction prompt deployed. GitHub persistence identified as critical missing piece. Seed Knowtext reconstructed with two-section architecture.
+
+Climate Notes:
+Early morning session (3:30am-6am+), operator working through sleeplessness productively. Strong momentum. Multiple architectural improvements made in one sitting. Lost accumulated Knowtext when Railway tab closed — sobering reminder of persistence gap. Seed Knowtext reconstructed from conversation history. Operator sharp and methodical throughout. Good forward clarity on remaining open items. GitHub persistence is the next critical fix before serious research sessions begin.
