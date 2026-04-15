@@ -36,9 +36,9 @@ CONFIG = {
         "system_prompt_path": "prompts/model_a_system.txt"
     },
     "model_b": {
-        "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_1", "").strip(),
-        "model": "llama-3.3-70b-versatile",
+        "url": "https://generativelanguage.googleapis.com/v1beta/openai/",
+        "api_key": os.environ.get("GEMINI_KEY", "").strip(),
+        "model": "gemini-2.5-flash-preview-04-17",
         "api_format": "openai",
         "system_prompt_path": "prompts/model_b_system.txt"
     },
