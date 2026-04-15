@@ -38,7 +38,7 @@ CONFIG = {
     "model_b": {
         "url": "https://generativelanguage.googleapis.com/v1beta/openai/",
         "api_key": os.environ.get("GEMINI_KEY", "").strip(),
-        "model": "gemini-2.5-flash-preview-04-17",
+        "model": "gemini-2.5-flash",
         "api_format": "openai",
         "system_prompt_path": "prompts/model_b_system.txt"
     },
