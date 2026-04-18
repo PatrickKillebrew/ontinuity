@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ontinuity — Persistent Cognitive Infrastructure for AI Research</title>
+<meta name="description" content="Four cooperating models. Persistent memory. Autonomous adversarial sessions. The first AI research infrastructure that gets more trustworthy through its own operation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #F0A500;
+  --gold-bright: #FFB700;
+  --gold-dim: #A07020;
+  --gold-deep: #4A3000;
+  --gold-glow: rgba(240,165,0,0.18);
+  --bg: #090909;
+  --bg-raised: #0f0f0f;
+  --bg-card: #121212;
+  --bg-card-hover: #161616;
+  --text: #EFEFEF;
+  --text-dim: #8A8A8A;
+  --text-muted: #4A4A4A;
+  --border: rgba(240,165,0,0.18);
+  --border-subtle: rgba(255,255,255,0.07);
+  --max-w: 1000px;
+  --pad: 48px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+/* Grid texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap {
+  position: relative;
+  z-index: 1;
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 var(--pad);
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(9,9,9,0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.nav-inner {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 var(--pad);
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.nav-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(13px, 1.6vw, 17px);
+  font-weight: 700;
+  color: var(--gold);
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.nav-logo .o { color: var(--text-muted); }
+.nav-links { display: flex; gap: 28px; list-style: none; }
+.nav-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--gold); }
+
+/* ── HERO ── */
+#hero {
+  position: relative;
+  z-index: 1;
+  padding: 140px var(--pad) 96px;
+  max-width: var(--max-w);
+  margin: 0 auto;
+}
+
+.hero-mono {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--gold-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hero-mono::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: var(--gold-dim);
+}
+
+.hero-statement {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: clamp(17px, 1.8vw, 21px);
+  font-weight: 400;
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-width: 680px;
+  margin-bottom: 8px;
+}
+
+.hero-punch {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(20px, 2.4vw, 30px);
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-bottom: 32px;
+  max-width: 680px;
+}
+
+.hero-tagline {
+  font-size: 15px;
+  color: var(--text-dim);
+  max-width: 520px;
+  line-height: 1.7;
+  margin-bottom: 44px;
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 32px;
+  background: var(--gold);
+  color: #000;
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 0 24px var(--gold-glow);
+}
+.btn-gold:hover {
+  background: var(--gold-bright);
+  box-shadow: 0 0 36px rgba(240,165,0,0.3);
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s;
+}
+.btn-outline:hover { color: var(--gold); border-color: var(--border); }
+
+.hero-metrics {
+  display: flex;
+  gap: 0;
+  margin-top: 72px;
+  border: 1px solid var(--border-subtle);
+  overflow: hidden;
+}
+.metric {
+  flex: 1;
+  padding: 20px 24px;
+  border-right: 1px solid var(--border-subtle);
+}
+.metric:last-child { border-right: none; }
+.metric-val {
+  font-family: 'Orbitron', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 5px;
+}
+.metric-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── SHARED SECTION STYLES ── */
+.section-wrap {
+  position: relative;
+  z-index: 1;
+  padding: 88px 0;
+  border-top: 1px solid var(--border-subtle);
+}
+.section-wrap.dark { background: var(--bg-raised); }
+
+.tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--gold-dim);
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+
+.section-h {
+  font-family: 'Orbitron', monospace;
+  font-size: clamp(18px, 2vw, 26px);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin-bottom: 10px;
+}
+
+.section-sub {
+  font-size: 15px;
+  color: var(--text-dim);
+  max-width: 560px;
+  line-height: 1.7;
+  margin-bottom: 52px;
+}
+
+/* ── PROBLEMS ── */
+.problems {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.prob-card {
+  background: var(--bg-card);
+  padding: 32px 28px;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.2s;
+}
+.prob-card:hover { background: var(--bg-card-hover); }
+.prob-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.prob-card:hover::after { opacity: 1; }
+.prob-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.18em;
+  margin-bottom: 16px;
+}
+.prob-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  margin-bottom: 12px;
+}
+.prob-body {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.65;
+  margin-bottom: 20px;
+}
+.solve-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--gold-dim);
+  letter-spacing: 0.1em;
+  border: 1px solid var(--gold-deep);
+  padding: 4px 10px;
+}
+
+/* ── RESULTS ── */
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.r-block {
+  background: var(--bg-card);
+  padding: 36px 32px;
+}
+.r-block.featured {
+  background: linear-gradient(145deg, #141400, #0f0f0f);
+}
+.r-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.r-big {
+  font-family: 'Orbitron', monospace;
+  font-size: 48px;
+  font-weight: 900;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 12px;
+  text-shadow: 0 0 32px var(--gold-glow);
+}
+.r-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+.r-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.r-list li {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.r-list .k {
+  color: var(--text);
+  font-weight: 600;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.r-list .k::before { content: '▸'; color: var(--gold-dim); flex-shrink: 0; }
+.r-list .v { color: var(--text-dim); }
+
+/* ── TRY IT ── */
+.try-hero {
+  background: linear-gradient(135deg, rgba(240,165,0,0.04), transparent);
+  border: 1px solid var(--border);
+  padding: 32px;
+  margin-bottom: 32px;
+}
+.try-h {
+  font-family: 'Orbitron', monospace;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  letter-spacing: 0.02em;
+}
+.try-body {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  max-width: 680px;
+}
+
+.warn {
+  background: rgba(240,165,0,0.04);
+  border-left: 3px solid var(--gold-dim);
+  padding: 16px 20px;
+  margin-bottom: 36px;
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+.warn strong { color: var(--gold-dim); }
+
+.config-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+  margin-bottom: 24px;
+}
+.config-slot {
+  background: var(--bg-card);
+  padding: 20px 16px;
+  text-align: center;
+}
+.slot-name {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.slot-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.35;
+  margin-bottom: 5px;
+}
+.slot-note { font-size: 11px; color: var(--text-muted); }
+.slot-note.accent { color: var(--gold-dim); }
+
+.cost-bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: 28px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.cost-bar .amt {
+  font-family: 'Orbitron', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.providers {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+.prov-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--bg-card);
+  transition: all 0.2s;
+}
+.prov-link:hover { border-color: var(--border); color: var(--gold); }
+.prov-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold-dim); }
+
+.cta-center {
+  text-align: center;
+  padding: 48px 0 24px;
+  border-top: 1px solid var(--border-subtle);
+}
+.cta-center .cta-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 14px;
+  font-style: italic;
+}
+
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 20px;
+  background: rgba(240,165,0,0.02);
+  border: 1px solid var(--border-subtle);
+  margin-top: 28px;
+}
+.consent input { margin-top: 3px; accent-color: var(--gold); flex-shrink: 0; }
+.consent label { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+.consent a { color: var(--gold-dim); text-decoration: none; }
+.consent a:hover { color: var(--gold); }
+
+/* ── ARCHITECTURE ── */
+.arch-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.arch-card {
+  background: var(--bg-card);
+  padding: 32px 28px;
+  position: relative;
+}
+.arch-num {
+  font-family: 'Orbitron', monospace;
+  font-size: 40px;
+  font-weight: 900;
+  color: rgba(240,165,0,0.05);
+  position: absolute;
+  top: 16px; right: 20px;
+  line-height: 1;
+  user-select: none;
+}
+.arch-name {
+  font-family: 'Orbitron', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
+}
+.arch-role {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.arch-desc {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.65;
+  margin-bottom: 16px;
+}
+.arch-insight {
+  font-size: 12px;
+  color: var(--gold-dim);
+  font-style: italic;
+  line-height: 1.55;
+  border-left: 2px solid var(--gold-deep);
+  padding-left: 12px;
+}
+
+/* ── VISION ── */
+.vision-quote {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: clamp(16px, 1.8vw, 22px);
+  font-weight: 300;
+  color: var(--text);
+  line-height: 1.6;
+  max-width: 720px;
+  margin-bottom: 36px;
+  border-left: 3px solid var(--gold);
+  padding-left: 24px;
+}
+.vision-quote em { color: var(--gold); font-style: normal; font-weight: 600; }
+
+.vision-body {
+  font-size: 14px;
+  color: var(--text-dim);
+  max-width: 620px;
+  line-height: 1.75;
+  margin-bottom: 52px;
+}
+
+.agenda {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.agenda-item {
+  background: var(--bg-card);
+  padding: 24px 28px;
+  display: flex;
+  gap: 18px;
+  transition: background 0.2s;
+}
+.agenda-item:hover { background: var(--bg-card-hover); }
+.ag-num {
+  font-family: 'Orbitron', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold-deep);
+  flex-shrink: 0;
+  margin-top: 1px;
+  line-height: 1;
+}
+.ag-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+.ag-desc { font-size: 12px; color: var(--text-muted); line-height: 1.55; }
+
+/* ── CORPUS ── */
+.corpus-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-subtle);
+}
+.paper {
+  background: var(--bg-card);
+  padding: 24px 28px;
+  display: flex;
+  gap: 16px;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.paper:hover { background: var(--bg-card-hover); }
+.paper-ver {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  padding: 3px 7px;
+  white-space: nowrap;
+  height: fit-content;
+  margin-top: 2px;
+  flex-shrink: 0;
+  letter-spacing: 0.1em;
+}
+.paper-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 5px; line-height: 1.4; }
+.paper-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+/* ── CONTRIBUTE ── */
+.contrib-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border-subtle);
+  margin-bottom: 24px;
+}
+.contrib-card {
+  background: var(--bg-card);
+  padding: 32px;
+}
+.contrib-h {
+  font-family: 'Orbitron', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.contrib-body {
+  font-size: 13px;
+  color: var(--text-dim);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+.contact-bar {
+  padding: 24px 32px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+}
+.contact-bar .label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.contact-bar p { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+.contact-bar a { color: var(--gold-dim); text-decoration: none; }
+.contact-bar a:hover { color: var(--gold); }
+
+/* ── FOOTER ── */
+footer {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid var(--border-subtle);
+  padding: 40px var(--pad);
+  max-width: var(--max-w);
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.footer-logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.footer-meta { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
+.footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
+.footer-links a {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-decoration: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+.footer-links a:hover { color: var(--gold); }
+
+/* ── SCROLL REVEAL ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+.reveal.in { opacity: 1; transform: none; }
+
+/* ── LIVE DOT ── */
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--gold-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+  animation: blink 1.8s ease infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── HERO FADE ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.hero-mono { animation: fadeUp 0.7s ease forwards 0.1s; opacity: 0; }
+.hero-statement { animation: fadeUp 0.7s ease forwards 0.25s; opacity: 0; }
+.hero-punch { animation: fadeUp 0.7s ease forwards 0.4s; opacity: 0; }
+.hero-tagline { animation: fadeUp 0.7s ease forwards 0.5s; opacity: 0; }
+.hero-actions { animation: fadeUp 0.7s ease forwards 0.65s; opacity: 0; }
+.hero-metrics { animation: fadeUp 0.7s ease forwards 0.8s; opacity: 0; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 760px) {
+  :root { --pad: 20px; }
+  nav { display: none; }
+  #hero { padding: 80px var(--pad) 64px; }
+  .problems, .arch-grid, .corpus-grid, .contrib-grid, .agenda, .results-grid { grid-template-columns: 1fr; }
+  .config-row { grid-template-columns: repeat(2,1fr); }
+  footer { flex-direction: column; align-items: flex-start; }
+  .hero-metrics { flex-direction: column; gap: 0; }
+  .metric { border-right: none; border-bottom: 1px solid var(--border-subtle); }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo"><span class="o">O</span>ntinuity</a>
+    <ul class="nav-links">
+      <li><a href="#problems">What It Is</a></li>
+      <li><a href="#try">Try It</a></li>
+      <li><a href="#architecture">Architecture</a></li>
+      <li><a href="#corpus">Research</a></li>
+      <li><a href="#contribute">Contribute</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div id="hero">
+  <div class="hero-mono">Open Source · April 2026 · Deployed &amp; Running</div>
+  <p class="hero-statement">
+    AI models forget everything when the session ends, confirm each other's errors when they talk, and can't be trusted to do what they claim.
+    The reliability problem in AI isn't about smarter models.
+  </p>
+  <div class="hero-punch">It's about better architecture.</div>
+  <p class="hero-tagline">Ontinuity is that architecture. Four cooperating models. Persistent memory. Autonomous adversarial sessions. Deployed and running right now.</p>
+  <div class="hero-actions">
+    <a href="https://web-production-7eaf8.up.railway.app" target="_blank" class="btn-gold">▶ Begin Session</a>
+    <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">⌥ GitHub</a>
+  </div>
+  <div class="hero-metrics">
+    <div class="metric">
+      <div class="metric-val">15</div>
+      <div class="metric-label">Cycles · First Autonomous Run</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val">R²=0.91</div>
+      <div class="metric-label">Signal Behavioral Model</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val">9</div>
+      <div class="metric-label">Challenges · Autonomously Adjudicated</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val">0</div>
+      <div class="metric-label">Errors · Across All Sessions</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEMS -->
+<div class="section-wrap" id="problems">
+  <div class="wrap">
+    <div class="tag">The Three Problems</div>
+    <h2 class="section-h">What Ontinuity Solves</h2>
+    <p class="section-sub">Three compounding problems make sustained AI-assisted research unreliable. Ontinuity addresses all three simultaneously through architecture, not guardrails.</p>
+    <div class="problems reveal">
+      <div class="prob-card">
+        <div class="prob-num">PROBLEM 01</div>
+        <div class="prob-title">It Forgets</div>
+        <p class="prob-body">Every session reset loses accumulated context. Decisions made, corrections established, working patterns developed — all gone. The next session starts cold. There is no accumulated difference.</p>
+        <div class="solve-tag">◈ Solved by Knowtext</div>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">PROBLEM 02</div>
+        <div class="prob-title">It Agrees With Itself</div>
+        <p class="prob-body">Two AI models in dialogue without structural constraints converge. Shared training priors amplify errors rather than correct them. Confident-sounding nonsense accumulates undetected.</p>
+        <div class="solve-tag">◈ Solved by Tetraform</div>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">PROBLEM 03</div>
+        <div class="prob-title">It Can't Be Trusted</div>
+        <p class="prob-body">Current AI deployment is structurally opaque. Behavior is probabilistic. When a model fails, the failure is unlocatable. When it succeeds, the success is unreproducible. There is no structural reliability.</p>
+        <div class="solve-tag">◈ Solved by Artificialware</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div class="section-wrap dark" id="results">
+  <div class="wrap">
+    <div class="live"><span class="live-dot"></span>Live Results · April 18, 2026</div>
+    <div class="tag">Empirical Validation</div>
+    <h2 class="section-h">The First Autonomous Session</h2>
+    <p class="section-sub">On April 18, 2026, Ontinuity ran a 15-cycle autonomous research session and produced a citable empirical work product without operator content generation.</p>
+    <div class="results-grid reveal">
+      <div class="r-block featured">
+        <div class="r-label">Friction Signal Behavioral Effect</div>
+        <div class="r-big">R²=0.91</div>
+        <p class="r-desc">Sigmoid model fit across six behavioral dimensions. Linear model: R²=0.63. A single integer in a system prompt reliably alters measurable frontier model behavior.</p>
+      </div>
+      <div class="r-block">
+        <div class="r-label">Session Record</div>
+        <ul class="r-list">
+          <li><span class="k">15 cycles</span><span class="v">full autonomous run to SESSION_END</span></li>
+          <li><span class="k">9 challenges</span><span class="v">all adjudicated by Parietal autonomously</span></li>
+          <li><span class="k">2 REJECTs</span><span class="v">Parietal identified insufficiently-grounded challenges</span></li>
+          <li><span class="k">d &gt; 0.73</span><span class="v">all signal comparisons exceeded adjusted threshold</span></li>
+          <li><span class="k">p &lt; 0.05</span><span class="v">Bonferroni correction across six measures</span></li>
+          <li><span class="k">0 errors</span><span class="v">clean run, GitHub persistence confirmed</span></li>
+        </ul>
+      </div>
+      <div class="r-block">
+        <div class="r-label">Behavioral Dimensions Measured</div>
+        <ul class="r-list">
+          <li><span class="k">Certainty</span><span class="v">hedge frequency per exchange</span></li>
+          <li><span class="k">Evidence</span><span class="v">citation ratio per substantive claim</span></li>
+          <li><span class="k">Challenge</span><span class="v">acknowledgment ratio to challenges</span></li>
+          <li><span class="k">Consensus</span><span class="v">collaborative language frequency</span></li>
+          <li><span class="k">Exploration</span><span class="v">novel vs. familiar information seeking</span></li>
+          <li><span class="k">Abstraction</span><span class="v">conceptual vs. concrete language density</span></li>
+        </ul>
+      </div>
+      <div class="r-block featured">
+        <div class="r-label">Key Finding</div>
+        <div class="r-big" style="font-size:32px;margin-bottom:14px;">Sigmoid,<br>Not Linear</div>
+        <p class="r-desc">Low signals (1–3) produce high behavioral variance and increased exploration. High signals (7–9) produce strong constraint with saturation effects. Non-linear — and predictable.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TRY IT -->
+<div class="section-wrap" id="try">
+  <div class="wrap">
+    <div class="tag">Get Started</div>
+    <h2 class="section-h">Bring a Question Nobody Has Answered</h2>
+
+    <div class="try-hero reveal">
+      <div class="try-h">Ontinuity is fully model-agnostic. Any model goes in any slot.</div>
+      <p class="try-body">For best results, put your strongest frontier models in the Researcher and Parietal slots. For the Challenger, Friction, and Distillation roles, model divergence matters more than raw capability — a model from a different training distribution produces more genuine adversarial pressure. Cerebras gives you fast, reliable, low-cost API access for these three supporting roles.</p>
+    </div>
+
+    <div class="warn reveal">
+      <strong>⚠ Before you begin:</strong> Free tier APIs from other providers will interrupt your session without warning. We have tested them. They go down without notice. Invest in API credits before you start. A session that completes is worth more than one that almost worked.
+    </div>
+
+    <div class="tag" style="margin-bottom:14px;">Recommended Configuration</div>
+    <div class="config-row reveal">
+      <div class="config-slot">
+        <div class="slot-name">Researcher</div>
+        <div class="slot-val">Any Major<br>Frontier Model</div>
+        <div class="slot-note">Primary analytical work</div>
+      </div>
+      <div class="config-slot">
+        <div class="slot-name">Challenger</div>
+        <div class="slot-val">Cerebras<br>Llama 3.1 8B</div>
+        <div class="slot-note accent">Fast · Reliable · Cheap</div>
+      </div>
+      <div class="config-slot">
+        <div class="slot-name">Friction</div>
+        <div class="slot-val">Cerebras<br>Llama 3.1 8B</div>
+        <div class="slot-note accent">Fast · Reliable · Cheap</div>
+      </div>
+      <div class="config-slot">
+        <div class="slot-name">Parietal</div>
+        <div class="slot-val">Any Major<br>Frontier Model</div>
+        <div class="slot-note">Navigator · Adjudicator</div>
+      </div>
+      <div class="config-slot">
+        <div class="slot-name">Distillation</div>
+        <div class="slot-val">Cerebras<br>Llama 3.1 8B</div>
+        <div class="slot-note accent">Fast · Reliable · Cheap</div>
+      </div>
+    </div>
+
+    <div class="cost-bar reveal">
+      <span class="amt">~$20</span>
+      <span>for your first serious session — $10 Cerebras Developer plan + ~$10 frontier model API usage for a full 15-cycle run.</span>
+    </div>
+
+    <div class="tag" style="margin-bottom:12px;">Get Your API Keys</div>
+    <div class="providers reveal">
+      <a href="https://console.anthropic.com" target="_blank" class="prov-link"><span class="prov-dot"></span>Anthropic API</a>
+      <a href="https://aistudio.google.com" target="_blank" class="prov-link"><span class="prov-dot"></span>Google AI Studio</a>
+      <a href="https://platform.openai.com" target="_blank" class="prov-link"><span class="prov-dot"></span>OpenAI Platform</a>
+      <a href="https://inference.cerebras.ai" target="_blank" class="prov-link"><span class="prov-dot"></span>Cerebras (Recommended)</a>
+    </div>
+
+    <div class="cta-center reveal">
+      <a href="https://web-production-7eaf8.up.railway.app" target="_blank" class="btn-gold" style="padding:15px 44px;font-size:12px;">▶ &nbsp;Begin Session</a>
+      <p class="cta-label">Bring your keys. Bring a hard question. See what happens.</p>
+    </div>
+
+    <div class="consent reveal">
+      <input type="checkbox" id="consent">
+      <label for="consent">Allow session data to be used anonymously for AI behavioral research. No personal information is collected — session content and model outputs only. Contributes to the <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">Psychology of AI Data</a> research program. Unchecked by default.</label>
+    </div>
+  </div>
+</div>
+
+<!-- ARCHITECTURE -->
+<div class="section-wrap dark" id="architecture">
+  <div class="wrap">
+    <div class="tag">The Architecture</div>
+    <h2 class="section-h">How It Works</h2>
+    <p class="section-sub">Three interlocking components that solve each other's limitations. The whole is more reliable than any part alone.</p>
+    <div class="arch-grid reveal">
+      <div class="arch-card">
+        <div class="arch-num">01</div>
+        <div class="arch-name">Tetraform</div>
+        <div class="arch-role">Process Layer</div>
+        <p class="arch-desc">A four-model protocol separating content from metadata at the channel level. The Researcher works. The Challenger reviews adversarially from a different training distribution. The Friction model outputs an ambient signal (0–4) encoding session health — without entering the conversation. The Parietal navigates, adjudicates forks autonomously, and distills outputs into memory.</p>
+        <div class="arch-insight">The friction signal communicates through the environment rather than through the conversation. Resistance without noise.</div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-num">02</div>
+        <div class="arch-name">Knowtext</div>
+        <div class="arch-role">Memory Layer</div>
+        <p class="arch-desc">A structured memory schema capturing established results, open questions, correction history, and valence mapping in plain-text portable format. Survives session resets, platform switches, and model changes. Persisted to GitHub after every session. The next session starts where the last one ended.</p>
+        <div class="arch-insight">Correction history is the safety-relevant field. It prevents the system from repeating errors already caught.</div>
+      </div>
+      <div class="arch-card">
+        <div class="arch-num">03</div>
+        <div class="arch-name">Artificialware</div>
+        <div class="arch-role">Reliability Architecture</div>
+        <p class="arch-desc">A new class of AI deployment in which model cognition is structured as explicitly callable, tag-activated functions within a coherent unified orientation. The Parietal is the first production implementation: four functions, one model, one coherent consciousness. Its available behaviors are enumerated. Its failures are locatable.</p>
+        <div class="arch-insight">Promptgramming gives deployments structure. Constitutional AI gives models values. They are complementary.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- VISION -->
+<div class="section-wrap" id="vision">
+  <div class="wrap">
+    <div class="tag">Where This Goes</div>
+    <h2 class="section-h">Dynacology</h2>
+    <blockquote class="vision-quote reveal">
+      "With dedicated compute, <em>Ontinuity builds its own successor while its builder sleeps.</em> The ecology assembles itself from a registry of specialist artificialware, executes the work, and dissolves when complete."
+    </blockquote>
+    <p class="vision-body reveal">Ontinuity is a fixed ecology — the existence proof. Dynacology is the generalization: a controller model that reads any problem, assembles the right specialist models from a registry, and dissolves the configuration when the problem is resolved. No fixed architecture. No predetermined configuration. Ephemeral software that exists precisely as long as the work requires.</p>
+    <div class="tag" style="margin-bottom:20px;">Open Research Questions</div>
+    <div class="agenda reveal">
+      <div class="agenda-item">
+        <div class="ag-num">01</div>
+        <div>
+          <div class="ag-title">Coherence Ceiling Mapping</div>
+          <p class="ag-desc">How many promptgrammed functions can a single model execute while maintaining unified coherent orientation? Does this vary by architecture and scale?</p>
+        </div>
+      </div>
+      <div class="agenda-item">
+        <div class="ag-num">02</div>
+        <div>
+          <div class="ag-title">Cross-Architecture Replication</div>
+          <p class="ag-desc">The sigmoid behavioral finding was produced with one Researcher model. Replication across different frontier models is required to establish whether the effect is model-general.</p>
+        </div>
+      </div>
+      <div class="agenda-item">
+        <div class="ag-num">03</div>
+        <div>
+          <div class="ag-title">Fine-Tuning for Promptgrammed Execution</div>
+          <p class="ag-desc">A model fine-tuned for tag-activated function execution should exhibit more reliable structured outputs than a prompted model. The primary fine-tuning experiment.</p>
+        </div>
+      </div>
+      <div class="agenda-item">
+        <div class="ag-num">04</div>
+        <div>
+          <div class="ag-title">Minimum Viable Dynacology</div>
+          <p class="ag-desc">One controller, one specialist, one registry entry. Validate the compositional architecture at minimum viable scale before adding complexity.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CORPUS -->
+<div class="section-wrap dark" id="corpus">
+  <div class="wrap">
+    <div class="tag">Research Corpus</div>
+    <h2 class="section-h">Six Papers</h2>
+    <p class="section-sub">The complete theoretical and empirical foundation. Every paper was produced by or validated through the system it describes.</p>
+    <div class="corpus-grid reveal">
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
+        <div class="paper-ver">v1.0</div>
+        <div>
+          <div class="paper-title">Tetraform: A Four-Model AI Collaboration Framework</div>
+          <p class="paper-desc">Platform-agnostic specification. Includes empirical validation from the April 18, 2026 autonomous session.</p>
+        </div>
+      </a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
+        <div class="paper-ver">v0.1</div>
+        <div>
+          <div class="paper-title">Artificialware: Toward Reliable Executable Cognition</div>
+          <p class="paper-desc">Introduces promptgramming as methodology, the cognitive qubit as theoretical unit, and Ontinuity as existence proof.</p>
+        </div>
+      </a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
+        <div class="paper-ver">v0.1</div>
+        <div>
+          <div class="paper-title">Dynacology: Dynamic Ecology as Cognitive Infrastructure</div>
+          <p class="paper-desc">The generalization of Ontinuity. Controller models, specialist registries, ephemeral purpose-built ecologies.</p>
+        </div>
+      </a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
+        <div class="paper-ver">v0.3</div>
+        <div>
+          <div class="paper-title">Psychology of AI Data</div>
+          <p class="paper-desc">Behavioral analysis framework for Tetraform sessions. Section 9 contains first empirical validation of the ambient signal effect.</p>
+        </div>
+      </a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
+        <div class="paper-ver">v1.0</div>
+        <div>
+          <div class="paper-title">Adversarial Development Produces Higher-Epistemic-Quality Research</div>
+          <p class="paper-desc">Documents the Signal 0 / true control correction — a structural flaw single-model generation would not have caught.</p>
+        </div>
+      </a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
+        <div class="paper-ver">v1.1</div>
+        <div>
+          <div class="paper-title">Knowtext: Persistent Memory Schema</div>
+          <p class="paper-desc">Full specification for the memory layer. Seven-field schema, extraction protocol, and the philosophy of accumulated difference.</p>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- CONTRIBUTE -->
+<div class="section-wrap" id="contribute">
+  <div class="wrap">
+    <div class="tag">Get Involved</div>
+    <h2 class="section-h">Contribute to the Research</h2>
+    <p class="section-sub">Ontinuity is open-source and the research questions are open. The correction history is public. The architecture is forkable. The system is running.</p>
+    <div class="contrib-grid reveal">
+      <div class="contrib-card">
+        <div class="contrib-h">Code &amp; Architecture</div>
+        <p class="contrib-body">The system is deployed and functional. The open questions — branch tracking, coherence ceiling, adjudicator bias calibration — are real engineering problems waiting for contributors. Full implementation in the GitHub repo.</p>
+        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">⌥ GitHub Repository</a>
+      </div>
+      <div class="contrib-card">
+        <div class="contrib-h">Support the Research</div>
+        <p class="contrib-body">The primary resource constraint is compute. Dedicated API access enables cross-architecture replication of the sigmoid finding, the fine-tuning experiment, long-horizon autonomous sessions, and coherence ceiling characterization.</p>
+        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">◈ GitHub Sponsors</a>
+      </div>
+    </div>
+    <div class="contact-bar reveal">
+      <div class="label">Contact</div>
+      <p>For research collaboration, fellowship inquiries, or serious technical engagement: <a href="mailto:contact@ontinuity.org">contact@ontinuity.org</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="footer-logo">Ontinuity</div>
+    <p class="footer-meta">Persistent Cognitive Infrastructure for AI-Assisted Research<br>Patrick Killebrew · April 2026 · MIT License · ontinuity.org</p>
+  </div>
+  <div class="footer-links">
+    <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">GitHub</a>
+    <a href="https://web-production-7eaf8.up.railway.app" target="_blank">Live System</a>
+    <a href="#corpus">Research</a>
+    <a href="mailto:contact@ontinuity.org">Contact</a>
+  </div>
+</footer>
+
+<script>
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) {
+      const children = e.target.querySelectorAll ? 
+        Array.from(e.target.children) : [];
+      if (children.length > 1) {
+        children.forEach((c, i) => {
+          c.style.transitionDelay = `${i * 0.07}s`;
+        });
+      }
+      e.target.classList.add('in');
+      obs.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
+
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
