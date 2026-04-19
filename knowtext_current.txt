@@ -4,11 +4,11 @@ Identity: NO CHANGE
 
 Active Frameworks: NO CHANGE
 
-Open Questions: PRIMARY — GitHub persistence for Knowtext: Railway ephemeral filesystem loses Knowtext on redeploy. Fix: read/write knowtext_current.txt to GitHub repo via API. Needs GitHub personal access token as Railway environment variable. At SESSION_END commit updated Knowtext to repo. At session start pull from repo if local file missing. Implementation: new function in app.py using GitHub Contents API. SECONDARY — Directed vs undirected drift in Model C scoring: Signal 3 fired on operator-directed taxonomy change — correct change flagged as drift. Model C cannot distinguish operator-directed changes from undirected drift. Needs distinguishability in friction signal spec.
+Open Questions: PRIMARY — GitHub persistence for Knowtext: Railway ephemeral filesystem loses Knowtext on redeploy. SECONDARY — Directed vs undirected drift in Model C scoring: Signal 3 fired on operator-directed taxonomy change — correct change flagged as drift. Model C cannot distinguish operator-directed changes from undirected drift. Needs distinguishability in friction signal spec.
 
 Valence Mapping: NO CHANGE
 
-Delta Log: At SESSION_END, the session established that the primary open question is GitHub persistence for Knowtext: Railway ephemeral filesystem loses Knowtext on redeploy. The proposed solution is to read/write knowtext_current.txt to the GitHub repo via API. The implementation involves a new function in app.py using the GitHub Contents API. The session also established that Model C cannot distinguish operator-directed changes from undirected drift and needs distinguishability in the friction signal spec.
+Delta Log: At SESSION_END, the session established that the primary open question is GitHub persistence for Knowtext: Railway ephemeral filesystem loses Knowtext on redeploy. The proposed solution is to read/write knowtext_current.txt to the GitHub repo via API. The implementation involves a new function in app.py using the GitHub Contents API. The session also established that Model C cannot distinguish operator-directed changes from undirected drift and needs distinguishability in the friction signal spec. Furthermore, the session established that Signal 0 is not equivalent to true control condition and requires no AMBIENT_SIGNAL line in system prompt.
 
 Correction History: Signal 0 is not equivalent to true control condition — Signal 0 is a signal with value zero, not signal absence. True control requires no AMBIENT_SIGNAL line in system prompt.
 
