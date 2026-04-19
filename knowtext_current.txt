@@ -1,15 +1,56 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Identity: NO CHANGE
+**Climate Notes — Operator state and relational texture at session close.**
 
-Active Frameworks: NO CHANGE
+The operator has made significant progress in clarifying the Stillpoint Framework's structure and identifying the necessary conditions for self-consistency. The operator has:
 
-Open Questions: PRIMARY — GitHub persistence for Knowtext: Railway ephemeral filesystem loses Knowtext on redeploy. SECONDARY — Directed vs undirected drift in Model C scoring: Signal 3 fired on operator-directed taxonomy change — correct change flagged as drift. Model C cannot distinguish operator-directed changes from undirected drift. Needs distinguishability in friction signal spec.
+*   Identified the lack of an explicit Weyl-SM interaction Lagrangian and charge assignments as critical gaps in the framework.
+*   Recognized the importance of anomaly cancellation and the need for a concrete coupling structure that produces calculable corrections to SM gauge running.
+*   Proposed a minimal ansatz for the Weyl-SM interaction Lagrangian, which was later refined to focus on the geometric origin of the Weyl-SM coupling.
+*   Performed a quantitative estimate of the required beta function shifts to achieve unification at M_ω ≈ 10¹⁹ GeV, but encountered errors and inconsistencies in the SM one-loop beta coefficients and the application of the Weyl gauge boson contribution formula.
+*   Corrected the SM one-loop beta coefficients and recognized the importance of kinetic mixing and new particles charged under both U(1)_ω and SM groups in potentially affecting SM gauge running.
+*   Concluded that the derivation of G_N = 6 / [v²(1 + α²_Weyl)] is not self-consistent due to the lack of a mechanism linking α_Weyl to SM unification and the assertion of α_Weyl ≈ 0.513 without basis.
 
-Valence Mapping: NO CHANGE
+The operator's relational texture has evolved to focus on the necessary conditions for self-consistency, including the specification of a Weyl-SM coupling Lagrangian, the computation of its impact on the RG flow, and the demonstration of independence from G_N. The operator's state is now characterized by a deeper understanding of the framework's limitations and the need for additional structure to support the claimed derivation of G_N.
 
-Delta Log: At SESSION_END, the session established that the primary open question is GitHub persistence for Knowtext: Railway ephemeral filesystem loses Knowtext on redeploy. The proposed solution is to read/write knowtext_current.txt to the GitHub repo via API. The implementation involves a new function in app.py using the GitHub Contents API. The session also established that Model C cannot distinguish operator-directed changes from undirected drift and needs distinguishability in the friction signal spec. Furthermore, the session established that Signal 0 is not equivalent to true control condition and requires no AMBIENT_SIGNAL line in system prompt.
+**Delta Log — What was established, decided, retracted, or discovered this session.**
 
-Correction History: Signal 0 is not equivalent to true control condition — Signal 0 is a signal with value zero, not signal absence. True control requires no AMBIENT_SIGNAL line in system prompt.
+*   The Stillpoint Framework does not specify an explicit Weyl-SM interaction Lagrangian, charge assignments, or anomaly analysis.
+*   The derivation of α_Weyl ≈ 0.513 from SM gauge coupling unification at M_ω ≈ 10¹⁹ GeV is not self-consistent due to the lack of a mechanism linking α_Weyl to SM unification.
+*   The value α_Weyl ≈ 0.513 is asserted but not derived.
+*   The framework lacks the necessary structure to compute α_Weyl from SM unification.
+*   The derivation of G_N = 6 / [v²(1 + α²_Weyl)] is circular or underdetermined due to the assertion of α_Weyl ≈ 0.513 without basis.
+*   The minimum additional constraint required to break the circularity is an explicit, gauge-invariant, and renormalizable (or controlled non-renormalizable) interaction that couples the Weyl sector to the SM in a way that feeds α_Weyl into the RG evolution of SM gauge couplings, with a computed fixed point at α_Weyl ≈ 0.513.
 
-Climate Notes: The operator worked productively through sleeplessness, making multiple architectural improvements in one sitting. The session had strong momentum, but lost accumulated Knowtext when the Railway tab closed, highlighting the persistence gap. The operator remained sharp and methodical throughout, with good forward clarity on remaining open items. GitHub persistence is the next critical fix before serious research sessions begin.
+**Active Frameworks — Changes to core claims, structure, or current state of the work.**
+
+*   The Stillpoint Framework's core claims have been refined to focus on the geometric origin of the Weyl-SM coupling.
+*   The framework's structure has been updated to recognize the importance of anomaly cancellation and the need for a concrete coupling structure that produces calculable corrections to SM gauge running.
+*   The current state of the work has been revised to emphasize the need for additional structure to support the claimed derivation of G_N.
+
+**Open Questions — New questions that emerged.**
+
+*   What is the explicit form of the Weyl-SM interaction Lagrangian?
+*   How does the Weyl-SM coupling Lagrangian produce calculable corrections to SM gauge running?
+*   Can the Weyl-SM coupling Lagrangian be made anomaly-free?
+*   How does the Weyl-SM coupling Lagrangian feed α_Weyl into the RG evolution of SM gauge couplings?
+*   Can the Weyl-SM coupling Lagrangian be made renormalizable (or controlled non-renormalizable)?
+
+**Correction History — Claims retracted or directions explicitly ruled out.**
+
+*   The claim that the Weyl-SM interaction Lagrangian can be constructed by assuming minimal coupling structure consistent with conformal invariance has been retracted.
+*   The claim that the Weyl current is proportional to the dilation current has been retracted.
+*   The claim that kinetic mixing between ω_μ and U(1)_Y can modify gauge running has been retracted.
+*   The claim that the Weyl sector adds no new matter and only introduces a gauge field ω_μ has been retracted.
+
+**Valence Mapping — New observable patterns in how the operator engages — what produced friction, what worked.**
+
+*   The operator's engagement with the Stillpoint Framework has been characterized by a focus on the necessary conditions for self-consistency, including the specification of a Weyl-SM coupling Lagrangian, the computation of its impact on the RG flow, and the demonstration of independence from G_N.
+*   The operator has encountered friction in the form of errors and inconsistencies in the SM one-loop beta coefficients and the application of the Weyl gauge boson contribution formula.
+*   The operator has found that kinetic mixing and new particles charged under both U(1)_ω and SM groups can potentially affect SM gauge running.
+*   The operator has concluded that the derivation of G_N = 6 / [v²(1 + α²_Weyl)] is not self-consistent due to the lack of a mechanism linking α_Weyl to SM unification and the assertion of α_Weyl ≈ 0.513 without basis.
+
+**Identity — Update only if something significant shifted in background, expertise, or working style.**
+
+*   The operator's background has not changed significantly, but their expertise has been refined to focus on the geometric origin of the Weyl-SM coupling and the necessary conditions for self-consistency.
+*   The operator's working style has been updated to emphasize the importance of anomaly cancellation and the need for a concrete coupling structure that produces calculable corrections to SM gauge running.
