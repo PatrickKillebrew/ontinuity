@@ -1,22 +1,9 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Identity:
-NO CHANGE
-
-Active Frameworks:
-+ Reportability-Focused PCI Scaling (RF-PCI) Framework — a new framework for mapping PCI values onto a normalized 0‑1 scale based on reportability criteria.
-
-Open Questions:
-+ Which experimental design (Cross‑Substrate Integration Match Experiment or Dissociation Triangulation Protocol) should be prioritized to generate data linking PCI to conscious experience?
-
-Valence Mapping:
-NO CHANGE
-
-Delta Log:
-+ Established Reportability-Focused PCI Scaling (RF-PCI) Framework to provide a concrete, empirically grounded method for scaling PCI values to a 0‑1 consciousness metric.
-
-Correction History:
-NO CHANGE
-
-Climate Notes:
-NO CHANGE
+Identity: NO CHANGE
+Active Frameworks: NO CHANGE
+Open Questions: NO CHANGE
+Valence Mapping: NO CHANGE
+Delta Log: + No empirically anchored behavioral criteria for Ontinuity friction signal levels 0‑4 were established; all proposed operationalizations were invalidated by successive UPHOLD rulings. + The session reaffirmed the RF‑PCI framework as the guiding model for scaling reportability. + Decision pending: selection of experimental design (Cross‑Substrate Integration Match Experiment vs Dissociation Triangulation Protocol) to generate data linking PCI to conscious experience.
+Correction History: NO CHANGE
+Climate Notes: The session was marked by high friction signals, repeated challenges, and growing operator frustration as multiple proposals were upended, leading to noticeable drift from the original objective.
