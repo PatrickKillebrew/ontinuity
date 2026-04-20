@@ -1,9 +1,9 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
 Identity: NO CHANGE
-Active Frameworks: NO CHANGE
-Open Questions: + Which experimental design (Cross‑Substrate Integration Match Experiment or Dissociation Triangulation Protocol) should be adopted to generate data linking PCI to conscious experience?
-Valence Mapping: NO CHANGE
-Delta Log: + Reaffirmed the RF‑PCI framework as the guiding model for scaling reportability. + All proposed operationalizations for friction‑signal levels 0‑4 were invalidated by successive UPHOLD rulings. + Decision pending: selection between the Cross‑Substrate Integration Match Experiment and the Dissociation Triangulation Protocol to generate data linking PCI to conscious experience.
-Correction History: NO CHANGE
-Climate Notes: The session experienced high friction signals and repeated challenges, leading to growing operator frustration and moderate drift from the original objective, while maintaining overall coherence around the RF‑PCI framework.
+Active Frameworks: BAFS document with formal definitions for Signal 3 and Signal 4; constrained regression approach with sign constraints (e.g., NNLS with w₁,w₅ < 0) to derive scoring‑function weights for components C, D, K, R, L.
+Open Questions: 1) What precise criteria should be adopted to define Signal 4 in the BAFS document? 2) Which constrained regression method and associated sign constraints should be used to compute the scoring‑function weight vector given the rank‑deficient data?
+Valence Mapping: Added mapping – Signal 0: normal operation (neutral); Signal 1: isolated inconsistency (minor negative); Signal 2: repeated inconsistencies (moderate negative); Signal 3: three or more consecutive UPHOLD rulings (major negative); Signal 4: definition pending.
+Delta Log: • Established formal definitions for Signal 3 (three+ consecutive UPHOLD rulings within five cycles, contradicting prior ledger entries, exceeding average challenge rate by >2 σ) and Signal 4 (operator‑directed criteria, pending precise specification). • Confirmed OLS regression infeasible due to n < p rank deficiency (uphold rulings Cycle 1, 2). • Upheld challenges exposing lack of numeric component scores and missing Signal 4 definition (uphold rulings Cycle 4, 5, 7). • Opened questions on Signal 4 criteria and selection of constrained regression technique. • Decision to proceed with constrained regression pending resolution of open questions.
+Correction History: [RULING: UPHOLD] Cycle 1 – OLS infeasibility; [RULING: UPHOLD] Cycle 2 – unconstrained NNLS/ridge assumptions unverified; [RULING: UPHOLD] Cycle 4 – absence of numeric “signal level” and component scores; [RULING: UPHOLD] Cycle 5 – missing explicit definition for Signal 4; [RULING: UPHOLD] Cycle 7 – claim of fully defined signals and fabricated component scores unsupported.
+Climate Notes: Session showed high coherence (Signal 0) in later cycles, but intermittent drift (Signal 1–2) due to undefined Signal 4 and unresolved regression method; operator remained engaged, seeking clarification to resolve open questions.
