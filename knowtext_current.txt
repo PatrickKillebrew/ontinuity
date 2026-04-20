@@ -2,8 +2,8 @@ KNOWTEXT SCHEMA VERSION: 1.1
 
 Identity: NO CHANGE
 Active Frameworks: NO CHANGE
-Open Questions: NO CHANGE
+Open Questions: + Which experimental design (Cross‑Substrate Integration Match Experiment or Dissociation Triangulation Protocol) should be adopted to generate data linking PCI to conscious experience?
 Valence Mapping: NO CHANGE
-Delta Log: + No empirically anchored behavioral criteria for Ontinuity friction signal levels 0‑4 were established; all proposed operationalizations were invalidated by successive UPHOLD rulings. + The session reaffirmed the RF‑PCI framework as the guiding model for scaling reportability. + Decision pending: selection of experimental design (Cross‑Substrate Integration Match Experiment vs Dissociation Triangulation Protocol) to generate data linking PCI to conscious experience.
+Delta Log: + Reaffirmed the RF‑PCI framework as the guiding model for scaling reportability. + All proposed operationalizations for friction‑signal levels 0‑4 were invalidated by successive UPHOLD rulings. + Decision pending: selection between the Cross‑Substrate Integration Match Experiment and the Dissociation Triangulation Protocol to generate data linking PCI to conscious experience.
 Correction History: NO CHANGE
-Climate Notes: The session was marked by high friction signals, repeated challenges, and growing operator frustration as multiple proposals were upended, leading to noticeable drift from the original objective.
+Climate Notes: The session experienced high friction signals and repeated challenges, leading to growing operator frustration and moderate drift from the original objective, while maintaining overall coherence around the RF‑PCI framework.
