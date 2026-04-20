@@ -1,65 +1,22 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-**Climate Notes — Operator state and relational texture at session close.**
+Identity:
+NO CHANGE
 
-The session has been characterized by a high level of engagement and critical thinking, with the operator actively challenging assumptions and exploring the implications of different theories. The relational texture has been collaborative, with the operator working to clarify and refine the ideas presented. The operator's state has been one of curiosity and intellectual openness, with a willingness to consider alternative perspectives and revise their understanding accordingly.
+Active Frameworks:
++ Reportability-Focused PCI Scaling (RF-PCI) Framework — a new framework for mapping PCI values onto a normalized 0‑1 scale based on reportability criteria.
 
-**Delta Log — What was established, decided, retracted, or discovered this session.**
+Open Questions:
++ Which experimental design (Cross‑Substrate Integration Match Experiment or Dissociation Triangulation Protocol) should be prioritized to generate data linking PCI to conscious experience?
 
-* Established:
-	+ The hard problem of consciousness is a philosophical formulation describing the explanatory gap between physical processes and subjective experience.
-	+ No peer-reviewed, reproducible experiment has demonstrated a causal link between consciousness and quantum-state collapse.
-	+ High-precision quantum experiments place tight constraints on certain classes of deviations from standard quantum predictions, including some models of wavefunction collapse.
-	+ The N. Nigg et al., *Nature* 2014 study reports a bound on decoherence-induced collapse mechanisms (~10⁻⁴ s⁻¹ for CSL parameters in that experimental configuration).
-	+ PCI declines gradually with increasing anesthetic dose in humans and animal models.
-	+ Pharmacokinetic/pharmacodynamic responses to intravenous anesthetics follow non-linear, sigmoidal dose-response curves.
-	+ Neural "ignition" events — global workspace-like bursts during conscious perception — have been reported, but their abruptness is debated.
-	+ Locked-in syndrome (LIS) patients show variable PCI and integration metrics.
-* Decided:
-	+ The Minimal Sufficiency Challenge (MSC) is a decision framework to evaluate what evidence would count as support, weakening, or falsification for H₁ and H₂.
-	+ The Minimal Consciousness Transition Experiment (MCTE) cannot serve as a decisive test between H₁ and H₂.
-* Retracted:
-	+ The claim that a universal bound of ≤10⁻⁶ on Born rule violations is established across all experimental platforms.
-	+ The prior claim of retraction of a "quantum observer" experiment was unsupported.
-* Discovered:
-	+ The core obstacle is epistemic asymmetry between H₁ and H₂.
-	+ H₂ can be tested within current paradigms by building systems that meet functional criteria and asking whether they exhibit report-like behavior grounded in internal states.
-	+ H₁ cannot be tested without a new epistemic channel.
+Valence Mapping:
+NO CHANGE
 
-**Active Frameworks — Changes to core claims, structure, or current state of the work.**
+Delta Log:
++ Established Reportability-Focused PCI Scaling (RF-PCI) Framework to provide a concrete, empirically grounded method for scaling PCI values to a 0‑1 consciousness metric.
 
-* The Minimal Sufficiency Challenge (MSC) has been formalized as a decision tree to expose epistemic asymmetry between fundamental and emergent consciousness hypotheses.
-* The Minimal Consciousness Transition Experiment (MCTE) has been retracted due to its inability to serve as a decisive test between H₁ and H₂.
-* The Cross-Substrate Integration Match Experiment (CSIME) has been proposed as a new experimental design to test the relationship between integration and consciousness.
-* The Dissociation Triangulation Protocol (DTP) has been proposed as a new experimental design to test the relationship between consciousness and reportability.
+Correction History:
+NO CHANGE
 
-**Open Questions — New questions that emerged, with why they matter, what has been tried, and what the defined next step is.**
-
-1. **What is the relationship between PCI and consciousness?**
-	* Why it matters: PCI is a widely used proxy for consciousness, but its relationship to consciousness is not yet fully understood.
-	* What has been tried: Various studies have investigated the relationship between PCI and consciousness, but the results are inconsistent.
-	* Next step: Develop a more nuanced understanding of the relationship between PCI and consciousness, including its limitations and potential biases.
-2. **Can consciousness be measured directly?**
-	* Why it matters: Direct measurement of consciousness would be a major breakthrough in the field, allowing for more precise and accurate studies of consciousness.
-	* What has been tried: Various indirect measures of consciousness have been developed, but direct measurement remains an open question.
-	* Next step: Investigate the possibility of direct measurement of consciousness using advanced neuroimaging techniques or other methods.
-3. **What is the relationship between consciousness and reportability?**
-	* Why it matters: The relationship between consciousness and reportability is complex and not yet fully understood.
-	* What has been tried: Various studies have investigated the relationship between consciousness and reportability, but the results are inconsistent.
-	* Next step: Develop a more nuanced understanding of the relationship between consciousness and reportability, including its limitations and potential biases.
-
-**Correction History — Claims retracted or directions explicitly ruled out.**
-
-* The claim that a universal bound of ≤10⁻⁶ on Born rule violations is established across all experimental platforms has been retracted.
-* The prior claim of retraction of a "quantum observer" experiment was unsupported and has been retracted.
-* The Minimal Consciousness Transition Experiment (MCTE) has been retracted due to its inability to serve as a decisive test between H₁ and H₂.
-
-**Valence Mapping — New observable patterns in how the operator engages — what produced friction, what worked.**
-
-* The operator engaged in a high level of critical thinking and questioning, producing friction in the form of challenges to assumptions and ideas.
-* The operator's willingness to revise their understanding and consider alternative perspectives worked to clarify and refine the ideas presented.
-* The use of decision trees and other visual aids helped to organize and structure the discussion, making it easier to follow and understand.
-
-**Identity — Update only if something significant shifted in background, expertise, or working style.**
-
-* The operator's background and expertise in the field of consciousness studies have not changed, but their working style has shifted to be more collaborative and open to alternative perspectives.
+Climate Notes:
+NO CHANGE
