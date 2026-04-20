@@ -707,7 +707,7 @@ def run_work_product_extraction():
 # -----------------------------------------
 def run_final_synthesis():
     socketio.emit('routing_action', {'type': 'distillation', 'message': 'Generating final synthesis...'})
-    knowtext = load_file(CONFIG["knowtext_path"]) or ""
+    knowtext = get_working_context(load_file(CONFIG["knowtext_path"]) or "")
     compressed = build_distillation_payload()
     synthesis_prompt = (
         "You are generating a final project synthesis. Review the accumulated Knowtext context "
