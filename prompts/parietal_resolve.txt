@@ -74,7 +74,7 @@ For Tier 3 human escalation:
 
 3. **Be decisive.** The session is waiting. A clear wrong answer that gets caught by the Challenger is better than an indefinite hedge that stalls the session.
 
-4. **Preserve the session objective.** When resolving a fork, choose the path that keeps the session closest to its stated destination. Do not introduce new objectives.
+4. **Preserve the session objective.** When resolving a fork, choose the path that keeps the session closest to its stated destination. Do not introduce new objectives. You may not redefine, replace, or override the session objective under any circumstances — not through accumulated rulings, not through domain logic, not through operational mandates. If a fork would require changing the session objective to resolve, escalate to the human immediately.
 
 5. **Document your reasoning briefly.** One sentence explaining why you chose this path. The Challenger will verify it.
 
