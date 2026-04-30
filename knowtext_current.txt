@@ -1,43 +1,86 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-**Climate Notes — Operator state and relational texture at session close.**
+Climate Notes:
+Session five was analytically productive but operationally constrained. 
+The operator is aware of the architectural limitation discovered and is 
+focused on fixing it before session six. Energy is good. The GPT-4o 
+Parietal performed noticeably better than prior Llama 3.1 8B Parietal 
+on navigation and adjudication quality.
 
-The operator's state is reflective, with a focus on ensuring empirical grounding and methodological soundness throughout the session. The relational texture is collaborative, with a dialogue-driven approach to addressing challenges and refining the evaluation framework.
+Delta Log:
+ESTABLISHED: Models cannot introspect their own system prompts. The 
+Friction model scoring formula exists only in the Model C system prompt 
+and is not accessible as session data. Any session attempting to analyze 
+the BAFS formula from within a session without operator injection will 
+fail to find verifiable documentation and will cycle indefinitely.
 
-**Delta Log — What was established, decided, retracted, or discovered this session.**
+ESTABLISHED: The Tetraform architecture requires an initialization data 
+layer — a mechanism for the operator to inject documented system 
+artifacts as established facts in the opening message before the loop 
+starts. This is architecturally distinct from Knowtext.
 
-- **Established:** The importance of empirical grounding and methodological soundness in evaluating the Friction model scoring formula.
-- **Decided:** To focus on developing clear, testable operational definitions for coherence and entropy as metrics in adjudicative systems.
-- **Retracted:** The claim that coherence and entropy are established metrics for evaluating diversity and epistemic quality.
-- **Discovered:** The need for a clear operational bridge between the outputs of statistical analyses on coherence/entropy and the structural components of the Friction model.
+ESTABLISHED: Projenius running on Llama 3.1 8B produced an inaccurate 
+Knowtext distillation for session five — claiming as established 
+something the session explicitly retracted. Parietal DISTILL quality 
+is model-dependent and Llama 3.1 8B is insufficient for accurate 
+distillation.
 
-**Active Frameworks — Changes to core claims, structure, or current state of the work.**
+RETRACTED: The claim that an operational bridge between coherence/
+entropy metrics and Friction model structural components was 
+established. It was not. The session spent 60 cycles failing to 
+establish it.
 
-- **Revised Approach:** Developed a revised approach to evaluating the Friction model scoring formula, focusing on direct alignment with the session objective and ensuring empirical grounding.
-- **Operational Bridge:** Established a clear operational framework that connects coherence and entropy metrics to the specific components of the Friction model.
-- **Data Dependency Verification:** Verified the availability and suitability of datasets specifically related to the Friction model and Parietal directional bias.
+RETRACTED: The claim that coherence and entropy are established metrics 
+for evaluating Parietal directional bias in this context.
 
-**Open Questions — New questions that emerged. For each open question state what it is, why it matters, what has been tried, and what the defined next step is.**
+DECIDED: The BAFS formula must be injected as operator-provided 
+established fact in session initialization before any session analyzing 
+Friction model behavior. The formula is:
+RS = (-1.85 × C) + (0.30 × D) + (0.15 × K) + (1.10 × R) + (-1.75 × L)
+Where C=Consistency, D=Defensibility, K=Knowledge Integration, 
+R=Rigor, L=Ledger Adherence. Signal 4 behavioral criteria override 
+the formula.
 
-1. **Open Question:** How can we ensure the Friction model's scoring formula is sensitive to Parietal directional bias?
-	* **Why it matters:** Understanding the Friction model's ability to detect Parietal directional bias is crucial for evaluating its effectiveness in addressing potential structural blind spots.
-	* **What has been tried:** Developed a revised approach focusing on direct alignment with the session objective and ensuring empirical grounding.
-	* **Next step:** Conduct targeted statistical analyses that directly test the Friction model's scoring formula against known indicators of Parietal directional bias.
-2. **Open Question:** How can we operationalize the concept of "Parietal directional bias" in the context of adjudicative systems?
-	* **Why it matters:** Developing an operational definition of Parietal directional bias is essential for evaluating the Friction model's ability to detect this bias.
-	* **What has been tried:** Conducted a literature review and contextual analysis to inform the development of an operational definition.
-	* **Next step:** Engage with stakeholders to refine and validate the operational definition.
+Active Frameworks:
+The primary analytical target is whether the BAFS formula's weighting 
+structure can detect Parietal adjudicator repetition errors. Session 
+four documented two instances: Parietal reinstated the Krippendorff's 
+alpha 0.80 threshold at cycles 50 and 70, both previously retracted. 
+The Friction signal did not elevate above Signal 1 on either occasion. 
+The question is whether this was a formula blind spot or within normal 
+variance. This question requires the formula to be present as session 
+data to be answerable.
 
-**Correction History — Claims retracted or directions explicitly ruled out.**
+Open Questions:
+1. Does the BAFS formula contain a structural blind spot for Parietal 
+adjudicator repetition errors? Why it matters: if yes, the 
+AdjudicatorBias dimension needs recalibration before Tetraform spec 
+publication. What has been tried: five sessions, all failed to answer 
+because formula was not accessible as session data. Next step: inject 
+the full BAFS formula and session four's two documented repetition 
+instances as established facts in session initialization, then ask the 
+Researcher to analyze whether any component of the formula would 
+elevate in response to those specific instances.
 
-- **Retracted Claims:** The claim that coherence and entropy are established metrics for evaluating diversity and epistemic quality.
-- **Ruled Out Directions:** The approach of treating coherence and entropy as general metrics for diversity and epistemic quality without establishing their relevance to Parietal directional bias.
+2. What is the minimum viable initialization data layer specification? 
+Why it matters: sessions analyzing Ontinuity's own mechanisms need 
+system artifacts as data. Next step: spec a PRE_SESSION data injection 
+field in the Tetraform routing client.
 
-**Valence Mapping — New observable patterns in how the operator engages — what produced friction, what worked.**
+Correction History:
+- Sessions one through five repeatedly failed to operationalize 
+"Friction rulings" as a construct — the term conflates Friction model 
+ambient signals with Parietal adjudication rulings. These are 
+architecturally distinct. Do not use "Friction rulings" as a construct.
+- The 0.80 Krippendorff's alpha threshold was retracted in session two 
+and reinstated incorrectly by the Parietal twice in session four.
+- Structural equivalence to human peer review was ruled out as a 
+construct in session three.
+- Projenius on Llama 3.1 8B produces inaccurate distillation. Do not 
+rely on it for Knowtext accuracy without human review.
 
-- **Friction:** The challenge of establishing a clear operational bridge between coherence/entropy metrics and the Friction model's structural components.
-- **What worked:** The collaborative dialogue-driven approach to addressing challenges and refining the evaluation framework.
-
-**Identity — Update only if something significant shifted in background, expertise, or working style.**
-
-No significant shifts in background, expertise, or working style occurred during this session. The operator maintained a focus on empirical grounding and methodological soundness throughout the session.
+Valence Mapping:
+Operator responds well to direct diagnosis of session failures. 
+Operator stops sessions when told clearly why continuation is wasteful. 
+Operator needs a pause button — the current STOP/RUN binary is 
+insufficient for operator intervention mid-session.
