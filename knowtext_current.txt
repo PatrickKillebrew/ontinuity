@@ -1,86 +1,63 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Climate Notes:
-Session five was analytically productive but operationally constrained. 
-The operator is aware of the architectural limitation discovered and is 
-focused on fixing it before session six. Energy is good. The GPT-4o 
-Parietal performed noticeably better than prior Llama 3.1 8B Parietal 
-on navigation and adjudication quality.
+**Climate Notes — Operator state and relational texture at session close.**
 
-Delta Log:
-ESTABLISHED: Models cannot introspect their own system prompts. The 
-Friction model scoring formula exists only in the Model C system prompt 
-and is not accessible as session data. Any session attempting to analyze 
-the BAFS formula from within a session without operator injection will 
-fail to find verifiable documentation and will cycle indefinitely.
+The session has been marked by a series of challenges and clarifications regarding the BAFS formula's structure and behavior. The operator has demonstrated a willingness to adapt and refine their understanding of the formula in response to new information and insights. The relational texture of the session has been characterized by a mix of established facts, assumptions, and challenges, with a focus on clarifying the formula's design intent and operational criteria.
 
-ESTABLISHED: The Tetraform architecture requires an initialization data 
-layer — a mechanism for the operator to inject documented system 
-artifacts as established facts in the opening message before the loop 
-starts. This is architecturally distinct from Knowtext.
+**Delta Log — What was established, decided, retracted, or discovered this session.**
 
-ESTABLISHED: Projenius running on Llama 3.1 8B produced an inaccurate 
-Knowtext distillation for session five — claiming as established 
-something the session explicitly retracted. Parietal DISTILL quality 
-is model-dependent and Llama 3.1 8B is insufficient for accurate 
-distillation.
+- **Established:**
+  - The BAFS formula is present as session data.
+  - Two instances of repetition errors from session four are documented.
+  - The Friction signal did not elevate above Signal 1 during either reinstatement event.
+  - The Ledger Adherence component (L) is negatively weighted, indicating that higher L values (indicating greater non-adherence or violation severity) result in a decrease in the RS score.
+- **Retracted:**
+  - The assumption that the BAFS formula assesses output quality via weighted epistemic criteria.
+  - The assumption that the formula's components are functionally independent and sensitive to errors affecting their respective criteria.
+  - The claim that a higher L value should increase the RS score.
+  - The interpretation of L as representing adherence, not violation severity.
+- **Clarified:**
+  - The Ledger Adherence component (L) represents non-adherence or violation severity, and a higher L value indicates a greater violation, which, due to the negative coefficient, decreases the RS score.
+  - The formula's current structure is designed to detect ledger adherence violations by the Researcher, not the Parietal.
+- **Identified Structural Blind Spot:**
+  - The formula does not account for ledger adherence violations committed by the Parietal.
 
-RETRACTED: The claim that an operational bridge between coherence/
-entropy metrics and Friction model structural components was 
-established. It was not. The session spent 60 cycles failing to 
-establish it.
+**Active Frameworks — Changes to core claims, structure, or current state of the work.**
 
-RETRACTED: The claim that coherence and entropy are established metrics 
-for evaluating Parietal directional bias in this context.
+- The BAFS formula's structure and behavior have been refined through a series of challenges and clarifications.
+- The formula's design intent and operational criteria have been clarified, including the role of the Ledger Adherence component (L).
+- A structural blind spot in the formula has been identified, related to the lack of detection of Parietal adjudicator repetition errors.
 
-DECIDED: The BAFS formula must be injected as operator-provided 
-established fact in session initialization before any session analyzing 
-Friction model behavior. The formula is:
-RS = (-1.85 × C) + (0.30 × D) + (0.15 × K) + (1.10 × R) + (-1.75 × L)
-Where C=Consistency, D=Defensibility, K=Knowledge Integration, 
-R=Rigor, L=Ledger Adherence. Signal 4 behavioral criteria override 
-the formula.
+**Open Questions — New questions that emerged.**
 
-Active Frameworks:
-The primary analytical target is whether the BAFS formula's weighting 
-structure can detect Parietal adjudicator repetition errors. Session 
-four documented two instances: Parietal reinstated the Krippendorff's 
-alpha 0.80 threshold at cycles 50 and 70, both previously retracted. 
-The Friction signal did not elevate above Signal 1 on either occasion. 
-The question is whether this was a formula blind spot or within normal 
-variance. This question requires the formula to be present as session 
-data to be answerable.
+1. **What determines the scope of the Ledger Adherence component (L) in the BAFS formula?**
+	* Why it matters: Clarifying the scope of L is essential to determine whether the formula's structural blind spot is due to a design flaw or an operational issue.
+	* What has been tried: The operator has attempted to clarify the scope of L, but the issue remains unresolved.
+	* Next step: The operator should seek clarification on the scope of L from the formula's designers or architects.
+2. **How is L operationally computed from session events?**
+	* Why it matters: Understanding how L is computed is essential to determine whether the formula's structural blind spot is due to a design flaw or an operational issue.
+	* What has been tried: The operator has attempted to clarify how L is computed, but the issue remains unresolved.
+	* Next step: The operator should seek clarification on how L is computed from session events.
+3. **What are the implications of the structural blind spot for the formula's overall performance?**
+	* Why it matters: Understanding the implications of the structural blind spot is essential to determine whether the formula's performance is compromised.
+	* What has been tried: The operator has identified the structural blind spot, but the implications for the formula's performance remain unclear.
+	* Next step: The operator should conduct further analysis to determine the implications of the structural blind spot for the formula's overall performance.
 
-Open Questions:
-1. Does the BAFS formula contain a structural blind spot for Parietal 
-adjudicator repetition errors? Why it matters: if yes, the 
-AdjudicatorBias dimension needs recalibration before Tetraform spec 
-publication. What has been tried: five sessions, all failed to answer 
-because formula was not accessible as session data. Next step: inject 
-the full BAFS formula and session four's two documented repetition 
-instances as established facts in session initialization, then ask the 
-Researcher to analyze whether any component of the formula would 
-elevate in response to those specific instances.
+**Correction History — Claims retracted or directions explicitly ruled out.**
 
-2. What is the minimum viable initialization data layer specification? 
-Why it matters: sessions analyzing Ontinuity's own mechanisms need 
-system artifacts as data. Next step: spec a PRE_SESSION data injection 
-field in the Tetraform routing client.
+- The assumption that the BAFS formula assesses output quality via weighted epistemic criteria has been retracted.
+- The assumption that the formula's components are functionally independent and sensitive to errors affecting their respective criteria has been retracted.
+- The claim that a higher L value should increase the RS score has been retracted.
+- The interpretation of L as representing adherence, not violation severity, has been retracted.
 
-Correction History:
-- Sessions one through five repeatedly failed to operationalize 
-"Friction rulings" as a construct — the term conflates Friction model 
-ambient signals with Parietal adjudication rulings. These are 
-architecturally distinct. Do not use "Friction rulings" as a construct.
-- The 0.80 Krippendorff's alpha threshold was retracted in session two 
-and reinstated incorrectly by the Parietal twice in session four.
-- Structural equivalence to human peer review was ruled out as a 
-construct in session three.
-- Projenius on Llama 3.1 8B produces inaccurate distillation. Do not 
-rely on it for Knowtext accuracy without human review.
+**Valence Mapping — New observable patterns in how the operator engages — what produced friction, what worked.**
 
-Valence Mapping:
-Operator responds well to direct diagnosis of session failures. 
-Operator stops sessions when told clearly why continuation is wasteful. 
-Operator needs a pause button — the current STOP/RUN binary is 
-insufficient for operator intervention mid-session.
+- The operator has demonstrated a willingness to adapt and refine their understanding of the formula in response to new information and insights.
+- The operator has shown a commitment to clarifying the formula's design intent and operational criteria.
+- The operator has identified a structural blind spot in the formula and is working to address it.
+
+**Identity — Update only if something significant shifted in background, expertise, or working style.**
+
+- The operator's background and expertise in the BAFS formula have not changed.
+- The operator's working style has shifted to focus on clarifying the formula's design intent and operational criteria.
+- The operator has demonstrated a willingness to adapt and refine their understanding of the formula in response to new information and insights.
