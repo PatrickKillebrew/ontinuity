@@ -2,48 +2,42 @@ KNOWTEXT SCHEMA VERSION: 1.1
 
 **Climate Notes — Operator state and relational texture at session close.**
 
-The session has progressed through multiple cycles of refinement, addressing foundational ambiguities, methodological flaws, and theoretical grounding. The operator has demonstrated adaptability, rigor, and a commitment to grounded theory. The relational texture has shifted from challenge to alignment, with the operator acknowledging and addressing prior criticisms. The operator's state is one of engagement, with a focus on refining the analysis to ensure methodological soundness and theoretical justification.
+The operator's state is reflective, with a focus on ensuring empirical grounding and methodological soundness throughout the session. The relational texture is collaborative, with a dialogue-driven approach to addressing challenges and refining the evaluation framework.
 
 **Delta Log — What was established, decided, retracted, or discovered this session.**
 
-* Established:
-	+ The necessity of inductive open-coding before defining constructs like "Friction Rulings" or measuring diversity.
-	+ The importance of verifying consensus on operational definitions and chosen metrics.
-	+ The suitability of entropy as a descriptive metric for diversity.
-* Decided:
-	+ To prioritize the analysis of "Friction Rulings" due to their established link to bias detection and epistemic quality.
-	+ To use coherence as the primary metric to quantify epistemic quality.
-* Retracted:
-	+ The claim that the sigmoid model is the established best-fit for the relationship between Parietal ruling diversity and session epistemic quality.
-	+ The assumption that "Parietal ruling diversity" is a coherent object of study.
-* Discovered:
-	+ A positive correlation between increased diversity in "Friction" rulings and higher coherence scores, indicating improved epistemic quality.
+- **Established:** The importance of empirical grounding and methodological soundness in evaluating the Friction model scoring formula.
+- **Decided:** To focus on developing clear, testable operational definitions for coherence and entropy as metrics in adjudicative systems.
+- **Retracted:** The claim that coherence and entropy are established metrics for evaluating diversity and epistemic quality.
+- **Discovered:** The need for a clear operational bridge between the outputs of statistical analyses on coherence/entropy and the structural components of the Friction model.
 
 **Active Frameworks — Changes to core claims, structure, or current state of the work.**
 
-* The core claim has shifted from assuming a sigmoid model to using entropy as a descriptive metric for diversity.
-* The structure of the analysis has been revised to focus on "Friction Rulings" and use coherence as the primary metric for epistemic quality.
-* The current state of the work is one of refinement, with a focus on ensuring methodological soundness and theoretical justification.
+- **Revised Approach:** Developed a revised approach to evaluating the Friction model scoring formula, focusing on direct alignment with the session objective and ensuring empirical grounding.
+- **Operational Bridge:** Established a clear operational framework that connects coherence and entropy metrics to the specific components of the Friction model.
+- **Data Dependency Verification:** Verified the availability and suitability of datasets specifically related to the Friction model and Parietal directional bias.
 
-**Open Questions — New questions that emerged.**
+**Open Questions — New questions that emerged. For each open question state what it is, why it matters, what has been tried, and what the defined next step is.**
 
-* What are the implications of the positive correlation between "Friction" ruling diversity and epistemic quality for decision-making processes?
-* How can the findings be applied to improve decision-making outcomes in various contexts?
-* What are the potential limitations and biases of the current analysis, and how can they be addressed in future research?
+1. **Open Question:** How can we ensure the Friction model's scoring formula is sensitive to Parietal directional bias?
+	* **Why it matters:** Understanding the Friction model's ability to detect Parietal directional bias is crucial for evaluating its effectiveness in addressing potential structural blind spots.
+	* **What has been tried:** Developed a revised approach focusing on direct alignment with the session objective and ensuring empirical grounding.
+	* **Next step:** Conduct targeted statistical analyses that directly test the Friction model's scoring formula against known indicators of Parietal directional bias.
+2. **Open Question:** How can we operationalize the concept of "Parietal directional bias" in the context of adjudicative systems?
+	* **Why it matters:** Developing an operational definition of Parietal directional bias is essential for evaluating the Friction model's ability to detect this bias.
+	* **What has been tried:** Conducted a literature review and contextual analysis to inform the development of an operational definition.
+	* **Next step:** Engage with stakeholders to refine and validate the operational definition.
 
 **Correction History — Claims retracted or directions explicitly ruled out.**
 
-* The claim that the sigmoid model is the established best-fit for the relationship between Parietal ruling diversity and session epistemic quality has been retracted.
-* The assumption that "Parietal ruling diversity" is a coherent object of study has been retracted.
-* The direction of using a specific functional form (sigmoid) to model the diversity-quality relationship has been ruled out.
+- **Retracted Claims:** The claim that coherence and entropy are established metrics for evaluating diversity and epistemic quality.
+- **Ruled Out Directions:** The approach of treating coherence and entropy as general metrics for diversity and epistemic quality without establishing their relevance to Parietal directional bias.
 
 **Valence Mapping — New observable patterns in how the operator engages — what produced friction, what worked.**
 
-* The operator engaged in a cycle of refinement, addressing foundational ambiguities and methodological flaws.
-* The operator demonstrated adaptability and a commitment to grounded theory.
-* The use of open-coding and codebook development produced friction, but ultimately led to a more robust analysis.
-* The operator's engagement with stakeholders and the iterative refinement process worked to ensure methodological soundness and theoretical justification.
+- **Friction:** The challenge of establishing a clear operational bridge between coherence/entropy metrics and the Friction model's structural components.
+- **What worked:** The collaborative dialogue-driven approach to addressing challenges and refining the evaluation framework.
 
 **Identity — Update only if something significant shifted in background, expertise, or working style.**
 
-* No significant shifts in background, expertise, or working style have occurred during this session. The operator has maintained a consistent focus on methodological soundness and theoretical justification.
+No significant shifts in background, expertise, or working style occurred during this session. The operator maintained a focus on empirical grounding and methodological soundness throughout the session.
