@@ -3,6 +3,17 @@ import re
 import os
 import sys
 from datetime import datetime
+import unicodedata
+
+def clean_text(text):
+    """Normalize unicode smart quotes and punctuation."""
+    if not text:
+        return text
+    text = text.replace('\u201c', '"').replace('\u201d', '"')
+    text = text.replace('\u2018', "'").replace('\u2019', "'")
+    text = text.replace('\u2014', '--').replace('\u2013', '-')
+    return text
+
 
 # ─────────────────────────────────────────────
 
@@ -320,6 +331,7 @@ def extract_and_store(log_text, db_path=DEFAULT_DB_PATH):
 Main entry point. Parse log_text and write to database.
 Returns dict with counts of rows inserted.
 “””
+log_text = clean_text(log_text)
 conn = init_db(db_path)
 c    = conn.cursor()
 
