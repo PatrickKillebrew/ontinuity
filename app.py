@@ -990,13 +990,48 @@ def run_session_loop(objective, start_fresh=False):
         distilled = run_distillation_with_timeout(run_distillation) or False
     if not distilled:
         socketio.emit('routing_action', {'type': 'distillation', 'message': 'Distillation skipped — session complete without Knowtext update.'})
-    run_work_product_extraction()
+        run_work_product_extraction()
     write_session_log()
+
+    # Step 4.5 — Behavioral database extraction
+    try:
+        from extract_to_db import extract_and_store
+        session_log_content = next(
+            (a["content"] for a in active_session["artifacts"] 
+             if a["label"] == "Session Log"), None
+        )
+        if session_log_content:
+            db_result = extract_and_store(
+                session_log_content,
+                "ontinuity_behavioral_data.db"
+            )
+            socketio.emit('routing_action', {
+                'type': 'distillation',
+                'message': f"Behavioral database updated. "
+                           f"{db_result['challenges']} challenges, "
+                           f"{db_result['signals']} signals recorded."
+            })
+            commit_to_github(
+                "ontinuity_behavioral_data.db",
+                f"Session data: {active_session['start_time']}"
+            )
+        else:
+            socketio.emit('routing_action', {
+                'type': 'distillation',
+                'message': 'Database extraction skipped — session log not found.'
+            })
+    except Exception as e:
+        socketio.emit('routing_action', {
+            'type': 'distillation',
+            'message': f'Database extraction failed: {str(e)}'
+        })
+
     active_session["running"] = False
     socketio.emit('session_complete', {
         'cycles': active_session["cycle"],
         'artifacts_count': len(active_session["artifacts"])
     })
+
 
 # -----------------------------------------
 # FLASK ROUTES
