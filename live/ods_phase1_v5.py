@@ -27,6 +27,9 @@ Changes from original v5:
 """
 
 import gymnasium as gym
+import sys
+import os
+from datetime import datetime
 import numpy as np
 import gym_donkeycar  # noqa: F401 - registers environments
 from mission_state import MissionState
@@ -118,6 +121,21 @@ def advance_phase(cte):
 # -----------------------------------------
 
 if __name__ == "__main__":
+    # SESSION LOGGING - Python tee, UTF-8, bypasses PowerShell encoding
+    log_dir = r"C:\donkeycar\sessions"
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, f"session_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt")
+    log_file = open(log_path, "w", encoding="utf-8")
+
+    class Tee:
+        def __init__(self, *streams): self.streams = streams
+        def write(self, data):
+            for s in self.streams: s.write(data)
+        def flush(self):
+            for s in self.streams: s.flush()
+
+    sys.stdout = Tee(sys.__stdout__, log_file)
+    sys.stderr = Tee(sys.__stderr__, log_file)
     print("[ODS] Ontinuity Driving System - Phase 1 Brainstem v5")
     print("[ODS] Sensor pairs: FORWARD active | LEFT REAR RIGHT ready")
     print(f"[ODS] Connecting to simulator at {SIM_HOST}:{SIM_PORT}")
@@ -326,3 +344,6 @@ if __name__ == "__main__":
     finally:
         env.close()
         print("[ODS] Environment closed.")
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+        log_file.close()
