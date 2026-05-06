@@ -1,0 +1,187 @@
+[ODS] Ontinuity Driving System - Phase 1 Brainstem v5
+[ODS] Sensor pairs: FORWARD active | LEFT REAR RIGHT ready
+[ODS] Connecting to simulator at 127.0.0.1:9091
+[ODS] Make sure track is loaded in simulator
+
+starting DonkeyGym env
+Setting default: start_delay 5.0
+Setting default: max_cte 8.0
+Setting default: frame_skip 1
+Setting default: cam_resolution (120, 160, 3)
+Setting default: log_level 20
+Setting default: steer_limit 1.0
+Setting default: throttle_min 0.0
+Setting default: throttle_max 1.0
+INFO:gym_donkeycar.core.client:connecting to 127.0.0.1:9091 
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:231: UserWarning: [33mWARN: Box low's precision lowered by casting to float32, current low.dtype=float64[0m
+  gym.logger.warn(
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:297: UserWarning: [33mWARN: Box high's precision lowered by casting to float32, current high.dtype=float64[0m
+  gym.logger.warn(
+INFO:gym_donkeycar.envs.donkey_sim:on need car config
+INFO:gym_donkeycar.envs.donkey_sim:sending car config.
+INFO:gym_donkeycar.envs.donkey_sim:sim started!
+INFO:gym_donkeycar.envs.donkey_sim:done sending lidar config., {'deg_per_sweep_inc': '2.0', 'deg_ang_down': '0.0', 'deg_ang_delta': '-1.0', 'num_sweeps_levels': '1', 'max_range': '50.0', 'noise': '0.4', 'offset_x': '0.0', 'offset_y': '0.5', 'offset_z': '0.5', 'rot_x': '0.0'}
+[ODS] Connected. Car reset. Starting drive sequence.
+[ODS] Phase: ORIENTING
+
+[ODS] Ontinuity outer loop started
+[ONTINUITY] Outer loop started
+
+[ODS] FORWARD MIN: 47.71m
+[ODS] ORIENTING | CTE: -2.937 | Steer: 1.000 | Throttle: 0.15 | Speed: 0.12 | Yaw rate: 0.9004
+[ODS] FORWARD MIN: 24.69m
+[ODS] ORIENTING | CTE: -2.403 | Steer: 1.000 | Throttle: 0.15 | Speed: 0.23 | Yaw rate: 1.7414
+[ODS] FORWARD MIN: 15.25m
+[ODS] ORIENTING | CTE: -0.961 | Steer: 0.185 | Throttle: 0.15 | Speed: 0.37 | Yaw rate: 1.2212
+[ODS] Phase: CORRECTING
+[ODS] FORWARD MIN: 20.48m
+[ODS] CORRECTING | CTE: 1.163 | Steer: -1.000 | Throttle: 0.28 | Speed: 0.56 | Yaw rate: 4.2647
+[ODS] FORWARD MIN: 36.49m
+[ODS] CORRECTING | CTE: 0.238 | Steer: 0.260 | Throttle: 0.28 | Speed: 0.97 | Yaw rate: 2.1298
+[ODS] FORWARD MIN: 32.05m
+[ODS] CORRECTING | CTE: -0.424 | Steer: 0.002 | Throttle: 0.28 | Speed: 1.35 | Yaw rate: 1.0830
+[ODS] Phase: TRACKING - center acquired
+[ODS] FORWARD MIN: 44.63m
+[ODS] TRACKING | CTE: -0.095 | Steer: 0.126 | Throttle: 0.80 | Speed: 2.03 | Yaw rate: 1.0661
+[ODS] FORWARD MIN: 38.85m
+[ODS] TRACKING | CTE: -0.187 | Steer: 0.055 | Throttle: 0.80 | Speed: 2.10 | Yaw rate: 1.2416
+[ODS] FORWARD MIN: 39.29m
+[ODS] TRACKING | CTE: 0.006 | Steer: -0.002 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 0.1649
+[ODS] FORWARD MIN: 36.35m
+[ODS] TRACKING | CTE: -0.099 | Steer: 0.036 | Throttle: 0.80 | Speed: 2.00 | Yaw rate: 0.5598
+[ODS] FORWARD MIN: 99.00m
+[ODS] TRACKING | CTE: -0.064 | Steer: 0.024 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 0.2940
+[ODS] FORWARD MIN: 99.00m
+[ODS] TRACKING | CTE: 0.002 | Steer: -0.002 | Throttle: 0.80 | Speed: 2.04 | Yaw rate: 0.0626
+[ODS] FORWARD MIN: 48.52m
+[ODS] TRACKING | CTE: -0.004 | Steer: 0.001 | Throttle: 0.80 | Speed: 2.03 | Yaw rate: 0.0372
+[ODS] FORWARD MIN: 36.27m
+[ODS] TRACKING | CTE: -0.003 | Steer: 0.001 | Throttle: 0.80 | Speed: 2.03 | Yaw rate: 0.0381
+[ODS] FORWARD MIN: 24.28m
+[ODS] TRACKING | CTE: 0.016 | Steer: -0.015 | Throttle: 0.80 | Speed: 2.02 | Yaw rate: 0.1020
+[ODS] FORWARD MIN: 14.06m
+[ODS] TRACKING | CTE: 0.015 | Steer: 0.032 | Throttle: 0.80 | Speed: 2.00 | Yaw rate: 0.4691
+[ODS] FORWARD MIN: 47.97m
+[ODS] TRACKING | CTE: -1.314 | Steer: 1.000 | Throttle: 0.80 | Speed: 1.93 | Yaw rate: 10.7855
+[ODS] FORWARD MIN: 38.74m
+[ODS] TRACKING | CTE: 0.379 | Steer: -0.209 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 0.6279
+[ODS] FORWARD MIN: 40.33m
+[ODS] TRACKING | CTE: -0.578 | Steer: -0.186 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 13.2250
+[ODS] FORWARD MIN: 48.97m
+[ODS] TRACKING | CTE: 0.014 | Steer: 0.005 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 0.1880
+[ODS] FORWARD MIN: 99.00m
+[ODS] TRACKING | CTE: 0.111 | Steer: 0.006 | Throttle: 0.80 | Speed: 2.04 | Yaw rate: 0.0484
+[ODS] FORWARD MIN: 99.00m
+[ODS] TRACKING | CTE: 0.153 | Steer: -0.050 | Throttle: 0.80 | Speed: 2.02 | Yaw rate: 0.8044
+[ODS] FORWARD MIN: 99.00m
+[ODS] TRACKING | CTE: 0.147 | Steer: -0.043 | Throttle: 0.80 | Speed: 2.00 | Yaw rate: 0.8400
+[ODS] FORWARD MIN: 41.90m
+[ODS] TRACKING | CTE: 0.221 | Steer: -0.091 | Throttle: 0.80 | Speed: 2.02 | Yaw rate: 1.3959
+[ODS] FORWARD MIN: 29.32m
+[ODS] TRACKING | CTE: 0.161 | Steer: -0.054 | Throttle: 0.80 | Speed: 2.04 | Yaw rate: 0.6614
+[ODS] FORWARD MIN: 30.95m
+[ODS] TRACKING | CTE: 0.150 | Steer: -0.068 | Throttle: 0.80 | Speed: 2.02 | Yaw rate: 0.7303
+[ODS] FORWARD MIN: 47.22m
+[ODS] TRACKING | CTE: 0.171 | Steer: -0.075 | Throttle: 0.80 | Speed: 2.00 | Yaw rate: 0.8981
+[ODS] FORWARD MIN: 43.34m
+[ODS] TRACKING | CTE: 0.121 | Steer: -0.139 | Throttle: 0.80 | Speed: 2.02 | Yaw rate: 0.4981
+[ODS] FORWARD MIN: 19.97m
+[ODS] TRACKING | CTE: 0.277 | Steer: -0.068 | Throttle: 0.80 | Speed: 2.02 | Yaw rate: 2.0946
+[ODS] FORWARD MIN: 13.01m
+[ODS] TRACKING | CTE: -0.008 | Steer: -0.005 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 0.0046
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] FORWARD MIN: 10.47m
+[ODS] TRACKING | CTE: 0.127 | Steer: -0.100 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 1.0232
+[ONTINUITY] GATE DETECTED — symmetry 0.13m R:7.8m L:8.0m CTE:0.34 — throttle_ceiling → 0.2
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ONTINUITY] GATE CLEARED — throttle_ceiling restored
+[ODS] FORWARD MIN: 7.10m
+[ODS] TRACKING | CTE: -1.439 | Steer: 1.000 | Throttle: 0.80 | Speed: 1.72 | Yaw rate: 12.9807
+[ONTINUITY] GATE DETECTED — symmetry 1.79m R:8.3m L:6.5m CTE:-1.34 — throttle_ceiling → 0.2
+[ONTINUITY] STEERING BIAS RIGHT 0.64 — obs_steer:0.0 CTE:-1.34 speed_factor:0.74
+[ODS] OBSTACLE! steering RIGHT
+[ONTINUITY] GATE CLEARED — throttle_ceiling restored
+[ONTINUITY] STEERING BIAS released
+[ODS] FORWARD MIN: 38.07m
+[ODS] TRACKING | CTE: 0.892 | Steer: 0.160 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 12.1374
+[ODS] FORWARD MIN: 30.92m
+[ODS] TRACKING | CTE: 0.167 | Steer: -0.158 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 1.2168
+[ODS] FORWARD MIN: 31.52m
+[ODS] TRACKING | CTE: 0.424 | Steer: -0.247 | Throttle: 0.80 | Speed: 1.98 | Yaw rate: 3.9598
+[ODS] FORWARD MIN: 23.24m
+[ODS] TRACKING | CTE: 0.130 | Steer: -0.129 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 1.1361
+[ODS] FORWARD MIN: 16.07m
+[ODS] TRACKING | CTE: 0.288 | Steer: -0.137 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 1.9894
+[ONTINUITY] GATE DETECTED — symmetry 0.00m R:7.4m L:7.4m CTE:0.47 — throttle_ceiling → 0.2
+[ODS] OBSTACLE! steering LEFT
+[ODS] FORWARD MIN: 4.93m
+[ODS] OBSTACLE! steering LEFT
+[ODS] TRACKING | CTE: 0.528 | Steer: -0.369 | Throttle: 0.80 | Speed: 2.04 | Yaw rate: 2.6429
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering RIGHT
+[ONTINUITY] GATE CLEARED — throttle_ceiling restored
+[ODS] FORWARD MIN: 12.13m
+[ODS] TRACKING | CTE: 0.151 | Steer: 0.037 | Throttle: 0.80 | Speed: 1.94 | Yaw rate: 1.1578
+[ODS] FORWARD MIN: 49.43m
+[ODS] TRACKING | CTE: -0.374 | Steer: -0.327 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 9.0998
+[ODS] FORWARD MIN: 20.07m
+[ODS] TRACKING | CTE: 0.261 | Steer: -0.083 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 1.6872
+[ODS] FORWARD MIN: 14.71m
+[ODS] TRACKING | CTE: -0.026 | Steer: 0.061 | Throttle: 0.80 | Speed: 1.98 | Yaw rate: 0.6485
+[ODS] FORWARD MIN: 19.03m
+[ODS] TRACKING | CTE: 0.004 | Steer: -0.015 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 0.3308
+[ODS] FORWARD MIN: 21.22m
+[ODS] TRACKING | CTE: -0.003 | Steer: 0.001 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 0.0162
+[ODS] FORWARD MIN: 23.15m
+[ODS] TRACKING | CTE: -0.000 | Steer: 0.000 | Throttle: 0.80 | Speed: 2.06 | Yaw rate: 0.0142
+[ODS] FORWARD MIN: 47.79m
+[ODS] TRACKING | CTE: -0.001 | Steer: 0.000 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 0.0162
+[ODS] FORWARD MIN: 37.02m
+[ODS] TRACKING | CTE: -0.001 | Steer: 0.000 | Throttle: 0.80 | Speed: 2.05 | Yaw rate: 0.0161
+[ODS] FORWARD MIN: 25.88m
+[ODS] TRACKING | CTE: -0.000 | Steer: 0.000 | Throttle: 0.80 | Speed: 2.04 | Yaw rate: 0.0147
+[ODS] FORWARD MIN: 29.52m
+[ODS] TRACKING | CTE: -0.287 | Steer: 0.114 | Throttle: 0.80 | Speed: 2.02 | Yaw rate: 3.0723
+[ODS] FORWARD MIN: 13.49m
+[ODS] TRACKING | CTE: -0.040 | Steer: 0.031 | Throttle: 0.80 | Speed: 2.01 | Yaw rate: 0.3155
+[ONTINUITY] GATE DETECTED — symmetry 0.29m R:7.6m L:7.3m CTE:-0.08 — throttle_ceiling → 0.2
+[ONTINUITY] STEERING BIAS RIGHT 0.36 — obs_steer:0.0 CTE:-0.08 speed_factor:0.69
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ONTINUITY] STEERING BIAS released
+[ODS] Episode ended - resetting
+[ONTINUITY] GATE CLEARED — throttle_ceiling restored
+[ODS] FORWARD MIN: 44.90m
+[ODS] ORIENTING | CTE: -3.041 | Steer: 1.000 | Throttle: 0.15 | Speed: 0.00 | Yaw rate: 175.8576
+[ODS] FORWARD MIN: 47.24m
+[ODS] ORIENTING | CTE: -2.933 | Steer: 1.000 | Throttle: 0.15 | Speed: 0.13 | Yaw rate: 0.9033
+[ODS] FORWARD MIN: 25.11m
+[ODS] ORIENTING | CTE: -2.407 | Steer: 1.000 | Throttle: 0.15 | Speed: 0.23 | Yaw rate: 1.7545
+[ODS] FORWARD MIN: 15.32m
+[ODS] ORIENTING | CTE: -0.969 | Steer: 0.193 | Throttle: 0.15 | Speed: 0.37 | Yaw rate: 1.2655
+[ODS] Phase: CORRECTING
+[ODS] FORWARD MIN: 20.61m
+[ODS] CORRECTING | CTE: 1.137 | Steer: -1.000 | Throttle: 0.28 | Speed: 0.56 | Yaw rate: 4.2050
+[ODS] FORWARD MIN: 36.56m
+[ODS] CORRECTING | CTE: 0.220 | Steer: 0.256 | Throttle: 0.28 | Speed: 0.97 | Yaw rate: 2.1112
+[ODS] FORWARD MIN: 32.13m
+[ODS] CORRECTING | CTE: -0.415 | Steer: -0.003 | Throttle: 0.28 | Speed: 1.35 | Yaw rate: 1.0243
+[ODS] Phase: TRACKING - center acquired
+[ODS] FORWARD MIN: 44.61m
+[ODS] TRACKING | CTE: -0.099 | Steer: 0.143 | Throttle: 0.80 | Speed: 2.04 | Yaw rate: 1.0620
+
+[ODS] Stopped by user
+[ODS] Environment closed.
