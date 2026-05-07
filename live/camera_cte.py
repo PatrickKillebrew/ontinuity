@@ -208,7 +208,7 @@ def compute_camera_cte(obs, debug=False):
         # Yellow line found — CTE is offset from center
         # yellow_x is 0.0-1.0; 0.5 = centered
         # Positive CTE = yellow line is left of center = car is left of center
-        raw_cte = (0.5 - yellow_x) * 2.0   # scale to -1.0 to +1.0
+        raw_cte = (yellow_x - 0.5) * 2.0   # scale to -1.0 to +1.0
 
     else:
         # ── LAYER 2: Road surface ─────────────────────────────
@@ -221,7 +221,7 @@ def compute_camera_cte(obs, debug=False):
             raw_cte    = _prev_cte
         else:
             corridor_center = (left_x + right_x) / 2.0
-            raw_cte         = (0.5 - corridor_center) * 2.0
+            raw_cte         = (corridor_center - 0.5) * 2.0
 
     # Clip to valid range
     raw_cte = max(-1.0, min(1.0, raw_cte))
