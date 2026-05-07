@@ -34,6 +34,7 @@ import numpy as np
 import gym_donkeycar  # noqa: F401 - registers environments
 from mission_state import MissionState
 from ontinuity_loop import start_ontinuity_loop
+from camera_cte import compute_camera_cte
 
 # -----------------------------------------
 # CONFIGURATION
@@ -184,6 +185,12 @@ if __name__ == "__main__":
             else:
                 yaw_rate = 0.0
             speed = info.get("speed", 0.0)
+            cam_cte = compute_camera_cte(obs)
+            # Save camera image for inspection (remove after camera CTE built)
+            if cycle_count % 20 == 0:
+                import cv2
+                cam_img = obs  # obs is the 120x160x3 RGB array
+                cv2.imwrite(f"C:\\donkeycar\\cam_{cycle_count}.png", cv2.cvtColor(cam_img, cv2.COLOR_RGB2BGR))
 
             # TELEMETRY UPDATE
             mission.update(
@@ -290,6 +297,9 @@ if __name__ == "__main__":
             # THROTTLE AND DIRECTIVES
             throttle   = get_throttle()
             directives = mission.get_directives()
+            steering_bias = directives.get("steering_bias", 0.0)
+            if steering_bias != 0.0:
+                obstacle_steer = 0.0
 
             if directives["abort"]:
                 print("[ODS] ABORT directive received - stopping")
@@ -302,7 +312,9 @@ if __name__ == "__main__":
                       f"Steer: {steering:.3f} | "
                       f"Throttle: {throttle:.2f} | "
                       f"Speed: {speed:.2f} | "
-                      f"Yaw rate: {yaw_rate:.4f}")
+                      f"Yaw rate: {yaw_rate:.4f} | "
+                      f"CamCTE: {cam_cte:.3f}")
+                      
 
             cte_rate           = abs(cte - prev_cte)
             cte_throttle_scale = max(0.4, 1.0 - (abs(cte) * 0.25) - (cte_rate * 1.0) - (yaw_rate * 0.0))
@@ -321,7 +333,6 @@ if __name__ == "__main__":
                 final_steer = steering
 
             # Apply outer loop steering bias
-            steering_bias = directives.get("steering_bias", 0.0)
             if steering_bias != 0.0:
                 final_steer = max(-1.0, min(1.0, final_steer + steering_bias))
 
