@@ -37,7 +37,7 @@ from ontinuity_loop import start_ontinuity_loop
 from camera_cte import compute_camera_cte
 
 # -----------------------------------------
-# CONFIGURATIONS
+# CONFIGURATION
 # -----------------------------------------
 
 SIM_HOST = "127.0.0.1"
