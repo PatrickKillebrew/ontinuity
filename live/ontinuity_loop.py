@@ -140,8 +140,8 @@ def run_ontinuity_loop(mission, lidar_feed):
                 continue
 
             # ── GATE / OBSTACLE DETECTION ──────────────────────────
-            is_gate, symmetry, min_r, min_l = detect_gate_signature(lidar)
-
+            #is_gate, symmetry, min_r, min_l = detect_gate_signature(lidar)
+            is_gate = False
             if is_gate and not state.gate_active:
                 state.gate_active     = True
                 state.gate_hold_count = 0
