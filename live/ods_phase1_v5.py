@@ -188,6 +188,20 @@ if __name__ == "__main__":
             speed = info.get("speed", 0.0)
             cam_cte = compute_camera_cte(obs)
             cte     = -cam_cte
+            
+            # LIDAR SHADOW GATE — validates camera CTE against physical LiDAR reality
+            lidar_raw = info.get('lidar', [])
+            if abs(cam_cte) > 0.3 and len(lidar_raw) > 0:
+                if cam_cte > 0:
+                    side = [lidar_raw[i] for i in range(0, 20) if lidar_raw[i] > 0]
+                else:
+                    side = [lidar_raw[i] for i in range(160, 180) if lidar_raw[i] > 0]
+                min_side = min(side) if side else 99
+                if min_side > 8.0:
+                    cam_cte *= 0.3
+                    cte      = -cam_cte
+                    if cycle_count % 20 == 0:
+                        print(f"[ODS] SHADOW GATE — cam_cte dampened (LiDAR clear {min_side:.1f}m)")
 
             # TELEMETRY UPDATE
             mission.update(
