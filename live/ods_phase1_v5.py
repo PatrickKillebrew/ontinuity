@@ -187,7 +187,7 @@ if __name__ == "__main__":
                 yaw_rate = 0.0
             speed = info.get("speed", 0.0)
             cam_cte = compute_camera_cte(obs)
-            cte     = cam_cte
+            cte     = -cam_cte
 
             # TELEMETRY UPDATE
             mission.update(
