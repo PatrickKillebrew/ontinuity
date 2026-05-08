@@ -43,8 +43,8 @@ from camera_cte import compute_camera_cte
 SIM_HOST = "127.0.0.1"
 SIM_PORT = 9091
 
-PID_P = 0.25
-PID_D = 1.85
+PID_P = 2.0
+PID_D = 15.0
 PID_I = 0.0
 
 THROTTLE_ORIENTING  = 0.15
@@ -173,6 +173,7 @@ if __name__ == "__main__":
 
             # SENSORS
             cte  = info.get("cte", 0.0)
+            sim_cte = cte
             yaw  = info.get("car", (0.0, 0.0, 0.0))[2]
             yaw_history.append(yaw)
             if len(yaw_history) > 3:
@@ -186,6 +187,7 @@ if __name__ == "__main__":
                 yaw_rate = 0.0
             speed = info.get("speed", 0.0)
             cam_cte = compute_camera_cte(obs)
+            cte     = cam_cte
 
             # TELEMETRY UPDATE
             mission.update(
