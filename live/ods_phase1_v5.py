@@ -282,11 +282,17 @@ if __name__ == "__main__":
 
                 trigger = False
                 if min(min_center_r, min_center_l) < 6.0:
-                    trigger        = True
-                    obstacle_steer = -1.0 if min_center_r < min_center_l else 1.0
+                    closer  = min(min_center_r, min_center_l)
+                    farther = max(min_center_r, min_center_l)
+                    if farther > 0 and (closer / farther) < 0.55:
+                        trigger        = True
+                        obstacle_steer = -1.0 if min_center_r < min_center_l else 1.0
                 elif min(min_wide_r, min_wide_l) < 3.0:
-                    trigger        = True
-                    obstacle_steer = -1.0 if min_wide_r < min_wide_l else 1.0
+                    closer  = min(min_wide_r, min_wide_l)
+                    farther = max(min_wide_r, min_wide_l)
+                    if farther > 0 and (closer / farther) < 0.55:
+                        trigger        = True
+                        obstacle_steer = -1.0 if min_wide_r < min_wide_l else 1.0
 
                 # Reflex suppression: don't steer further out of bounds
                 if (obstacle_steer > 0 and cte > 1.0) or (obstacle_steer < 0 and cte < -1.0):
