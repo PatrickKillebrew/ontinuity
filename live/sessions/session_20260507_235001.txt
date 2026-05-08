@@ -1,0 +1,53 @@
+[ODS] Ontinuity Driving System - Phase 1 Brainstem v5
+[ODS] Sensor pairs: FORWARD active | LEFT REAR RIGHT ready
+[ODS] Connecting to simulator at 127.0.0.1:9091
+[ODS] Make sure track is loaded in simulator
+
+starting DonkeyGym env
+Setting default: start_delay 5.0
+Setting default: max_cte 8.0
+Setting default: frame_skip 1
+Setting default: cam_resolution (120, 160, 3)
+Setting default: log_level 20
+Setting default: steer_limit 1.0
+Setting default: throttle_min 0.0
+Setting default: throttle_max 1.0
+INFO:gym_donkeycar.core.client:connecting to 127.0.0.1:9091 
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:231: UserWarning: [33mWARN: Box low's precision lowered by casting to float32, current low.dtype=float64[0m
+  gym.logger.warn(
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:297: UserWarning: [33mWARN: Box high's precision lowered by casting to float32, current high.dtype=float64[0m
+  gym.logger.warn(
+INFO:gym_donkeycar.envs.donkey_sim:on need car config
+INFO:gym_donkeycar.envs.donkey_sim:sending car config.
+INFO:gym_donkeycar.envs.donkey_sim:sim started!
+INFO:gym_donkeycar.envs.donkey_sim:done sending lidar config., {'deg_per_sweep_inc': '2.0', 'deg_ang_down': '0.0', 'deg_ang_delta': '-1.0', 'num_sweeps_levels': '1', 'max_range': '50.0', 'noise': '0.4', 'offset_x': '0.0', 'offset_y': '0.5', 'offset_z': '0.5', 'rot_x': '0.0'}
+[ODS] Connected. Car reset. Starting drive sequence.
+[ODS] Phase: ORIENTING
+
+[ODS] Ontinuity outer loop started
+[ONTINUITY] Outer loop started - channel architecture active
+
+[ODS] Phase: CORRECTING
+[ODS] Phase: TRACKING - center acquired
+[ODS] FORWARD MIN: 7.12m
+[ODS] TRACKING | CTE: -0.024 | Steer: -0.021 | Throttle: 0.50 | Speed: 0.76 | Yaw rate: 0.4589 | CamCTE: 0.024
+[ODS] FORWARD MIN: 7.87m
+[ODS] TRACKING | CTE: -0.009 | Steer: 0.033 | Throttle: 0.50 | Speed: 1.77 | Yaw rate: 0.2871 | CamCTE: 0.009
+[ODS] FORWARD MIN: 7.55m
+[ODS] TRACKING | CTE: -0.016 | Steer: 0.103 | Throttle: 0.50 | Speed: 1.99 | Yaw rate: 0.0401 | CamCTE: 0.016
+[ONTINUITY] AVOID_RIGHT - R:3.5m C:6.4m L:8.3m bias:-0.20 throttle:0.80
+[ONTINUITY] CLEAR - R:3.6m C:7.6m L:8.0m bias:+0.00 throttle:1.00
+[ODS] FORWARD MIN: 9.39m
+[ODS] TRACKING | CTE: -0.029 | Steer: 0.104 | Throttle: 0.50 | Speed: 2.02 | Yaw rate: 0.9005 | CamCTE: 0.029
+[ODS] FORWARD MIN: 10.53m
+[ODS] TRACKING | CTE: -0.059 | Steer: 0.151 | Throttle: 0.50 | Speed: 2.00 | Yaw rate: 2.2480 | CamCTE: 0.059
+[ONTINUITY] LEFT_CURVE - R:11.6m C:8.0m L:6.7m bias:-0.30 throttle:0.80
+[ONTINUITY] ROUTE_RIGHT - R:4.0m C:2.9m L:2.7m bias:+0.40 throttle:0.80
+[ONTINUITY] CLEAR - R:2.7m C:1.7m L:1.7m bias:+0.00 throttle:1.00
+[ODS] FORWARD MIN: 1.26m
+[ODS] TRACKING | CTE: -0.326 | Steer: 1.000 | Throttle: 0.50 | Speed: 1.92 | Yaw rate: 12.2455 | CamCTE: 0.326
+[ODS] Episode ended - resetting
+[ODS] Phase: CORRECTING
+
+[ODS] Stopped by user
+[ODS] Environment closed.
