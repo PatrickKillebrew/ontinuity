@@ -43,8 +43,8 @@ from camera_cte import compute_camera_cte
 SIM_HOST = "127.0.0.1"
 SIM_PORT = 9091
 
-PID_P = 2.0
-PID_D = 15.0
+PID_P = 0.8
+PID_D = 5.0
 PID_I = 0.0
 
 THROTTLE_ORIENTING  = 0.15
