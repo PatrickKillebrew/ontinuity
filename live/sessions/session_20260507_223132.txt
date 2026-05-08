@@ -1,0 +1,286 @@
+[ODS] Ontinuity Driving System - Phase 1 Brainstem v5
+[ODS] Sensor pairs: FORWARD active | LEFT REAR RIGHT ready
+[ODS] Connecting to simulator at 127.0.0.1:9091
+[ODS] Make sure track is loaded in simulator
+
+starting DonkeyGym env
+Setting default: start_delay 5.0
+Setting default: max_cte 8.0
+Setting default: frame_skip 1
+Setting default: cam_resolution (120, 160, 3)
+Setting default: log_level 20
+Setting default: steer_limit 1.0
+Setting default: throttle_min 0.0
+Setting default: throttle_max 1.0
+INFO:gym_donkeycar.core.client:connecting to 127.0.0.1:9091 
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:231: UserWarning: [33mWARN: Box low's precision lowered by casting to float32, current low.dtype=float64[0m
+  gym.logger.warn(
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:297: UserWarning: [33mWARN: Box high's precision lowered by casting to float32, current high.dtype=float64[0m
+  gym.logger.warn(
+INFO:gym_donkeycar.envs.donkey_sim:on need car config
+INFO:gym_donkeycar.envs.donkey_sim:sending car config.
+INFO:gym_donkeycar.envs.donkey_sim:sim started!
+INFO:gym_donkeycar.envs.donkey_sim:done sending lidar config., {'deg_per_sweep_inc': '2.0', 'deg_ang_down': '0.0', 'deg_ang_delta': '-1.0', 'num_sweeps_levels': '1', 'max_range': '50.0', 'noise': '0.4', 'offset_x': '0.0', 'offset_y': '0.5', 'offset_z': '0.5', 'rot_x': '0.0'}
+[ODS] Connected. Car reset. Starting drive sequence.
+[ODS] Phase: ORIENTING
+
+[ODS] Ontinuity outer loop started
+
+[ONTINUITY] Outer loop started
+[ODS] Phase: CORRECTING
+[ODS] Phase: TRACKING - center acquired
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.16m
+[ODS] TRACKING | CTE: -0.035 | Steer: 0.014 | Throttle: 0.50 | Speed: 0.76 | Yaw rate: 0.5401 | CamCTE: 0.035
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 8.04m
+[ODS] TRACKING | CTE: -0.003 | Steer: 0.011 | Throttle: 0.50 | Speed: 1.77 | Yaw rate: 0.1673 | CamCTE: 0.003
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.08m
+[ODS] TRACKING | CTE: -0.007 | Steer: -0.001 | Throttle: 0.50 | Speed: 2.05 | Yaw rate: 0.2573 | CamCTE: 0.007
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.27m
+[ODS] TRACKING | CTE: 0.027 | Steer: -0.071 | Throttle: 0.50 | Speed: 2.01 | Yaw rate: 0.7447 | CamCTE: -0.027
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 10.39m
+[ODS] TRACKING | CTE: -0.086 | Steer: 0.236 | Throttle: 0.50 | Speed: 1.97 | Yaw rate: 3.5497 | CamCTE: 0.086
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 3.41m
+[ODS] TRACKING | CTE: -0.167 | Steer: 0.556 | Throttle: 0.50 | Speed: 1.97 | Yaw rate: 5.3694 | CamCTE: 0.167
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] Episode ended - resetting
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] Phase: CORRECTING
+[ODS] Phase: TRACKING - center acquired
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.47m
+[ODS] TRACKING | CTE: -0.059 | Steer: 0.136 | Throttle: 0.50 | Speed: 0.53 | Yaw rate: 0.5714 | CamCTE: 0.059
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.68m
+[ODS] TRACKING | CTE: 0.011 | Steer: -0.016 | Throttle: 0.50 | Speed: 1.59 | Yaw rate: 0.3262 | CamCTE: -0.011
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.54m
+[ODS] TRACKING | CTE: -0.015 | Steer: 0.015 | Throttle: 0.50 | Speed: 2.02 | Yaw rate: 0.8042 | CamCTE: 0.015
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 6.62m
+[ODS] TRACKING | CTE: 0.031 | Steer: -0.051 | Throttle: 0.50 | Speed: 2.03 | Yaw rate: 1.2033 | CamCTE: -0.031
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 10.63m
+[ODS] TRACKING | CTE: -0.072 | Steer: 0.202 | Throttle: 0.50 | Speed: 2.03 | Yaw rate: 2.6436 | CamCTE: 0.072
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 4.71m
+[ODS] TRACKING | CTE: -0.130 | Steer: 0.321 | Throttle: 0.50 | Speed: 2.00 | Yaw rate: 5.7555 | CamCTE: 0.130
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] Episode ended - resetting
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] Phase: CORRECTING
+[ODS] Phase: TRACKING - center acquired
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.69m
+[ODS] TRACKING | CTE: -0.039 | Steer: 0.090 | Throttle: 0.50 | Speed: 0.28 | Yaw rate: 0.1790 | CamCTE: 0.039
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.38m
+[ODS] TRACKING | CTE: 0.013 | Steer: 0.004 | Throttle: 0.50 | Speed: 1.39 | Yaw rate: 0.3701 | CamCTE: -0.013
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 7.94m
+[ODS] TRACKING | CTE: -0.023 | Steer: 0.057 | Throttle: 0.50 | Speed: 1.97 | Yaw rate: 1.0011 | CamCTE: 0.023
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 6.24m
+[ODS] TRACKING | CTE: 0.032 | Steer: -0.073 | Throttle: 0.50 | Speed: 2.05 | Yaw rate: 1.3936 | CamCTE: -0.032
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 11.20m
+[ODS] TRACKING | CTE: -0.035 | Steer: 0.089 | Throttle: 0.50 | Speed: 2.05 | Yaw rate: 1.4450 | CamCTE: 0.035
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] FORWARD MIN: 6.24m
+[ODS] TRACKING | CTE: -0.157 | Steer: 0.430 | Throttle: 0.50 | Speed: 2.03 | Yaw rate: 6.9345 | CamCTE: 0.157
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] Episode ended - resetting
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ONTINUITY] Outer loop error: name 'detect_gate_signature' is not defined
+[ODS] Phase: CORRECTING
+[ODS] FORWARD MIN: 7.81m
+[ODS] CORRECTING | CTE: -0.046 | Steer: 0.055 | Throttle: 0.28 | Speed: 0.10 | Yaw rate: 0.1035 | CamCTE: 0.046
+[ODS] Phase: TRACKING - center acquired
+
+[ODS] Stopped by user
+[ODS] Environment closed.
