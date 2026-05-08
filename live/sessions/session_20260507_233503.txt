@@ -1,0 +1,199 @@
+[ODS] Ontinuity Driving System - Phase 1 Brainstem v5
+[ODS] Sensor pairs: FORWARD active | LEFT REAR RIGHT ready
+[ODS] Connecting to simulator at 127.0.0.1:9091
+[ODS] Make sure track is loaded in simulator
+
+starting DonkeyGym env
+Setting default: start_delay 5.0
+Setting default: max_cte 8.0
+Setting default: frame_skip 1
+Setting default: cam_resolution (120, 160, 3)
+Setting default: log_level 20
+Setting default: steer_limit 1.0
+Setting default: throttle_min 0.0
+Setting default: throttle_max 1.0
+INFO:gym_donkeycar.core.client:connecting to 127.0.0.1:9091 
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:231: UserWarning: [33mWARN: Box low's precision lowered by casting to float32, current low.dtype=float64[0m
+  gym.logger.warn(
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:297: UserWarning: [33mWARN: Box high's precision lowered by casting to float32, current high.dtype=float64[0m
+  gym.logger.warn(
+INFO:gym_donkeycar.envs.donkey_sim:on need car config
+INFO:gym_donkeycar.envs.donkey_sim:sending car config.
+INFO:gym_donkeycar.envs.donkey_sim:sim started!
+INFO:gym_donkeycar.envs.donkey_sim:done sending lidar config., {'deg_per_sweep_inc': '2.0', 'deg_ang_down': '0.0', 'deg_ang_delta': '-1.0', 'num_sweeps_levels': '1', 'max_range': '50.0', 'noise': '0.4', 'offset_x': '0.0', 'offset_y': '0.5', 'offset_z': '0.5', 'rot_x': '0.0'}
+[ODS] Connected. Car reset. Starting drive sequence.
+[ODS] Phase: ORIENTING
+
+[ONTINUITY] Outer loop started — channel architecture active[ODS] Ontinuity outer loop started
+
+
+[ODS] Phase: CORRECTING
+[ODS] Phase: TRACKING - center acquired
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 7.14m
+[ODS] TRACKING | CTE: -0.024 | Steer: -0.026 | Throttle: 0.50 | Speed: 0.75 | Yaw rate: 0.4353 | CamCTE: 0.024
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 7.89m
+[ODS] TRACKING | CTE: -0.014 | Steer: 0.037 | Throttle: 0.50 | Speed: 1.77 | Yaw rate: 0.4550 | CamCTE: 0.014
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 7.61m
+[ODS] TRACKING | CTE: -0.021 | Steer: 0.102 | Throttle: 0.50 | Speed: 2.07 | Yaw rate: 0.0537 | CamCTE: 0.021
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 7.54m
+[ODS] TRACKING | CTE: 0.021 | Steer: -0.030 | Throttle: 0.50 | Speed: 2.02 | Yaw rate: 0.7458 | CamCTE: -0.021
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 10.29m
+[ODS] TRACKING | CTE: -0.079 | Steer: 0.225 | Throttle: 0.50 | Speed: 2.02 | Yaw rate: 2.8989 | CamCTE: 0.079
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 3.51m
+[ODS] TRACKING | CTE: -0.190 | Steer: 0.760 | Throttle: 0.50 | Speed: 2.06 | Yaw rate: 6.1624 | CamCTE: 0.190
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] Episode ended - resetting
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] Phase: CORRECTING
+[ODS] Phase: TRACKING - center acquired
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 7.47m
+[ODS] TRACKING | CTE: -0.065 | Steer: 0.147 | Throttle: 0.50 | Speed: 0.53 | Yaw rate: 0.6689 | CamCTE: 0.065
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 7.86m
+[ODS] TRACKING | CTE: -0.008 | Steer: 0.059 | Throttle: 0.50 | Speed: 1.58 | Yaw rate: 0.0963 | CamCTE: 0.008
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 7.62m
+[ODS] TRACKING | CTE: -0.012 | Steer: 0.009 | Throttle: 0.50 | Speed: 2.02 | Yaw rate: 0.6454 | CamCTE: 0.012
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 6.73m
+[ODS] TRACKING | CTE: 0.028 | Steer: -0.070 | Throttle: 0.50 | Speed: 2.05 | Yaw rate: 0.8514 | CamCTE: -0.028
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 10.74m
+[ODS] TRACKING | CTE: -0.070 | Steer: 0.243 | Throttle: 0.50 | Speed: 2.04 | Yaw rate: 1.4938 | CamCTE: 0.070
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] FORWARD MIN: 4.98m
+[ODS] TRACKING | CTE: -0.098 | Steer: 0.118 | Throttle: 0.50 | Speed: 2.01 | Yaw rate: 5.2823 | CamCTE: 0.098
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ODS] Episode ended - resetting
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+[ONTINUITY] Outer loop error: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+
+[ODS] Stopped by user
+[ODS] Environment closed.
