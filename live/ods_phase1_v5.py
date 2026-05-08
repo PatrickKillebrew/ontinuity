@@ -286,7 +286,7 @@ if __name__ == "__main__":
                     farther = max(min_center_r, min_center_l)
                     if farther > 0 and (closer / farther) < 0.55:
                         trigger        = True
-                        obstacle_steer = -1.0 if min_center_r < min_center_l else 1.0
+                        obstacle_steer = -0.4 if min_center_r < min_center_l else 0.4
                 elif min(min_wide_r, min_wide_l) < 3.0:
                     closer  = min(min_wide_r, min_wide_l)
                     farther = max(min_wide_r, min_wide_l)
