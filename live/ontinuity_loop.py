@@ -58,7 +58,7 @@ class OuterLoopState:
 # PATTERN DETECTION
 # -----------------------------------------
 
-def detect_gate_signature(lidar):
+def F(lidar):
     """
     Returns (is_gate, symmetry, min_r, min_l) from raw lidar array.
     Gate signature: two objects roughly equidistant left and right at short range.
@@ -150,21 +150,21 @@ def run_ontinuity_loop(mission, lidar_feed):
                           f"— throttle_ceiling → {GATE_THROTTLE_CAP}")
                 mission.set_directives(throttle_ceiling=GATE_THROTTLE_CAP)
 
-                # Speed-aware steering bias
-                speed_factor         = max(0.3, 1.0 - (speed * 0.15))
-                scaled_bias_strength = BIAS_STRENGTH * speed_factor
-                scaled_hold          = max(3, int(BIAS_HOLD_CYCLES * speed_factor))
-                bias = compute_steering_bias(cte, obs_steer, min_r, min_l, scaled_bias_strength)
+                Speed-aware steering bias
+                # speed_factor         = max(0.3, 1.0 - (speed * 0.15))
+                # scaled_bias_strength = BIAS_STRENGTH * speed_factor
+                # scaled_hold          = max(3, int(BIAS_HOLD_CYCLES * speed_factor))
+                # bias = compute_steering_bias(cte, obs_steer, min_r, min_l, scaled_bias_strength)
 
-                if bias != 0.0:
-                    direction = "LEFT" if bias < 0 else "RIGHT"
-                    state.log(f"STEERING BIAS {direction} {abs(bias):.2f} — "
-                              f"obs_steer:{obs_steer:.1f} CTE:{cte:.2f} "
-                              f"speed_factor:{speed_factor:.2f}")
-                    state.bias_active     = True
-                    state.bias_hold_count = scaled_hold
-                    state.bias_direction  = bias
-                    mission.set_directives(steering_bias=bias)
+                # if bias != 0.0:
+                    # direction = "LEFT" if bias < 0 else "RIGHT"
+                    # state.log(f"STEERING BIAS {direction} {abs(bias):.2f} — "
+                              # f"obs_steer:{obs_steer:.1f} CTE:{cte:.2f} "
+                              # f"speed_factor:{speed_factor:.2f}")
+                    # state.bias_active     = True
+                    # state.bias_hold_count = scaled_hold
+                    # state.bias_direction  = bias
+                    # mission.set_directives(steering_bias=bias)
 
             elif state.gate_active:
                 if not is_gate:
