@@ -150,7 +150,7 @@ def run_ontinuity_loop(mission, lidar_feed):
                           f"— throttle_ceiling → {GATE_THROTTLE_CAP}")
                 mission.set_directives(throttle_ceiling=GATE_THROTTLE_CAP)
 
-                Speed-aware steering bias
+                #Speed-aware steering bias
                 # speed_factor         = max(0.3, 1.0 - (speed * 0.15))
                 # scaled_bias_strength = BIAS_STRENGTH * speed_factor
                 # scaled_hold          = max(3, int(BIAS_HOLD_CYCLES * speed_factor))
