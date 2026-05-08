@@ -1,0 +1,131 @@
+[ODS] Ontinuity Driving System - Phase 1 Brainstem v5
+[ODS] Sensor pairs: FORWARD active | LEFT REAR RIGHT ready
+[ODS] Connecting to simulator at 127.0.0.1:9091
+[ODS] Make sure track is loaded in simulator
+
+starting DonkeyGym env
+Setting default: start_delay 5.0
+Setting default: max_cte 8.0
+Setting default: frame_skip 1
+Setting default: cam_resolution (120, 160, 3)
+Setting default: log_level 20
+Setting default: steer_limit 1.0
+Setting default: throttle_min 0.0
+Setting default: throttle_max 1.0
+INFO:gym_donkeycar.core.client:connecting to 127.0.0.1:9091 
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:231: UserWarning: [33mWARN: Box low's precision lowered by casting to float32, current low.dtype=float64[0m
+  gym.logger.warn(
+C:\Users\kille\AppData\Local\Packages\PythonSoftwareFoundation.Python.3.11_qbz5n2kfra8p0\LocalCache\local-packages\Python311\site-packages\gymnasium\spaces\box.py:297: UserWarning: [33mWARN: Box high's precision lowered by casting to float32, current high.dtype=float64[0m
+  gym.logger.warn(
+INFO:gym_donkeycar.envs.donkey_sim:on need car config
+INFO:gym_donkeycar.envs.donkey_sim:sending car config.
+INFO:gym_donkeycar.envs.donkey_sim:sim started!
+INFO:gym_donkeycar.envs.donkey_sim:done sending lidar config., {'deg_per_sweep_inc': '2.0', 'deg_ang_down': '0.0', 'deg_ang_delta': '-1.0', 'num_sweeps_levels': '1', 'max_range': '50.0', 'noise': '0.4', 'offset_x': '0.0', 'offset_y': '0.5', 'offset_z': '0.5', 'rot_x': '0.0'}
+[ODS] Connected. Car reset. Starting drive sequence.
+[ODS] Phase: ORIENTING
+
+[ONTINUITY] Outer loop started[ODS] Ontinuity outer loop started
+
+
+[ODS] Phase: CORRECTING
+[ODS] Phase: TRACKING - center acquired
+[ODS] FORWARD MIN: 8.33m
+[ODS] TRACKING | CTE: 0.038 | Steer: -0.104 | Throttle: 0.80 | Speed: 1.05 | Yaw rate: 0.2802 | CamCTE: 0.038
+[ODS] FORWARD MIN: 6.98m
+[ODS] TRACKING | CTE: 0.188 | Steer: -0.373 | Throttle: 0.80 | Speed: 1.99 | Yaw rate: 4.0370 | CamCTE: 0.188
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] FORWARD MIN: 5.95m
+[ODS] TRACKING | CTE: 0.323 | Steer: -0.455 | Throttle: 0.80 | Speed: 1.99 | Yaw rate: 6.6790 | CamCTE: 0.323
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] FORWARD MIN: 7.33m
+[ODS] TRACKING | CTE: 0.358 | Steer: -0.555 | Throttle: 0.80 | Speed: 1.97 | Yaw rate: 14.2730 | CamCTE: 0.358
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] FORWARD MIN: 5.39m
+[ODS] TRACKING | CTE: 0.439 | Steer: -0.660 | Throttle: 0.80 | Speed: 1.92 | Yaw rate: 13.7525 | CamCTE: 0.439
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] FORWARD MIN: 4.85m
+[ODS] OBSTACLE! steering RIGHT
+[ODS] TRACKING | CTE: 0.204 | Steer: -0.143 | Throttle: 0.80 | Speed: 2.07 | Yaw rate: 0.8514 | CamCTE: 0.204
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] FORWARD MIN: 4.20m
+[ODS] OBSTACLE! steering RIGHT
+[ODS] TRACKING | CTE: 0.148 | Steer: -0.033 | Throttle: 0.80 | Speed: 1.90 | Yaw rate: 8.2268 | CamCTE: 0.148
+[ODS] FORWARD MIN: 5.96m
+[ODS] TRACKING | CTE: -0.472 | Steer: 1.000 | Throttle: 0.80 | Speed: 1.98 | Yaw rate: 13.0145 | CamCTE: -0.472
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ONTINUITY] GATE DETECTED — symmetry 1.29m R:4.4m L:5.7m CTE:-0.36 — throttle_ceiling → 0.2
+[ONTINUITY] STEERING BIAS LEFT 0.34 — obs_steer:-1.0 CTE:-0.36 speed_factor:0.69
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] OBSTACLE! steering LEFT
+[ODS] Episode ended - resetting
+[ONTINUITY] STEERING BIAS released
+[ODS] Phase: CORRECTING
+[ODS] FORWARD MIN: 7.89m
+[ODS] Phase: TRACKING - center acquired
+[ODS] TRACKING | CTE: 0.016 | Steer: -0.062 | Throttle: 0.28 | Speed: 0.18 | Yaw rate: 0.0859 | CamCTE: 0.016
+[ODS] FORWARD MIN: 10.76m
+[ODS] TRACKING | CTE: 0.063 | Steer: -0.090 | Throttle: 0.80 | Speed: 1.89 | Yaw rate: 1.0647 | CamCTE: 0.063
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] FORWARD MIN: 4.74m
+[ODS] TRACKING | CTE: 0.325 | Steer: -0.387 | Throttle: 0.80 | Speed: 2.03 | Yaw rate: 5.1295 | CamCTE: 0.325
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+[ODS] OBSTACLE! steering RIGHT
+
+[ODS] Stopped by user
+[ODS] Environment closed.
