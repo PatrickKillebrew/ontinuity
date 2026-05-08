@@ -56,7 +56,7 @@ ROAD_VAL_TOLERANCE = 60
 LAYER1_CONFIDENCE_THRESHOLD = 0.3
 
 # Output smoothing — prevents steering jerk on noisy frames
-SMOOTHING_ALPHA = 0.7   # higher = more smoothing, more lag
+SMOOTHING_ALPHA = 0.4   # higher = more smoothing, more lag
 
 
 # -----------------------------------------
