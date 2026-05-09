@@ -1,21 +1,36 @@
 """
-ONTINUITY OUTER LOOP - Near Horizon Mission Layer
+ONTINUITY OUTER LOOP — Three Horizon Architecture
 ==================================================
-Three-channel situational awareness for corridor navigation.
+Deep Horizon:    ~5Hz  — trend detection, curve prediction, confidence scoring
+Near Horizon:    ~10Hz — event validation, directive commitment, lifecycle management
+Present Horizon: brainstem (ods_phase1_v5.py) — reflexes only
 
-Channel architecture:
-- RIGHT channel:  right-side LiDAR clearance + closing rate
-- CENTER channel: forward LiDAR clearance + closing rate
-- LEFT channel:   left-side LiDAR clearance + closing rate
+ALL sensor interpretation is from the car's perspective. Always.
 
-Pattern detection:
-- Curve: forward closing + asymmetric side closure -> steer into curve
-- Obstacle: blocked channel -> route to clear channel
-- Combined: cone + curve -> inside curve channel preferred
+LiDAR layout (confirmed from brainstem, car's perspective):
+  RIGHT side of car: indices   0–35   (center-right 0-10, wide-right 10-30)
+  LEFT  side of car: indices 145–180  (wide-left 150-170, center-left 170-180)
+  FORWARD (center):  indices   0–15 + 165–180
 
-Directives issued via MissionState:
-- steering_bias:    added to brainstem final_steer each cycle
-- throttle_ceiling: multiplier on scaled_throttle
+RIGHT curve signature (car's perspective):
+  — LEFT channel CLOSES  : left wall curving in toward the car's forward path
+  — RIGHT channel OPENS  : right wall dropping away, revealing the corridor
+  — CENTER eventually closes as the left wall sweeps across the forward arc
+  — Action: steer RIGHT into the opening right corridor
+
+LEFT curve signature (car's perspective):
+  — RIGHT channel CLOSES : right wall curving in toward the car's forward path
+  — LEFT channel OPENS   : left wall dropping away, revealing the corridor
+  — CENTER eventually closes as the right wall sweeps across the forward arc
+  — Action: steer LEFT into the opening left corridor
+
+Horizon time boundaries:
+  DEEP_ENTRY     = 3.0s  deep starts watching and building confidence
+  NEAR_ENTRY     = 1.5s  near commits and issues directive
+  PRESENT_OWN    = 0.2s  brainstem owns completely, no overrides
+
+Event lifecycle:
+  NONE -> OPEN (deep confident) -> ACTIVE (near committed) -> CLOSED (curve done)
 """
 
 import time
@@ -24,184 +39,398 @@ import traceback
 from collections import deque
 
 
-# -----------------------------------------
-# CONFIGURATION
-# -----------------------------------------
+# ─────────────────────────────────────────
+# TIME HORIZON BOUNDARIES (seconds)
+# ─────────────────────────────────────────
 
-LOOP_INTERVAL = 0.10   # seconds (~10Hz)
+DEEP_ENTRY   = 3.0   # deep starts watching
+NEAR_ENTRY   = 1.5   # near commits and directs
+PRESENT_OWN  = 0.2   # brainstem sovereign
 
-# Channel LiDAR index ranges
-CH_RIGHT_INDICES  = list(range(5, 35))
-CH_CENTER_INDICES = list(range(0, 15)) + list(range(165, 180))
-CH_LEFT_INDICES   = list(range(145, 175))
+# ─────────────────────────────────────────
+# LOOP RATES
+# ─────────────────────────────────────────
 
-# Channel thresholds
-CH_BLOCKED_DIST        = 3.5   # meters - channel blocked
-CH_CLOSING_DIST        = 9.0   # meters - channel in closing zone
-CLOSING_RATE_THRESHOLD = 0.4   # meters per 3-cycle window - closing fast
-HISTORY_LEN            = 5     # cycles to keep per channel
+DEEP_INTERVAL = 0.20   # ~5Hz
+NEAR_INTERVAL = 0.10   # ~10Hz
 
-# Directive strengths
-CURVE_STEER_BIAS      = 0.30
-OBSTACLE_STEER_BIAS   = 0.40
-CURVE_THROTTLE_CAP    = 0.80
-OBSTACLE_THROTTLE_CAP = 0.80
+# ─────────────────────────────────────────
+# LiDAR CHANNEL INDICES (car's perspective)
+# ─────────────────────────────────────────
+
+CH_LEFT    = list(range(145, 180))
+CH_RIGHT   = list(range(0, 35))
+CH_CENTER  = list(range(0, 15)) + list(range(165, 180))
+
+# ─────────────────────────────────────────
+# DEEP HORIZON TUNING
+# ─────────────────────────────────────────
+
+DEEP_HISTORY      = 8
+CONF_THRESHOLD    = 0.25
+CLOSE_SLOPE_MIN   = 0.05
+OPEN_SLOPE_MAX    = 0.05
+MAX_CLOSE_RATE    = 1.5
+
+# ─────────────────────────────────────────
+# NEAR HORIZON TUNING
+# ─────────────────────────────────────────
+
+BASE_BIAS     = 0.28
+MAX_BIAS      = 0.50
+BASE_THROTTLE = 0.80
+MIN_THROTTLE  = 0.55
+CURVE_DONE_OPEN  = 6.0
+CURVE_DONE_CLOSE = 4.0
 
 
-# -----------------------------------------
-# STATE
-# -----------------------------------------
+# ─────────────────────────────────────────
+# SHARED EVENT STATE
+# ─────────────────────────────────────────
 
-class OuterLoopState:
+class EventState:
     def __init__(self):
-        self.right_history  = deque(maxlen=HISTORY_LEN)
-        self.center_history = deque(maxlen=HISTORY_LEN)
-        self.left_history   = deque(maxlen=HISTORY_LEN)
-        self.last_situation = "CLEAR"
+        self._lock         = threading.Lock()
+        self.event_type    = "NONE"
+        self.lifecycle     = "NONE"
+        self.confidence    = 0.0
+        self.tta           = 99.0
+        self.severity      = 0.0
+        self.steering_bias = 0.0
+        self.throttle_cap  = 1.0
+        self.cte_delta     = 0.0
+        self.steer_applied = 0.0
+        self.reflex_fired  = False
 
-    def log(self, event):
-        print(f"[ONTINUITY] {event}")
+    def open_event(self, etype, conf, tta, severity):
+        with self._lock:
+            self.event_type = etype
+            self.lifecycle  = "OPEN"
+            self.confidence = conf
+            self.tta        = tta
+            self.severity   = severity
+
+    def activate(self, bias, throttle):
+        with self._lock:
+            self.lifecycle     = "ACTIVE"
+            self.steering_bias = bias
+            self.throttle_cap  = throttle
+
+    def close(self):
+        with self._lock:
+            self.lifecycle     = "CLOSED"
+            self.event_type    = "NONE"
+            self.steering_bias = 0.0
+            self.throttle_cap  = 1.0
+
+    def reset(self):
+        with self._lock:
+            self.lifecycle     = "NONE"
+            self.event_type    = "NONE"
+            self.confidence    = 0.0
+            self.tta           = 99.0
+            self.severity      = 0.0
+            self.steering_bias = 0.0
+            self.throttle_cap  = 1.0
+
+    def set_tta(self, tta):
+        with self._lock:
+            self.tta = tta
+
+    def snapshot(self):
+        with self._lock:
+            return {
+                "event_type":    self.event_type,
+                "lifecycle":     self.lifecycle,
+                "confidence":    self.confidence,
+                "tta":           self.tta,
+                "severity":      self.severity,
+                "steering_bias": self.steering_bias,
+                "throttle_cap":  self.throttle_cap,
+            }
+
+    def write_feedback(self, cte_delta, steer_applied, reflex_fired):
+        with self._lock:
+            self.cte_delta     = cte_delta
+            self.steer_applied = steer_applied
+            self.reflex_fired  = reflex_fired
 
 
-# -----------------------------------------
-# CHANNEL SENSING
-# -----------------------------------------
+# ─────────────────────────────────────────
+# SHARED CHANNEL READER
+# ─────────────────────────────────────────
 
 def read_channels(lidar):
     """
-    Returns (min_r, min_c, min_l) as plain Python floats.
-    99.0 = no return = clear.
+    Returns (min_left, min_center, min_right) as plain Python floats.
+    99.0 = no return = open/clear.
+    All values from the car's perspective.
     """
     if lidar is None or len(lidar) < 180:
         return 99.0, 99.0, 99.0
 
-    # Convert to plain Python floats - prevents ALL numpy type ambiguity
-    right  = [float(lidar[i]) for i in CH_RIGHT_INDICES  if float(lidar[i]) > 0.0]
-    center = [float(lidar[i]) for i in CH_CENTER_INDICES if float(lidar[i]) > 0.0]
-    left   = [float(lidar[i]) for i in CH_LEFT_INDICES   if float(lidar[i]) > 0.0]
+    left   = [float(lidar[i]) for i in CH_LEFT   if float(lidar[i]) > 0.0]
+    center = [float(lidar[i]) for i in CH_CENTER  if float(lidar[i]) > 0.0]
+    right  = [float(lidar[i]) for i in CH_RIGHT   if float(lidar[i]) > 0.0]
 
-    min_r = min(right)  if right  else 99.0
-    min_c = min(center) if center else 99.0
-    min_l = min(left)   if left   else 99.0
+    return (
+        min(left)   if left   else 99.0,
+        min(center) if center else 99.0,
+        min(right)  if right  else 99.0,
+    )
 
-    return float(min_r), float(min_c), float(min_l)
 
+# ─────────────────────────────────────────
+# TREND ANALYSIS
+# ─────────────────────────────────────────
 
-def closing_rate(history):
-    """Positive = wall approaching over last 3 readings."""
-    if len(history) < 3:
+def trend_slope(history):
+    """
+    Rate of change (m/cycle). Positive = wall closing toward car.
+    """
+    n = len(history)
+    if n < 4:
         return 0.0
-    return float(history[-3]) - float(history[-1])
+    half     = n // 2
+    h        = list(history)
+    mean_old = sum(h[:half])  / half
+    mean_new = sum(h[half:])  / (n - half)
+    return float(mean_old - mean_new) / float(half)
 
 
-# -----------------------------------------
-# CHANNEL DECISION
-# -----------------------------------------
-
-def compute_channel_directive(state, min_r, min_c, min_l):
-    """Returns (situation, steering_bias, throttle_cap) as plain Python types."""
-
-    # Ensure all inputs are plain Python floats
-    min_r = float(min_r)
-    min_c = float(min_c)
-    min_l = float(min_l)
-
-    state.right_history.append(min_r)
-    state.center_history.append(min_c)
-    state.left_history.append(min_l)
-
-    rate_r = closing_rate(state.right_history)
-    rate_c = closing_rate(state.center_history)
-    rate_l = closing_rate(state.left_history)
-
-    r_blocked = bool(min_r < CH_BLOCKED_DIST)
-    c_blocked = bool(min_c < CH_BLOCKED_DIST)
-    l_blocked = bool(min_l < CH_BLOCKED_DIST)
-    c_closing = bool(rate_c > CLOSING_RATE_THRESHOLD) and bool(min_c < CH_CLOSING_DIST)
-
-    # CURVE DETECTION
-    if c_closing:
-        right_curve = bool(rate_r > CLOSING_RATE_THRESHOLD) and bool(min_r < min_l)
-        left_curve  = bool(rate_l > CLOSING_RATE_THRESHOLD) and bool(min_l < min_r)
-
-        if right_curve and not r_blocked:
-            return "RIGHT_CURVE", CURVE_STEER_BIAS, CURVE_THROTTLE_CAP
-
-        if left_curve and not l_blocked:
-            return "LEFT_CURVE", -CURVE_STEER_BIAS, CURVE_THROTTLE_CAP
-
-    # OBSTACLE ROUTING
-    if c_blocked:
-        if not r_blocked and (min_r >= min_l or l_blocked):
-            return "ROUTE_RIGHT", OBSTACLE_STEER_BIAS, OBSTACLE_THROTTLE_CAP
-        elif not l_blocked:
-            return "ROUTE_LEFT", -OBSTACLE_STEER_BIAS, OBSTACLE_THROTTLE_CAP
-
-    if r_blocked and not c_blocked:
-        return "AVOID_RIGHT", -OBSTACLE_STEER_BIAS * 0.5, OBSTACLE_THROTTLE_CAP
-    if l_blocked and not c_blocked:
-        return "AVOID_LEFT",  OBSTACLE_STEER_BIAS * 0.5, OBSTACLE_THROTTLE_CAP
-
-    return "CLEAR", 0.0, 1.0
+def curve_confidence(closing_slope, opening_slope, n):
+    if closing_slope < CLOSE_SLOPE_MIN:
+        return 0.0
+    close_strength = min(1.0, closing_slope / MAX_CLOSE_RATE)
+    open_bonus     = 0.20 if opening_slope < OPEN_SLOPE_MAX else 0.0
+    history_scale  = min(1.0, n / DEEP_HISTORY)
+    return min(1.0, float((close_strength + open_bonus) * history_scale))
 
 
-# -----------------------------------------
-# MAIN OUTER LOOP
-# -----------------------------------------
+# ─────────────────────────────────────────
+# DEEP HORIZON (~5Hz)
+# ─────────────────────────────────────────
 
-def run_ontinuity_loop(mission, lidar_feed):
-    state = OuterLoopState()
-    state.log("Outer loop started - channel architecture active")
+def run_deep_horizon(mission, lidar_feed, ev):
+    left_h   = deque(maxlen=DEEP_HISTORY)
+    center_h = deque(maxlen=DEEP_HISTORY)
+    right_h  = deque(maxlen=DEEP_HISTORY)
+
+    print("[DEEP] Deep horizon started")
 
     while True:
-        time.sleep(LOOP_INTERVAL)
-
+        time.sleep(DEEP_INTERVAL)
         try:
-            snapshot = mission.get_telemetry_snapshot()
-            phase    = snapshot.get("phase", "ORIENTING")
-            lidar    = lidar_feed.get("lidar", [])
+            snap  = mission.get_telemetry_snapshot()
+            phase = snap.get("phase", "ORIENTING")
+            speed = max(float(snap.get("speed", 0.1)), 0.1)
+            lidar = lidar_feed.get("lidar", [])
 
             if phase != "TRACKING":
-                mission.set_directives(steering_bias=0.0, throttle_ceiling=1.0)
-                state.right_history.clear()
-                state.center_history.clear()
-                state.left_history.clear()
-                state.last_situation = "CLEAR"
+                left_h.clear(); center_h.clear(); right_h.clear()
+                if ev.lifecycle != "NONE":
+                    ev.reset()
                 continue
 
-            min_r, min_c, min_l = read_channels(lidar)
+            min_l, min_c, min_r = read_channels(lidar)
+            left_h.append(min_l)
+            center_h.append(min_c)
+            right_h.append(min_r)
 
-            situation, bias, throttle_cap = compute_channel_directive(
-                state, min_r, min_c, min_l
+            tta = float(min_c / speed)
+            ev.set_tta(tta)
+
+            if tta > DEEP_ENTRY:
+                if ev.lifecycle == "OPEN":
+                    ev.close()
+                continue
+
+            n           = len(left_h)
+            left_slope  = trend_slope(left_h)
+            right_slope = trend_slope(right_h)
+
+            # RIGHT CURVE: left wall closing + right wall opening
+            right_conf = curve_confidence(
+                closing_slope=left_slope,
+                opening_slope=right_slope,
+                n=n
             )
 
-            if situation != state.last_situation:
-                state.log(
-                    f"{situation} - "
-                    f"R:{min_r:.1f}m C:{min_c:.1f}m L:{min_l:.1f}m "
-                    f"bias:{bias:+.2f} throttle:{throttle_cap:.2f}"
-                )
-                state.last_situation = situation
-
-            mission.set_directives(
-                steering_bias=float(bias),
-                throttle_ceiling=float(throttle_cap)
+            # LEFT CURVE: right wall closing + left wall opening
+            left_conf = curve_confidence(
+                closing_slope=right_slope,
+                opening_slope=left_slope,
+                n=n
             )
+
+            current = ev.snapshot()
+
+            if right_conf >= left_conf and right_conf >= CONF_THRESHOLD:
+                sev = min(1.0, float(left_slope / MAX_CLOSE_RATE))
+                if current["lifecycle"] in ("NONE", "CLOSED"):
+                    ev.open_event("RIGHT_CURVE", right_conf, tta, sev)
+                    print(f"[DEEP] RIGHT_CURVE OPEN  conf:{right_conf:.2f} "
+                          f"tta:{tta:.1f}s sev:{sev:.2f} "
+                          f"L:{min_l:.1f}m R:{min_r:.1f}m C:{min_c:.1f}m")
+
+            elif left_conf >= CONF_THRESHOLD:
+                sev = min(1.0, float(right_slope / MAX_CLOSE_RATE))
+                if current["lifecycle"] in ("NONE", "CLOSED"):
+                    ev.open_event("LEFT_CURVE", left_conf, tta, sev)
+                    print(f"[DEEP] LEFT_CURVE OPEN  conf:{left_conf:.2f} "
+                          f"tta:{tta:.1f}s sev:{sev:.2f} "
+                          f"L:{min_l:.1f}m R:{min_r:.1f}m C:{min_c:.1f}m")
+
+            else:
+                if current["lifecycle"] == "OPEN":
+                    ev.close()
+                    print("[DEEP] Event candidate cleared")
 
         except Exception as e:
-            print(f"[ONTINUITY] Outer loop error: {e}")
+            print(f"[DEEP] Error: {e}")
             traceback.print_exc()
 
 
-# -----------------------------------------
+# ─────────────────────────────────────────
+# NEAR HORIZON (~10Hz)
+# ─────────────────────────────────────────
+
+def run_near_horizon(mission, lidar_feed, ev):
+    last_lifecycle  = "NONE"
+    last_event_type = "NONE"
+
+    print("[NEAR] Near horizon started")
+
+    while True:
+        time.sleep(NEAR_INTERVAL)
+        try:
+            snap  = mission.get_telemetry_snapshot()
+            phase = snap.get("phase", "ORIENTING")
+            speed = max(float(snap.get("speed", 0.1)), 0.1)
+            lidar = lidar_feed.get("lidar", [])
+
+            if phase != "TRACKING":
+                mission.set_directives(
+                    steering_bias=0.0,
+                    throttle_ceiling=1.0,
+                    event_type="NONE",
+                    event_lifecycle="NONE"
+                )
+                last_lifecycle  = "NONE"
+                last_event_type = "NONE"
+                continue
+
+            min_l, min_c, min_r = read_channels(lidar)
+            tta = float(min_c / speed)
+            ev.set_tta(tta)
+
+            current = ev.snapshot()
+
+            # PRESENT SOVEREIGN: below 0.2s brainstem owns it
+            if tta < PRESENT_OWN:
+                mission.set_directives(
+                    steering_bias=float(current["steering_bias"]),
+                    throttle_ceiling=float(current["throttle_cap"]),
+                    event_type=current["event_type"],
+                    event_lifecycle=current["lifecycle"]
+                )
+                continue
+
+            # OPEN EVENT: commit when TTA enters near horizon window
+            if current["lifecycle"] == "OPEN" and tta < NEAR_ENTRY:
+                sev      = float(current["severity"])
+                bias     = min(MAX_BIAS, BASE_BIAS * (1.0 + sev))
+                throttle = max(MIN_THROTTLE, BASE_THROTTLE - (sev * 0.25))
+
+                if current["event_type"] == "RIGHT_CURVE":
+                    ev.activate(float(bias), float(throttle))
+                    print(f"[NEAR] RIGHT_CURVE ACTIVE  "
+                          f"bias:+{bias:.2f} throttle:{throttle:.2f} "
+                          f"tta:{tta:.1f}s L:{min_l:.1f}m R:{min_r:.1f}m")
+
+                elif current["event_type"] == "LEFT_CURVE":
+                    ev.activate(float(-bias), float(throttle))
+                    print(f"[NEAR] LEFT_CURVE ACTIVE  "
+                          f"bias:{-bias:.2f} throttle:{throttle:.2f} "
+                          f"tta:{tta:.1f}s L:{min_l:.1f}m R:{min_r:.1f}m")
+
+            # ACTIVE EVENT: hold directive, check for completion
+            elif current["lifecycle"] == "ACTIVE":
+                done = False
+
+                if current["event_type"] == "RIGHT_CURVE":
+                    done = bool(
+                        min_r > CURVE_DONE_OPEN and
+                        min_l > CURVE_DONE_CLOSE and
+                        tta > NEAR_ENTRY
+                    )
+                elif current["event_type"] == "LEFT_CURVE":
+                    done = bool(
+                        min_l > CURVE_DONE_OPEN and
+                        min_r > CURVE_DONE_CLOSE and
+                        tta > NEAR_ENTRY
+                    )
+
+                if done:
+                    ev.close()
+                    print(f"[NEAR] {current['event_type']} CLOSED — "
+                          f"corridor confirmed L:{min_l:.1f}m R:{min_r:.1f}m")
+
+            # NO ACTIVE EVENT: obstacle detection only
+            elif current["lifecycle"] in ("NONE", "CLOSED"):
+                obs_bias     = 0.0
+                obs_throttle = 1.0
+
+                if min_l < 3.0 and min_r > min_l * 2.0:
+                    obs_bias     =  0.25
+                    obs_throttle =  0.80
+                elif min_r < 3.0 and min_l > min_r * 2.0:
+                    obs_bias     = -0.25
+                    obs_throttle =  0.80
+
+                with ev._lock:
+                    ev.steering_bias = obs_bias
+                    ev.throttle_cap  = obs_throttle
+
+            # ISSUE DIRECTIVE TO BRAINSTEM
+            current = ev.snapshot()
+            mission.set_directives(
+                steering_bias=float(current["steering_bias"]),
+                throttle_ceiling=float(current["throttle_cap"]),
+                event_type=current["event_type"],
+                event_lifecycle=current["lifecycle"]
+            )
+
+            if (current["lifecycle"] != last_lifecycle or
+                    current["event_type"] != last_event_type):
+                last_lifecycle  = current["lifecycle"]
+                last_event_type = current["event_type"]
+
+        except Exception as e:
+            print(f"[NEAR] Error: {e}")
+            traceback.print_exc()
+
+
+# ─────────────────────────────────────────
 # LAUNCH HELPER
-# -----------------------------------------
+# ─────────────────────────────────────────
 
 def start_ontinuity_loop(mission, lidar_feed):
-    t = threading.Thread(
-        target=run_ontinuity_loop,
-        args=(mission, lidar_feed),
+    ev = EventState()
+
+    deep_thread = threading.Thread(
+        target=run_deep_horizon,
+        args=(mission, lidar_feed, ev),
         daemon=True
     )
-    t.start()
-    return t
+    near_thread = threading.Thread(
+        target=run_near_horizon,
+        args=(mission, lidar_feed, ev),
+        daemon=True
+    )
+
+    deep_thread.start()
+    near_thread.start()
+
+    print("[ONTINUITY] Three horizon architecture active")
+    return deep_thread, near_thread
