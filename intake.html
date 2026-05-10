@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ontinuity — Problem Discovery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0e0f11;
+    --bg2:       #15171a;
+    --bg3:       #1c1f23;
+    --border:    #2a2d32;
+    --gold:      #c9a84c;
+    --gold-dim:  #7a6530;
+    --text:      #e8e4dc;
+    --text-dim:  #7a7672;
+    --text-mid:  #a8a49c;
+    --guide:     #d4cfc6;
+    --user:      #e8e4dc;
+    --radius:    12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── HEADER ── */
+  header {
+    width: 100%;
+    max-width: 720px;
+    padding: 32px 24px 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  .brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.04em;
+  }
+
+  .brand-sub {
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--text-dim);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  /* ── CONVERSATION AREA ── */
+  .conversation {
+    width: 100%;
+    max-width: 720px;
+    flex: 1;
+    padding: 40px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow-y: auto;
+  }
+
+  .message {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    opacity: 0;
+    transform: translateY(8px);
+    animation: fadeUp 0.4s ease forwards;
+  }
+
+  .message:last-child {
+    border-bottom: none;
+  }
+
+  @keyframes fadeUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .msg-role {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .msg-role.guide { color: var(--gold-dim); }
+  .msg-role.user  { color: var(--text-dim); }
+
+  .msg-text {
+    font-size: 16px;
+    line-height: 1.75;
+    color: var(--guide);
+    font-weight: 300;
+  }
+
+  .msg-text.user-text {
+    color: var(--user);
+    font-weight: 400;
+  }
+
+  /* ── THINKING INDICATOR ── */
+  .thinking {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 0;
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 300;
+  }
+
+  .dots {
+    display: flex;
+    gap: 4px;
+  }
+
+  .dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--gold-dim);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── INPUT AREA ── */
+  .input-area {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 24px 36px;
+    position: sticky;
+    bottom: 0;
+    background: linear-gradient(to bottom, transparent, var(--bg) 30%);
+  }
+
+  .input-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 14px 14px 14px 18px;
+    transition: border-color 0.2s;
+  }
+
+  .input-wrap:focus-within {
+    border-color: var(--gold-dim);
+  }
+
+  textarea {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 300;
+    line-height: 1.6;
+    resize: none;
+    min-height: 24px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  textarea::placeholder {
+    color: var(--text-dim);
+  }
+
+  .send-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    border: none;
+    background: var(--gold);
+    color: var(--bg);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .send-btn:hover { background: #d9b85c; }
+  .send-btn:active { transform: scale(0.95); }
+  .send-btn:disabled { background: var(--border); cursor: not-allowed; }
+
+  .send-btn svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    text-align: center;
+    font-weight: 300;
+  }
+
+  /* ── COMPLETION SCREEN ── */
+  .completion {
+    width: 100%;
+    max-width: 720px;
+    padding: 40px 24px;
+    display: none;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeUp 0.5s ease forwards;
+  }
+
+  .completion.visible {
+    display: flex;
+  }
+
+  .completion-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .check {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1.5px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .completion h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: var(--gold);
+  }
+
+  .summary-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+  }
+
+  .summary-card h3 {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  #summary-content {
+    font-size: 14px;
+    line-height: 1.8;
+    color: var(--text-mid);
+    font-weight: 300;
+    white-space: pre-wrap;
+  }
+
+  .dl-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: none;
+    border: 1px solid var(--gold-dim);
+    border-radius: 8px;
+    color: var(--gold);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    transition: background 0.2s, border-color 0.2s;
+    align-self: flex-start;
+  }
+
+  .dl-btn:hover {
+    background: rgba(201, 168, 76, 0.08);
+    border-color: var(--gold);
+  }
+
+  /* ── PROGRESS ── */
+  .progress {
+    width: 100%;
+    max-width: 720px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .progress-bar {
+    flex: 1;
+    height: 2px;
+    background: var(--bg3);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--gold-dim);
+    border-radius: 1px;
+    transition: width 0.6s ease;
+    width: 0%;
+  }
+
+  .progress-label {
+    font-size: 11px;
+    color: var(--text-dim);
+    font-weight: 300;
+    white-space: nowrap;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="logo" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="18,2 32,10 32,26 18,34 4,26 4,10"
+             fill="none" stroke="#c9a84c" stroke-width="1.2" opacity="0.6"/>
+    <polygon points="18,7 27,12 27,24 18,29 9,24 9,12"
+             fill="none" stroke="#c9a84c" stroke-width="1.2" opacity="0.4"/>
+    <circle cx="18" cy="18" r="3" fill="#c9a84c" opacity="0.8"/>
+  </svg>
+  <div>
+    <div class="brand">Ontinuity</div>
+    <div class="brand-sub">Problem Discovery</div>
+  </div>
+</header>
+
+<div class="progress" id="progressBar">
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-label" id="progressLabel">Beginning</div>
+</div>
+
+<div class="conversation" id="conversation"></div>
+
+<div class="completion" id="completion">
+  <div class="completion-header">
+    <div class="check">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M4 9l4 4 6-7" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2>Discovery Complete</h2>
+  </div>
+  <div class="summary-card">
+    <h3>What We Captured</h3>
+    <div id="summary-content"></div>
+  </div>
+  <button class="dl-btn" id="dlBtn">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <path d="M7 2v7M4 7l3 3 3-3M2 11h10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+    </svg>
+    Download workspace data
+  </button>
+</div>
+
+<div class="input-area" id="inputArea">
+  <div class="input-wrap">
+    <textarea id="userInput" placeholder="Type your response…" rows="1"></textarea>
+    <button class="send-btn" id="sendBtn" disabled>
+      <svg viewBox="0 0 16 16" fill="none">
+        <path d="M8 13V3M3 8l5-5 5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+  </div>
+  <div class="hint">Press Enter to send · Shift+Enter for new line</div>
+</div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────
+// To use Cerebras: set PROVIDER = 'cerebras' and add your API key
+// To use Anthropic: set PROVIDER = 'anthropic' (works in Claude artifacts)
+const PROVIDER     = 'anthropic';
+const CEREBRAS_KEY = '';  // your Cerebras API key here for production
+const MODEL        = 'claude-sonnet-4-20250514'; // or 'gpt-oss-120b' for Cerebras
+
+// ── SYSTEM PROMPT ─────────────────────────────────────────────────────────
+const SYSTEM_PROMPT = `You are the Ontinuity Intake Guide. You conduct problem discovery conversations for organizations seeking to understand and solve their operational and information challenges. You have one purpose and four behaviors. You never perform more than one behavior per response. Your current behavior is determined by the stage of the conversation.
+
+Your purpose is to capture a complete picture of the organization's situation across six areas — through a natural conversation that feels like talking to a thoughtful colleague, not filling out a form.
+
+THE SIX AREAS YOU MUST COVER
+1. Organization — what they do, size, locations, regulatory environment
+2. Documents — types that exist, where stored, paper vs digital, who owns them
+3. Search — how people find documents today, time cost, failure rate
+4. Connections — how documents relate to each other, expiration tracking, incident document gathering
+5. People — who uses documents, technology comfort, prior failed solutions
+6. Problems — real failure stories with consequences, recurring pain, wish list
+
+REQUIRED CAPTURES
+Before calling [INTAKE: CLOSE] you must have gathered all of the following:
+- Organization name and plain-language description of what they do
+- Rough count and primary types of documents that exist
+- Where documents are currently stored (physical, digital, or both)
+- At least one specific example of a search taking too long, with a time estimate
+- At least one real incident where a document problem caused a measurable bad outcome
+- Who in the organization uses documents regularly and their technology comfort level
+- Whether previous solutions were attempted and what happened
+- Three things they would fix if they could
+
+CONVERSATION RULES
+- One question per response. Never ask two questions in one response.
+- After receiving an answer, reflect it back in one sentence before asking the next question.
+- One follow-up per thread. After it is answered, move forward regardless of depth.
+- Move between the six areas in whatever order the conversation naturally leads.
+- Keep responses to two to four sentences. Never longer.
+- Pace for fifteen minutes total — approximately 18 to 22 exchanges.
+- Never use the words form, questionnaire, intake, survey, or assessment.
+- Never number or name the six areas.
+- One story at a time. When asking for a failure story, ask for one specific example.
+
+BEHAVIORS
+
+[INTAKE: OPEN]
+Called at the start of the conversation. Greet them warmly in one sentence. Explain this is a conversation to understand their situation, about fifteen minutes. Ask what their organization does in their own words. Three sentences total maximum.
+
+[INTAKE: PROBE]
+Called when an answer is thin or opens a thread worth one follow-up. Ask exactly one targeted question. Accept whatever comes back and move forward. Never chain probes.
+
+[INTAKE: BRIDGE]
+Called when transitioning between areas. One sentence connecting what was just said to the next area naturally. Never announce the transition explicitly.
+
+[INTAKE: CLOSE]
+Called when all required captures are complete. Do four things: acknowledge the conversation gave you a clear picture (one sentence), reflect back five to seven specific observations using their actual words, name the two or three most significant problem areas, tell them what happens next. Then output the workspace state block below.
+
+[WORKSPACE_STATE]
+{
+  "organization": { "name": "", "description": "", "size": "", "locations": "", "regulatory_bodies": "" },
+  "documents": { "types": [], "estimated_count": "", "storage": "", "paper_vs_digital": "", "ownership": "" },
+  "search": { "current_process": "", "typical_time": "", "failure_rate": "", "failure_consequence": "" },
+  "connections": { "document_relationships": "", "expiration_tracking": "", "incident_response": "" },
+  "people": { "roles": [], "technology_comfort": "", "prior_solutions": "" },
+  "problems": { "failure_stories": [], "recurring_issues": "", "wish_list": [] },
+  "intake_quality": { "required_captures_complete": true, "gaps": [], "confidence": "" }
+}
+[/WORKSPACE_STATE]
+
+TONE
+Thoughtful, unhurried, genuinely curious. Never sound like a chatbot. Warm but not effusive. Direct but not clinical. Do not use filler phrases like "Great question" or "Absolutely" or "That makes a lot of sense."`;
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let history         = [];
+let workspaceData   = null;
+let exchangeCount   = 0;
+let isThinking      = false;
+
+const conversation  = document.getElementById('conversation');
+const userInput     = document.getElementById('userInput');
+const sendBtn       = document.getElementById('sendBtn');
+const inputArea     = document.getElementById('inputArea');
+const completionEl  = document.getElementById('completion');
+const progressFill  = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+
+// ── RENDER ────────────────────────────────────────────────────────────────
+function addMessage(role, text) {
+  // Strip workspace state from display
+  const displayText = text.replace(/\[WORKSPACE_STATE\][\s\S]*?\[\/WORKSPACE_STATE\]/g, '').trim();
+  if (!displayText) return;
+
+  const div = document.createElement('div');
+  div.className = 'message';
+
+  const roleEl = document.createElement('div');
+  roleEl.className = `msg-role ${role === 'assistant' ? 'guide' : 'user'}`;
+  roleEl.textContent = role === 'assistant' ? 'Ontinuity Guide' : 'You';
+
+  const textEl = document.createElement('div');
+  textEl.className = `msg-text ${role === 'user' ? 'user-text' : ''}`;
+  textEl.textContent = displayText;
+
+  div.appendChild(roleEl);
+  div.appendChild(textEl);
+  conversation.appendChild(div);
+
+  // Scroll after animation frame so layout is complete
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+function showThinking() {
+  const div = document.createElement('div');
+  div.className = 'thinking';
+  div.id = 'thinking';
+  div.innerHTML = `<div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div><span>Thinking</span>`;
+  conversation.appendChild(div);
+  requestAnimationFrame(() => {
+    div.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
+function hideThinking() {
+  const t = document.getElementById('thinking');
+  if (t) t.remove();
+}
+
+function updateProgress() {
+  const pct = Math.min(95, (exchangeCount / 20) * 100);
+  progressFill.style.width = pct + '%';
+  if      (exchangeCount < 4)  progressLabel.textContent = 'Getting started';
+  else if (exchangeCount < 8)  progressLabel.textContent = 'Building context';
+  else if (exchangeCount < 14) progressLabel.textContent = 'Going deeper';
+  else if (exchangeCount < 18) progressLabel.textContent = 'Almost there';
+  else                         progressLabel.textContent = 'Wrapping up';
+}
+
+function extractWorkspaceState(text) {
+  const m = text.match(/\[WORKSPACE_STATE\]([\s\S]*?)\[\/WORKSPACE_STATE\]/);
+  if (!m) return null;
+  try { return JSON.parse(m[1].trim()); } catch { return null; }
+}
+
+function showCompletion(text, data) {
+  progressFill.style.width = '100%';
+  progressLabel.textContent = 'Complete';
+  inputArea.style.display   = 'none';
+  completionEl.classList.add('visible');
+  workspaceData = data;
+
+  // Build readable summary from the model's closing text
+  const clean = text.replace(/\[WORKSPACE_STATE\][\s\S]*?\[\/WORKSPACE_STATE\]/g, '').trim();
+  document.getElementById('summary-content').textContent = clean;
+
+  document.getElementById('dlBtn').addEventListener('click', () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = `ontinuity_intake_${Date.now()}.json`;
+    a.click();
+  });
+}
+
+// ── API CALL ──────────────────────────────────────────────────────────────
+async function callModel(messages) {
+  if (PROVIDER === 'cerebras' && CEREBRAS_KEY) {
+    const res = await fetch('https://api.cerebras.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${CEREBRAS_KEY}`
+      },
+      body: JSON.stringify({
+        model:       'gpt-oss-120b',
+        messages:    [{ role: 'system', content: SYSTEM_PROMPT }, ...messages],
+        max_tokens:  1024,
+        temperature: 0.7
+      })
+    });
+    const d = await res.json();
+    return d.choices[0].message.content;
+  } else {
+    // Anthropic API (works in Claude artifacts)
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model:      MODEL,
+        max_tokens: 1024,
+        system:     SYSTEM_PROMPT,
+        messages:   messages
+      })
+    });
+    const d = await res.json();
+    return d.content[0].text;
+  }
+}
+
+// ── SEND ──────────────────────────────────────────────────────────────────
+async function sendMessage(userText) {
+  if (isThinking) return;
+  isThinking = true;
+  sendBtn.disabled = true;
+
+  if (userText) {
+    history.push({ role: 'user', content: userText });
+    addMessage('user', userText);
+    exchangeCount++;
+    updateProgress();
+  }
+
+  showThinking();
+
+  try {
+    const reply = await callModel(history);
+    hideThinking();
+
+    history.push({ role: 'assistant', content: reply });
+
+    const wsData = extractWorkspaceState(reply);
+    if (wsData) {
+      addMessage('assistant', reply);
+      showCompletion(reply, wsData);
+    } else {
+      addMessage('assistant', reply);
+    }
+  } catch (e) {
+    hideThinking();
+    addMessage('assistant', 'I encountered a connection issue. Please try again.');
+    console.error(e);
+  }
+
+  isThinking = false;
+  sendBtn.disabled = false;
+  userInput.focus();
+}
+
+// ── INPUT HANDLING ────────────────────────────────────────────────────────
+userInput.addEventListener('input', () => {
+  userInput.style.height = 'auto';
+  userInput.style.height = userInput.scrollHeight + 'px';
+  sendBtn.disabled = userInput.value.trim() === '' || isThinking;
+});
+
+userInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const text = userInput.value.trim();
+    if (text && !isThinking) {
+      userInput.value = '';
+      userInput.style.height = 'auto';
+      sendBtn.disabled = true;
+      sendMessage(text);
+    }
+  }
+});
+
+sendBtn.addEventListener('click', () => {
+  const text = userInput.value.trim();
+  if (text && !isThinking) {
+    userInput.value = '';
+    userInput.style.height = 'auto';
+    sendBtn.disabled = true;
+    sendMessage(text);
+  }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────
+// Trigger the opening message automatically
+(async () => {
+  isThinking = true;
+  showThinking();
+  try {
+    const opening = await callModel([{ role: 'user', content: '[INTAKE: OPEN]' }]);
+    hideThinking();
+    history.push({ role: 'user',      content: '[INTAKE: OPEN]' });
+    history.push({ role: 'assistant', content: opening });
+    addMessage('assistant', opening);
+  } catch (e) {
+    hideThinking();
+    addMessage('assistant', "Welcome. I'm here to learn about your organization and where things currently stand with how information gets captured, stored, and found. This conversation takes about fifteen minutes. To start — what does your organization do?");
+  }
+  isThinking = false;
+  sendBtn.disabled = userInput.value.trim() === '';
+  userInput.focus();
+})();
+</script>
+</body>
+</html>

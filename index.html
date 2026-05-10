@@ -10,22 +10,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --gold: #F0A500;
-  --gold-bright: #FFB700;
-  --gold-dim: #A07020;
-  --gold-deep: #4A3000;
-  --gold-glow: rgba(240,165,0,0.18);
-  --bg: #090909;
-  --bg-raised: #0f0f0f;
-  --bg-card: #121212;
+  --gold:        #c9a84c;
+  --gold-bright: #d9b85c;
+  --gold-dim:    #7a6530;
+  --gold-deep:   #3d2e0a;
+  --gold-glow:   rgba(201,168,76,0.18);
+  --bg:          #090909;
+  --bg-raised:   #0f0f0f;
+  --bg-card:     #121212;
   --bg-card-hover: #161616;
-  --text: #EFEFEF;
-  --text-dim: #8A8A8A;
-  --text-muted: #4A4A4A;
-  --border: rgba(240,165,0,0.18);
+  --text:        #EFEFEF;
+  --text-dim:    #8A8A8A;
+  --text-muted:  #4A4A4A;
+  --border:      rgba(201,168,76,0.18);
   --border-subtle: rgba(255,255,255,0.07);
   --max-w: 1000px;
-  --pad: 48px;
+  --pad:   48px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -46,8 +46,8 @@ body::before {
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(240,165,0,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(240,165,0,0.03) 1px, transparent 1px);
+    linear-gradient(rgba(201,168,76,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,168,76,0.03) 1px, transparent 1px);
   background-size: 48px 48px;
   pointer-events: none;
   z-index: 0;
@@ -87,8 +87,12 @@ nav {
   text-decoration: none;
   letter-spacing: 0.04em;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 .nav-logo .o { color: var(--text-muted); }
+.nav-logo svg { flex-shrink: 0; }
 .nav-links { display: flex; gap: 28px; list-style: none; }
 .nav-links a {
   color: var(--text-muted);
@@ -183,7 +187,7 @@ nav {
 }
 .btn-gold:hover {
   background: var(--gold-bright);
-  box-shadow: 0 0 36px rgba(240,165,0,0.3);
+  box-shadow: 0 0 36px rgba(201,168,76,0.3);
   transform: translateY(-1px);
 }
 
@@ -385,7 +389,7 @@ nav {
 
 /* ── TRY IT ── */
 .try-hero {
-  background: linear-gradient(135deg, rgba(240,165,0,0.04), transparent);
+  background: linear-gradient(135deg, rgba(201,168,76,0.04), transparent);
   border: 1px solid var(--border);
   padding: 32px;
   margin-bottom: 32px;
@@ -406,7 +410,7 @@ nav {
 }
 
 .warn {
-  background: rgba(240,165,0,0.04);
+  background: rgba(201,168,76,0.04);
   border-left: 3px solid var(--gold-dim);
   padding: 16px 20px;
   margin-bottom: 36px;
@@ -503,7 +507,7 @@ nav {
   align-items: flex-start;
   gap: 12px;
   padding: 16px 20px;
-  background: rgba(240,165,0,0.02);
+  background: rgba(201,168,76,0.02);
   border: 1px solid var(--border-subtle);
   margin-top: 28px;
 }
@@ -528,7 +532,7 @@ nav {
   font-family: 'Orbitron', monospace;
   font-size: 40px;
   font-weight: 900;
-  color: rgba(240,165,0,0.05);
+  color: rgba(201,168,76,0.05);
   position: absolute;
   top: 16px; right: 20px;
   line-height: 1;
@@ -708,6 +712,9 @@ footer {
   font-weight: 700;
   color: var(--gold);
   margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .footer-meta { font-size: 12px; color: var(--text-muted); line-height: 1.7; }
 .footer-links { display: flex; gap: 20px; flex-wrap: wrap; }
@@ -755,12 +762,12 @@ footer {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
-.hero-mono { animation: fadeUp 0.7s ease forwards 0.1s; opacity: 0; }
+.hero-mono    { animation: fadeUp 0.7s ease forwards 0.1s;  opacity: 0; }
 .hero-statement { animation: fadeUp 0.7s ease forwards 0.25s; opacity: 0; }
-.hero-punch { animation: fadeUp 0.7s ease forwards 0.4s; opacity: 0; }
-.hero-tagline { animation: fadeUp 0.7s ease forwards 0.5s; opacity: 0; }
+.hero-punch   { animation: fadeUp 0.7s ease forwards 0.4s;  opacity: 0; }
+.hero-tagline { animation: fadeUp 0.7s ease forwards 0.5s;  opacity: 0; }
 .hero-actions { animation: fadeUp 0.7s ease forwards 0.65s; opacity: 0; }
-.hero-metrics { animation: fadeUp 0.7s ease forwards 0.8s; opacity: 0; }
+.hero-metrics { animation: fadeUp 0.7s ease forwards 0.8s;  opacity: 0; }
 
 /* ── RESPONSIVE ── */
 @media (max-width: 760px) {
@@ -779,13 +786,20 @@ footer {
 
 <nav>
   <div class="nav-inner">
-    <a href="#" class="nav-logo"><span class="o">O</span>ntinuity</a>
+    <a href="#" class="nav-logo">
+      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+      </svg><span class="o">O</span>ntinuity
+    </a>
     <ul class="nav-links">
       <li><a href="#problems">What It Is</a></li>
       <li><a href="#try">Try It</a></li>
       <li><a href="#architecture">Architecture</a></li>
       <li><a href="#corpus">Research</a></li>
       <li><a href="#contribute">Contribute</a></li>
+      <li><a href="/intake.html">Problem Discovery</a></li>
     </ul>
   </div>
 </nav>
@@ -800,27 +814,27 @@ footer {
   <div class="hero-punch">It's about better architecture.</div>
   <p class="hero-tagline">Ontinuity is that architecture. Four cooperating models. Persistent memory. Autonomous adversarial sessions. Deployed and running right now.</p>
   <div class="hero-actions">
-    <a href="https://web-production-7eaf8.up.railway.app" target="_blank" class="btn-gold">▶ Begin Session</a>
-    <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">⌥ GitHub</a>
+    <a href="https://web-production-7eaf8.up.railway.app" target="_blank" class="btn-gold">&#9654; Begin Session</a>
+    <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#8997; GitHub</a>
   </div>
- <div class="hero-metrics">
-  <div class="metric">
-    <div class="metric-val">Apr 18</div>
-    <div class="metric-label">First Autonomous Session</div>
+  <div class="hero-metrics">
+    <div class="metric">
+      <div class="metric-val">Apr 18</div>
+      <div class="metric-label">First Autonomous Session</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val">15</div>
+      <div class="metric-label">Cycles · No Operator Content</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val">0</div>
+      <div class="metric-label">Errors · Clean Run</div>
+    </div>
+    <div class="metric">
+      <div class="metric-val">Open</div>
+      <div class="metric-label">Source · MIT License</div>
+    </div>
   </div>
-  <div class="metric">
-    <div class="metric-val">15</div>
-    <div class="metric-label">Cycles · No Operator Content</div>
-  </div>
-  <div class="metric">
-    <div class="metric-val">0</div>
-    <div class="metric-label">Errors · Clean Run</div>
-  </div>
-  <div class="metric">
-    <div class="metric-val">Open</div>
-    <div class="metric-label">Source · MIT License</div>
-  </div>
-</div>
 </div>
 
 <!-- PROBLEMS -->
@@ -834,19 +848,19 @@ footer {
         <div class="prob-num">PROBLEM 01</div>
         <div class="prob-title">It Forgets</div>
         <p class="prob-body">Every session reset loses accumulated context. Decisions made, corrections established, working patterns developed — all gone. The next session starts cold. There is no accumulated difference.</p>
-        <div class="solve-tag">◈ Solved by Knowtext</div>
+        <div class="solve-tag">&#9672; Solved by Knowtext</div>
       </div>
       <div class="prob-card">
         <div class="prob-num">PROBLEM 02</div>
         <div class="prob-title">It Agrees With Itself</div>
         <p class="prob-body">Two AI models in dialogue without structural constraints converge. Shared training priors amplify errors rather than correct them. Confident-sounding nonsense accumulates undetected.</p>
-        <div class="solve-tag">◈ Solved by Tetraform</div>
+        <div class="solve-tag">&#9672; Solved by Tetraform</div>
       </div>
       <div class="prob-card">
         <div class="prob-num">PROBLEM 03</div>
         <div class="prob-title">It Can't Be Trusted</div>
         <p class="prob-body">Current AI deployment is structurally opaque. Behavior is probabilistic. When a model fails, the failure is unlocatable. When it succeeds, the success is unreproducible. There is no structural reliability.</p>
-        <div class="solve-tag">◈ Solved by Artificialware</div>
+        <div class="solve-tag">&#9672; Solved by Artificialware</div>
       </div>
     </div>
   </div>
@@ -862,8 +876,8 @@ footer {
     <div class="results-grid reveal">
       <div class="r-block featured">
         <div class="r-label">Friction Signal Behavioral Effect</div>
-      <div class="r-big">Apr 18, 2026</div>
-<p class="r-desc">First fully autonomous 15-cycle research session. Produced a citable work product without operator content generation. Parietal adjudicated nine challenge events autonomously. Zero errors.</p>
+        <div class="r-big">Apr 18, 2026</div>
+        <p class="r-desc">First fully autonomous 15-cycle research session. Produced a citable work product without operator content generation. Parietal adjudicated nine challenge events autonomously. Zero errors.</p>
       </div>
       <div class="r-block">
         <div class="r-label">Session Record</div>
@@ -901,16 +915,13 @@ footer {
   <div class="wrap">
     <div class="tag">Get Started</div>
     <h2 class="section-h">Bring a Question Nobody Has Answered</h2>
-
     <div class="try-hero reveal">
       <div class="try-h">Ontinuity is fully model-agnostic. Any model goes in any slot.</div>
       <p class="try-body">For best results, put your strongest frontier models in the Researcher and Parietal slots. For the Challenger, Friction, and Distillation roles, model divergence matters more than raw capability — a model from a different training distribution produces more genuine adversarial pressure. Cerebras gives you fast, reliable, low-cost API access for these three supporting roles.</p>
     </div>
-
     <div class="warn reveal">
-      <strong>⚠ Before you begin:</strong> Free tier APIs from other providers will interrupt your session without warning. We have tested them. They go down without notice. Invest in API credits before you start. A session that completes is worth more than one that almost worked.
+      <strong>&#9888; Before you begin:</strong> Free tier APIs from other providers will interrupt your session without warning. We have tested them. They go down without notice. Invest in API credits before you start. A session that completes is worth more than one that almost worked.
     </div>
-
     <div class="tag" style="margin-bottom:14px;">Recommended Configuration</div>
     <div class="config-row reveal">
       <div class="config-slot">
@@ -939,12 +950,10 @@ footer {
         <div class="slot-note accent">Fast · Reliable · Cheap</div>
       </div>
     </div>
-
     <div class="cost-bar reveal">
       <span class="amt">~$20</span>
-      <span>for your first serious session — $10 Cerebras Developer plan + ~$10 frontier model API usage for a full 15-cycle run. Ontinuity itself is free..</span>
+      <span>for your first serious session — $10 Cerebras Developer plan + ~$10 frontier model API usage for a full 15-cycle run. Ontinuity itself is free.</span>
     </div>
-
     <div class="tag" style="margin-bottom:12px;">Get Your API Keys</div>
     <div class="providers reveal">
       <a href="https://console.anthropic.com" target="_blank" class="prov-link"><span class="prov-dot"></span>Anthropic API</a>
@@ -952,12 +961,10 @@ footer {
       <a href="https://platform.openai.com" target="_blank" class="prov-link"><span class="prov-dot"></span>OpenAI Platform</a>
       <a href="https://inference.cerebras.ai" target="_blank" class="prov-link"><span class="prov-dot"></span>Cerebras (Recommended)</a>
     </div>
-
     <div class="cta-center reveal">
-      <a href="https://web-production-7eaf8.up.railway.app" target="_blank" class="btn-gold" style="padding:15px 44px;font-size:12px;">▶ &nbsp;Begin Session</a>
+      <a href="https://web-production-7eaf8.up.railway.app" target="_blank" class="btn-gold" style="padding:15px 44px;font-size:12px;">&#9654; &nbsp;Begin Session</a>
       <p class="cta-label">Bring your keys. Bring a hard question. See what happens.</p>
     </div>
-
     <div class="consent reveal">
       <input type="checkbox" id="consent">
       <label for="consent">Allow session data to be used anonymously for AI behavioral research. No personal information is collected — session content and model outputs only. Contributes to the <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">Psychology of AI Data</a> research program. Unchecked by default.</label>
@@ -1103,12 +1110,12 @@ footer {
       <div class="contrib-card">
         <div class="contrib-h">Code &amp; Architecture</div>
         <p class="contrib-body">The system is deployed and functional. The open questions — branch tracking, coherence ceiling, adjudicator bias calibration — are real engineering problems waiting for contributors. Full implementation in the GitHub repo.</p>
-        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">⌥ GitHub Repository</a>
+        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#8997; GitHub Repository</a>
       </div>
       <div class="contrib-card">
         <div class="contrib-h">Support the Research</div>
         <p class="contrib-body">The primary resource constraint is compute. Dedicated API access enables cross-architecture replication of the sigmoid finding, the fine-tuning experiment, long-horizon autonomous sessions, and coherence ceiling characterization.</p>
-        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">◈ GitHub Sponsors</a>
+        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#9672; GitHub Sponsors</a>
       </div>
     </div>
     <div class="contact-bar reveal">
@@ -1121,22 +1128,29 @@ footer {
 <!-- FOOTER -->
 <footer>
   <div>
-    <div class="footer-logo">Ontinuity</div>
+    <div class="footer-logo">
+      <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+      </svg>Ontinuity
+    </div>
     <p class="footer-meta">Persistent Cognitive Infrastructure for AI-Assisted Research<br>Patrick Killebrew · April 2026 · MIT License · ontinuity.org</p>
   </div>
   <div class="footer-links">
     <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">GitHub</a>
     <a href="https://web-production-7eaf8.up.railway.app" target="_blank">Live System</a>
     <a href="#corpus">Research</a>
+    <a href="/intake.html">Problem Discovery</a>
     <a href="mailto:contact@ontinuity.org">Contact</a>
   </div>
 </footer>
 
 <script>
 const obs = new IntersectionObserver(entries => {
-  entries.forEach((e, i) => {
+  entries.forEach(e => {
     if (e.isIntersecting) {
-      const children = e.target.querySelectorAll ? 
+      const children = e.target.querySelectorAll ?
         Array.from(e.target.children) : [];
       if (children.length > 1) {
         children.forEach((c, i) => {
