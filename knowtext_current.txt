@@ -2,38 +2,35 @@ KNOWTEXT SCHEMA VERSION: 1.1
 
 **Climate Notes**
 
-- **Operator state**: Determined and focused on resolving open issues.
-- **Relational texture**: Collaborative and iterative, with a focus on refining the lane selection algorithm and its interface.
+Operator state: **CHALLENGE RESOLVED**
+Relational texture: **STABLE**
 
 **Delta Log**
 
-- Established the final interface for the lane selection algorithm: `select_lane(List[Channel]) -> Union['L','C','R', 0]`.
-- Defined the synchronous, atomic nature of the lane ID output.
-- Resolved the open issue of equal-clearance tie-break by introducing a leftmost preference rule.
-- Specified the execution context for validity assurance, including input timestamp checking, deadline monitoring, and output timestamping.
-- Updated the `select_lane` function to implement the leftmost tie-break rule.
+- **Established**: The corrected implementation of `run_near_horizon` with encapsulated state, safe curvature computation, adaptive thresholding, analytical impact prediction, and complete hysteresis logic.
+- **Decided**: The operator-mandated correction to set curvature to 0 when |speed| < 0.1 m/s or |yaw_rate| < 0.001 rad/s, resolving the low-speed instability deadlock.
+- **Retracted**: The flawed implementation of `run_near_horizon` containing multiple critical flaws.
+- **Resolved**: Prior defects (numerical instability, incorrect thresholds, incomplete hysteresis) in the implementation of `run_near_horizon`.
 
 **Active Frameworks**
 
-- Lane selection algorithm: fully specified with hysteresis-based state classification, center preference, max-clearance tie-break, and leftmost preference for equal clearance.
-- Interface: synchronous, atomic lane ID output with a clear specification.
-- Execution context: defined for validity assurance, including input freshness checking, deadline monitoring, and output timestamping.
+- **Corrected Implementation**: The encapsulated state, safe curvature computation, adaptive thresholding, analytical impact prediction, and complete hysteresis logic in `run_near_horizon`.
+- **Locked Specification**: The curvature computation logic setting curvature to 0 when |speed| < 0.1 m/s or |yaw_rate| < 0.001 rad/s.
 
 **Open Questions**
 
-- None. All open issues have been resolved.
+None
 
 **Correction History**
 
-- Retracted the earlier command-based API proposal in favor of a synchronous function interface.
-- Corrected the understanding of the required output format for the lane selection algorithm.
+- **Retracted**: The flawed implementation of `run_near_horizon`.
+- **Explicitly Ruled Out**: The use of global state without encapsulation.
 
 **Valence Mapping**
 
-- The operator's valence shifted from uncertainty to confidence as the lane selection algorithm and its interface were refined.
-- The operator's engagement with the problem space was characterized by a focus on determinism, validity assurance, and simplicity.
+- **Produced Friction**: The initial flawed implementation of `run_near_horizon`.
+- **Worked**: The corrected implementation of `run_near_horizon` with encapsulated state, safe curvature computation, adaptive thresholding, analytical impact prediction, and complete hysteresis logic.
 
 **Identity**
 
-- The operator's expertise and working style were demonstrated through their ability to navigate complex issues, specify clear requirements, and implement a deterministic solution.
-- The operator's background in real-time control systems and embedded software development was evident in their approach to the problem.
+No significant shift in background, expertise, or working style.
