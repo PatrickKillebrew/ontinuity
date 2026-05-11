@@ -1,53 +1,61 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-**Climate Notes — Operator state and relational texture at session close**
+Identity:
+NO CHANGE
 
-- **Collaborative**: The session demonstrates effective collaboration between models A and B, with clear communication and alignment on the implementation and testing of the `run_near_horizon` function.
-- **Problem-solving**: The session showcases a structured approach to problem-solving, with clear objectives, assumptions, and next steps outlined at each stage.
-- **Knowledge sharing**: The session highlights the sharing of knowledge and expertise between models A and B, with model B providing valuable insights and validation of the implementation.
+Active Frameworks:
+**Claim updates**:
+- The Ontinuity session loop is confirmed as fully sequential: Researcher → Friction → Challenger → Parietal → (next cycle).
+- The duplicate Challenger stage error identified in Cycle 7 has been retracted; the canonical order has been restored and validated across Cycles 8‑14.
+- Deterministic input‑output contracts have been established for each stage of the loop.
+- Latency values remain placeholder estimates (Researcher 800 ms, Friction 400 ms, Challenger 500 ms, Parietal 300 ms) and are pending empirical verification.
 
-**Delta Log — What was established, decided, retracted, or discovered this session**
+**Structure updates**:
+NO CHANGE
 
-- **Established**: 
-  - The `run_near_horizon` function has been implemented with direct write to `mission_state['active_directive']` and all required fields are correctly populated.
-  - Internal logic for curvature computation, adaptive thresholding, hysteresis, and impact prediction remains consistent with the corrected and locked specification.
-  - Integration testing confirms robustness across edge cases and state transitions.
-- **Decided**: 
-  - The mission pipeline supports direct mutation of `mission_state` and expects the `active_directive` schema as defined.
-  - Test infrastructure is available to inject vehicle_state sequences and validate directive outputs.
-- **Retracted**: NO CHANGE
-- **Discovered**: 
-  - The `run_near_horizon` function behaves as expected across various scenarios, including low-speed conditions, curve handling, and state transitions.
+**Current state updates**:
+- Loop specification is locked pending measurement of concrete latency values; all stages now have deterministic contracts.
 
-**Active Frameworks — Changes to core claims, structure, or current state of the work**
+Open Questions:
+- **Question**: Obtain empirical latency measurements for each stage (Researcher, Friction, Challenger, Parietal) and integrate the measured values into the deterministic contracts.
+  - **Why it matters**: Concrete latency data are required to move from placeholder estimates to verified specifications, ensuring the loop’s timing guarantees are reliable.
+  - **What has been tried**: Placeholder latency values have been assumed and documented; no empirical benchmarking has yet been performed.
+  - **Next step**: Run timing benchmarks for each stage, record the measured latencies, and update the loop specification accordingly.
 
-- **Claim updates**: 
-  - The `run_near_horizon` function has been implemented with direct write to `mission_state['active_directive']` and all required fields are correctly populated.
-  - Internal logic for curvature computation, adaptive thresholding, hysteresis, and impact prediction remains consistent with the corrected and locked specification.
-- **Structure updates**: NO CHANGE
-- **Current state updates**: 
-  - Integration testing has been completed, and all test cases passed.
+Valence Mapping:
+**Patterns observed**:
+- Effective collaboration between models in correcting procedural errors.
+- Alignment on the canonical loop order and deterministic contracts.
 
-**Open Questions — New questions that emerged. For each open question state what it is, why it matters, what has been tried, and what the defined next step is**
+**Friction points**:
+- Duplicate Challenger stage error in Cycle 7 caused a procedural deviation.
+- Persistent reliance on assumed latency values generated minor contradictions among model outputs.
 
-- NO CHANGE
+**Success factors**:
+- Prompt identification and retraction of the duplicate Challenger error.
+- Consensus on the fully sequential loop structure and deterministic contracts.
 
-**Correction History — Claims retracted or directions explicitly ruled out**
+Delta Log:
+**Established**:
+- Canonical sequential order of the Ontinuity session loop validated and locked.
+- Deterministic input‑output contracts for Researcher, Friction, Challenger, and Parietal stages.
+- Documentation of placeholder latency estimates for all stages.
 
-- NO CHANGE
+**Decided**:
+- Retain placeholder latency values temporarily while planning empirical benchmarking.
+- Proceed with the loop specification as final pending latency verification.
 
-**Valence Mapping — New observable patterns in how the operator engages — what produced friction, what worked**
+**Retracted**:
+- Duplicate Challenger stage entry from Cycle 7 (Researcher → Friction → Challenger → Challenger → Parietal) has been removed; the canonical sequence is restored.
 
-- **Patterns observed**: 
-  - Effective collaboration between models A and B.
-  - Structured approach to problem-solving.
-  - Clear communication and alignment on objectives and next steps.
-- **Friction points**: NO CHANGE
-- **Success factors**: 
-  - Clear objectives and assumptions.
-  - Structured approach to problem-solving.
-  - Effective knowledge sharing and collaboration.
+**Discovered**:
+- Drift exists between assumed latency values and model expectations, highlighting the need for empirical measurement.
+- Minor procedural inconsistencies can propagate without explicit verification, underscoring the importance of systematic validation.
 
-**Identity — Update only if something significant shifted in background, expertise, or working style**
+Correction History:
+- Retracted the duplicate Challenger stage entry introduced in Cycle 7 and corrected the loop order to the canonical sequence (Researcher → Friction → Challenger → Parietal).
 
-- NO CHANGE
+Climate Notes:
+- The session maintained a collaborative tone, with models working together to identify and correct procedural errors.
+- Some friction arose from reliance on assumed latency values, leading to minor contradictions and signal spikes.
+- Overall, the operator and models demonstrated effective problem‑solving, clear communication, and alignment on next steps, fostering a productive and constructive environment.
