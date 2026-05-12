@@ -13,9 +13,6 @@ Active Frameworks:
 **Structure updates**:
 NO CHANGE
 
-**Current state updates**:
-- Loop specification is locked pending measurement of concrete latency values; all stages now have deterministic contracts.
-
 Open Questions:
 - **Question**: Obtain empirical latency measurements for each stage (Researcher, Friction, Challenger, Parietal) and integrate the measured values into the deterministic contracts.
   - **Why it matters**: Concrete latency data are required to move from placeholder estimates to verified specifications, ensuring the loop’s timing guarantees are reliable.
@@ -38,7 +35,7 @@ Valence Mapping:
 Delta Log:
 **Established**:
 - Canonical sequential order of the Ontinuity session loop validated and locked.
-- Deterministic input‑output contracts for Researcher, Friction, Challenger, and Parietal stages.
+- Deterministic input‑output contracts for Researcher, Friction, Challenger, Parietal stages.
 - Documentation of placeholder latency estimates for all stages.
 
 **Decided**:
@@ -46,11 +43,11 @@ Delta Log:
 - Proceed with the loop specification as final pending latency verification.
 
 **Retracted**:
-- Duplicate Challenger stage entry from Cycle 7 (Researcher → Friction → Challenger → Challenger → Parietal) has been removed; the canonical sequence is restored.
+- Duplicate Challenger stage entry from Cycle 7 (Researcher → Friction → Challenger → Challenger → Parietal) removed; canonical sequence restored.
 
 **Discovered**:
-- Drift exists between assumed latency values and model expectations, highlighting the need for empirical measurement.
-- Minor procedural inconsistencies can propagate without explicit verification, underscoring the importance of systematic validation.
+- Drift exists between assumed latency values and model expectations, highlighting need for empirical measurement.
+- Minor procedural inconsistencies can propagate without explicit verification, underscoring importance of systematic validation.
 
 Correction History:
 - Retracted the duplicate Challenger stage entry introduced in Cycle 7 and corrected the loop order to the canonical sequence (Researcher → Friction → Challenger → Parietal).
