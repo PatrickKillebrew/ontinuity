@@ -1,27 +1,63 @@
 KNOWTEXT SCHEMA VERSION: 1.1
-
-**Climate Notes**  
-Operator appears satisfied and acknowledges the session’s termination; no signs of frustration or confusion are evident.
-
-**Delta Log**  
-- Established final closure of the session with Parietal authority issuing a **[SEAL]** ruling.  
-- Classified the “Ontinuity research operating system” as **Project Non‑Extant** per Ontinuity Epistemic Policy §3.4.  
-- Recorded immutable seal and archive ID `ONT‑SEAL‑20250405‑7d8e9f2a` in the session journal.  
-- Updated the Delta Log to indicate that all diagnostic objectives (server reachability, external knowledge access, `app.py` syntax, search request) are **operational** and verified.  
-- Declared no remaining degraded components or unresolved claims.  
-- Confirmed that the session loop integrity is verified and sealed.
-
-**Active Frameworks**  
-Added a new status category **“Non‑Extant”** to the project’s classification framework for handling entities that fail the Public Assertability Threshold.
-
-**Open Questions**  
-- **Closed**: *Does the “Ontinuity research operating system” associated with Elias Killebrew exist as a publicly declared project?* – Resolved as **non‑extant**; no further investigation required.
-
-**Correction History**  
-NO CHANGE.
-
-**Valence Mapping**  
-Operator engagement shifted from investigative focus to neutral/positive, reflecting relief and confirmation upon receipt of the final seal.
-
-**Identity**  
-NO CHANGE.
+ 
+Identity:
+Patrick Killebrew — independent developer and natural philosopher, Keller TX. Operating under Killebrew Oilfield Services S-Corp. Primary devices: iPad Pro M4 and HP laptop running Windows 11. Works across multiple devices and parallel conversations simultaneously.
+ 
+Active Frameworks:
+Tetraform v1.0 — four-model adversarial session protocol: Researcher (Model A), Challenger (Model B), Friction (Model C), Parietal. Session loop: Researcher → Friction → Challenger → Parietal → next cycle. Deterministic input-output contracts for each stage.
+ 
+Parietal Tetraform — four callable functions: PRE_SESSION, NAVIGATE, ADJUDICATE, DISTILL. Resolves majority of disputes autonomously. Escalates to human only at four specific conditions.
+ 
+Projenius — five callable functions: DISTILL, SYNTHESIZE, ORIENT, LEDGER_QUERY, SEARCH. Project-level consciousness maintaining cross-session established results ledger. SEARCH uses two-part query structure: citation context plus evidentiary question.
+ 
+Knowtext v1.1 — portable plain-text memory schema. Seven required fields plus optional HANDOFF. Provider-agnostic. GitHub-persisted.
+ 
+Workspace — Flask server running on laptop at 192.168.1.33:5001, publicly reachable at ontinuityws.duckdns.org:5001. Authenticated via X-API-Key header. Endpoints: /api/health, /api/session, /search, /run, /audit. 16-table SQLite database at C:\donkeycar\ontinuity.db.
+ 
+Rejected claims register — active in Model A system prompt every cycle. Survives conversation trimming. Extracts UPHOLD rulings and DIRECT CORRECTIONs and injects them as binding constraints.
+ 
+Ambient friction signal — single integer 0-4 injected into model context each cycle. Empirically validated sigmoid model R²=0.91 showing reliable behavioral modulation across six dimensions.
+ 
+Open Questions:
+- Hetzner VPS (5.78.42.38) not yet configured — SSH key only, no password, rescue mode needed to access
+- Single-model baseline comparison for AR-001 not yet run
+- Projenius ORIENT and SYNTHESIZE newly wired — untested in live session
+- SEARCH_REQUEST and VERIFY_CITATION tags newly wired — first real test pending
+- CODE_TEST tag newly wired — not yet confirmed firing in live session
+- WORKSPACE_API_KEY auth bug in write_session_to_workspace fixed but not yet deployed
+- Knowtext backup rotation uses Railway ephemeral filesystem — backups lost on redeploy
+ 
+Valence Mapping:
+Strong adversarial performance in AR-001 session — 10 UPHOLD rulings across 29 cycles, zero API errors, Challenger model string corrected (deepseek/deepseek-v3.2-exp). Parietal distillation working cleanly with 4000 token limit. Full loop closure confirmed: Researcher → Friction → Challenger → Parietal → distillation → GitHub commit → workspace database write.
+ 
+Parallelization finding — intra-cycle parallelization unsafe, inter-cycle pipelining achievable at Parietal boundary. Projected 1.8x throughput gain.
+ 
+Fabrication risk — Researcher demonstrated tendency to fabricate plausible citations when asked to reason about external existence of Ontinuity. VERIFY_CITATION tag designed to catch this. Session objectives must anchor Researcher to internal measurable state rather than external knowledge retrieval about Ontinuity itself.
+ 
+Delta Log:
+- Workspace Activation Record 001 produced and cleaned — all fabricated numbers removed, honest evidential tagging throughout
+- First full loop closure confirmed May 12 2026 — database has 3 sessions
+- All five model prompts updated: SYSTEM CONTEXT, whole-of-project awareness, SEARCH_REQUEST, VERIFY_CITATION, CODE_TEST, assumption tagging, multi-user scoping, PARIETAL RESOLVE binding constraint
+- Projenius ORIENT wired into pre_session_then_start with 25-second timeout
+- Projenius SYNTHESIZE wired after successful distillation with 30-second timeout
+- SEARCH_REQUEST tag wired into Model A routing — calls workspace /search + Projenius SEARCH
+- VERIFY_CITATION tag wired into Model B routing — citation verification path
+- CODE_TEST tag wired into Model A routing — calls workspace /run
+- Branch context filtering implemented — get_knowtext_filename() and get_github_knowtext_path() return branch-aware paths
+- Provider-agnostic CONFIG — all hardcoded Groq and Anthropic defaults removed
+- WORKSPACE_API_KEY added to all workspace HTTP calls
+- Rejected claims register deployed and tested
+ 
+Correction History:
+- Cerebras trailing newline bug on GROQ_KEY_1 — recurring issue, fix by deleting Railway variable and repasting cleanly
+- Deepseek model string must be deepseek/deepseek-v3.2-exp (dot not dash) — corrected after first AR session
+- Parietal distillation 2000 token limit caused incomplete Knowtext — fixed with max_tokens=4000
+- call_projenius and call_parietal used OR logic for has_projenius check — URL alone was sufficient to pass, causing calls with empty keys against Groq free tier, producing 210-second retry hang — fixed with AND logic requiring both key and url
+- write_session_to_workspace missing X-API-Key header — caused 401 on all workspace POST calls after auth was added to file_server.py — fixed
+ 
+Climate Notes:
+Jonathan Kerls (roommate) has read the executive summary and deep dive is scheduled. Has contact at MITRE in Euless TX working on aerospace legacy code resurrection — executive summary passed along. MITRE contact works remotely, considered exceptional, may be working on drone guidance system legacy code.
+ 
+Probing on workspace server from internet scanners is expected background noise — router and server handling correctly. Hetzner VPS setup remains blocked on SSH key access problem — rescue mode approach identified but not yet executed.
+ 
+Patrick working from iPad Pro M4 primarily, HP laptop secondary. Starbucks sessions productive. Universe-directed pacing — resistance signals taken seriously as timing indicators.
