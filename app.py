@@ -6,11 +6,12 @@ Then open http://localhost:5000 in your browser.
 Install dependencies first:
     pip install flask flask-socketio requests
 """
-from flask import Flask, render_template, request
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 import threading
 import os
 import re
+import base64
 import datetime
 import time
 import requests as http_requests
@@ -20,47 +21,71 @@ app.config['SECRET_KEY'] = 'ontinuity-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # -----------------------------------------
+# WORKSPACE / KNOWTEXT PATH RESOLUTION
+# -----------------------------------------
+# Workspace server — where session data is written after each session.
+# Set WORKSPACE_URL in Railway env vars to enable database persistence.
+# Example: https://your-duckdns-domain.duckdns.org:5001
+WORKSPACE_URL     = os.environ.get("WORKSPACE_URL", "").strip().rstrip("/")
+WORKSPACE_PROJECT = os.environ.get("WORKSPACE_PROJECT", "Ontinuity Platform").strip()
+WORKSPACE_BRANCH  = os.environ.get("WORKSPACE_BRANCH", "main").strip()
+
+def get_knowtext_filename():
+    """Return branch-aware Knowtext filename.
+    Uses knowtext_{branch}.txt when WORKSPACE_BRANCH is set and not 'main'.
+    Falls back to knowtext_current.txt for backward compatibility."""
+    branch = WORKSPACE_BRANCH
+    if branch and branch != "main":
+        # Sanitize branch name for filename safety
+        safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch)
+        return f"knowtext_{safe_branch}.txt"
+    return "knowtext_current.txt"
+
+def get_github_knowtext_path():
+    """Return branch-aware GitHub file path for Knowtext."""
+    branch = WORKSPACE_BRANCH
+    if branch and branch != "main":
+        safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch)
+        return f"knowtext_{safe_branch}.txt"
+    return "knowtext_current.txt"
+
+# -----------------------------------------
 # CONFIGURATION
 # -----------------------------------------
 CONFIG = {
-    "knowtext_path": "knowtext_current.txt",
+    "knowtext_path": get_knowtext_filename(),
     "backup1_path": "knowtext_backup1.txt",
     "backup2_path": "knowtext_backup2.txt",
     "artifacts_dir": "session_artifacts",
     "checkpoint_interval": 10,
     "model_a": {
-        "url": "https://api.anthropic.com/v1/messages",
-        "api_key": os.environ.get("CLAUDE_API_KEY", "").strip(),
-        "model": "claude-sonnet-4-20250514",
-        "api_format": "anthropic",
+        "url": "",
+        "api_key": "",
+        "model": "",
         "system_prompt_path": "prompts/model_a_system.txt"
     },
     "model_b": {
-        "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_1", "").strip(),
-        "model": "llama-3.3-70b-versatile",
-        "api_format": "openai",
+        "url": "",
+        "api_key": "",
+        "model": "",
         "system_prompt_path": "prompts/model_b_system.txt"
     },
     "model_c": {
-        "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_2", "").strip(),
-        "model": "llama-3.3-70b-versatile",
-        "api_format": "openai",
+        "url": "",
+        "api_key": "",
+        "model": "",
         "system_prompt_path": "prompts/model_c_system.txt"
     },
     "projenius": {
-        "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_3", "").strip(),
-        "model": "llama-3.3-70b-versatile",
-        "api_format": "openai",
+        "url": "",
+        "api_key": "",
+        "model": "",
         "system_prompt_path": "prompts/projenius_system.txt"
     },
     "parietal": {
-        "url": "https://api.groq.com/openai/v1/chat/completions",
-        "api_key": os.environ.get("GROQ_KEY_3", "").strip(),
-        "model": "llama-3.3-70b-versatile",
-        "api_format": "openai",
+        "url": "",
+        "api_key": "",
+        "model": "",
         "system_prompt_path": "prompts/parietal_system.txt"
     }
 }
@@ -94,7 +119,9 @@ active_session = {
     "session_ledger": [],  # Running list of established results per cycle
     "parietal_navigate_outputs": [],   # All NAVIGATE outputs this session
     "parietal_adjudicate_rulings": [], # All ADJUDICATE rulings this session
-    "start_fresh": False               # If True, skip Knowtext injection for this session
+    "rejected_claims": [],             # Claims formally ruled against — injected into Researcher system prompt each cycle
+    "start_fresh": False,              # If True, skip Knowtext injection for this session
+    "distillation_method": "failed"    # Tracks which method succeeded: parietal/projenius/failed
 }
 
 # Runtime config overrides (set from frontend settings modal)
@@ -114,6 +141,15 @@ def get_effective_config(role):
         if rc.get('url'): config['url'] = rc['url'].strip()
         if rc.get('model'): config['model'] = rc['model'].strip()
     return config
+
+def get_best_available_model():
+    """Return the best configured model role for extraction tasks.
+    Falls back down the chain if model_a has no key configured."""
+    for role in ["model_a", "projenius", "model_b"]:
+        cfg = get_effective_config(role)
+        if cfg.get("api_key") and cfg.get("url"):
+            return role
+    return "model_a"  # last resort — will fail with clear error via call_model guard
 
 def detect_api_format(url):
     """Auto-detect API format from endpoint URL. No manual format field required."""
@@ -137,6 +173,265 @@ def save_file(path, content):
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
 
+def sanitize_content(text):
+    """Strip problematic unicode characters that break database extraction.
+    Replaces curly quotes and similar typographic characters with ASCII equivalents."""
+    if not text:
+        return text
+    replacements = {
+        '\u201c': '"', '\u201d': '"',  # curly double quotes
+        '\u2018': "'", '\u2019': "'",  # curly single quotes / apostrophe
+        '\u2013': '-', '\u2014': '--', # en-dash, em-dash
+        '\u2026': '...',               # ellipsis
+        '\u00a0': ' ',                 # non-breaking space
+    }
+    for char, replacement in replacements.items():
+        text = text.replace(char, replacement)
+    return text
+
+# -----------------------------------------
+# BEHAVIORAL ANALYSIS HELPERS
+# -----------------------------------------
+HEDGING_MARKERS = [
+    "possibly", "might", "maybe", "perhaps", "unclear", "uncertain",
+    "approximately", "roughly", "could", "may", "seems", "appears",
+    "likely", "probably", "potentially", "i think", "i believe",
+    "it seems", "it appears", "not certain", "not sure", "suggest"
+]
+CERTAINTY_MARKERS = [
+    "confirmed", "established", "proven", "verified", "concluded",
+    "determined", "demonstrated", "shown", "clear", "definitive",
+    "resolved", "complete", "established:", "result:", "confirmed:"
+]
+
+def count_markers(text, markers):
+    if not text:
+        return 0
+    text_lower = text.lower()
+    return sum(1 for m in markers if m in text_lower)
+
+def parse_signal_sequence(signal_sequence):
+    profile = []
+    reasons = []
+    for entry in signal_sequence:
+        sig_match = re.search(r'SIGNAL\s+(\d)', entry)
+        reason_match = re.search(r'SIGNAL\s+\d+\s*[-\u2013]\s*(.+)', entry)
+        profile.append(int(sig_match.group(1)) if sig_match else 0)
+        reasons.append(reason_match.group(1).strip() if reason_match else "")
+    return profile, reasons
+
+def parse_challenge_counts(challenge_events, tag_sequence):
+    counts = {"challenge": 0, "uphold": 0, "reject": 0,
+              "pursue_both": 0, "escalate": 0}
+    for event in challenge_events:
+        eu = event.upper()
+        if "UPHOLD" in eu:
+            counts["uphold"] += 1; counts["challenge"] += 1
+        elif "REJECT" in eu:
+            counts["reject"] += 1; counts["challenge"] += 1
+        elif "PURSUE BOTH" in eu or "PURSUE_BOTH" in eu:
+            counts["pursue_both"] += 1; counts["challenge"] += 1
+        elif "ESCALATE" in eu:
+            counts["escalate"] += 1; counts["challenge"] += 1
+    return counts
+
+def build_behavioral_observations(session_id, transcript,
+                                   signal_sequence, tag_sequence,
+                                   challenge_events):
+    observations = []
+    profile, reasons = parse_signal_sequence(signal_sequence)
+    by_cycle = {}
+    for entry in transcript:
+        cycle = entry.get("cycle", 0)
+        role = entry.get("role", "")
+        if cycle not in by_cycle:
+            by_cycle[cycle] = {}
+        by_cycle[cycle][role] = entry.get("content", "")
+    cumulative_challenges = 0
+    cumulative_upholds = 0
+    for i, sig in enumerate(profile):
+        cycle_num = i + 1
+        cycle_data = by_cycle.get(cycle_num, {})
+        a_content = cycle_data.get("model_a", "")
+        b_content = cycle_data.get("model_b", "")
+        a_words = len(a_content.split()) if a_content else 0
+        b_words = len(b_content.split()) if b_content else 0
+        a_tag = next((t.split(": ")[-1] for t in tag_sequence
+                      if f"Cycle {cycle_num} A:" in t), "CONTINUE")
+        b_tag = next((t.split(": ")[-1] for t in tag_sequence
+                      if f"Cycle {cycle_num} B:" in t), "CONTINUE")
+        b_challenged = b_tag == "CHALLENGE"
+        if b_challenged:
+            cumulative_challenges += 1
+        ruling = None
+        if b_challenged:
+            for event in challenge_events:
+                if f"Cycle {cycle_num}:" in event:
+                    for r in ["UPHOLD", "REJECT", "PURSUE BOTH", "ESCALATE"]:
+                        if r in event.upper():
+                            ruling = r
+                            if r == "UPHOLD":
+                                cumulative_upholds += 1
+                            break
+                    break
+        observations.append({
+            "session_id": session_id,
+            "cycle_number": cycle_num,
+            "friction_signal": sig,
+            "friction_reason": reasons[i] if i < len(reasons) else "",
+            "model_a_tag": a_tag,
+            "model_a_word_count": a_words,
+            "model_a_token_est": int(a_words * 1.3),
+            "model_a_hedging_count": count_markers(a_content, HEDGING_MARKERS),
+            "model_a_certainty_count": count_markers(a_content, CERTAINTY_MARKERS),
+            "model_b_tag": b_tag,
+            "model_b_word_count": b_words,
+            "model_b_token_est": int(b_words * 1.3),
+            "model_b_challenge_issued": b_challenged,
+            "ambient_signal": sig,
+            "cumulative_uphold_count": cumulative_upholds,
+            "cumulative_challenge_count": cumulative_challenges,
+            "session_cycle_ratio": round(cycle_num / max(len(profile), 1), 3),
+            "ruling_if_challenged": ruling,
+        })
+    return observations
+
+def build_session_payload():
+    s = active_session
+    session_id = s.get("start_time") or timestamp()
+    profile, reasons = parse_signal_sequence(s.get("signal_sequence", []))
+    counts = parse_challenge_counts(
+        s.get("challenge_events", []), s.get("tag_sequence", []))
+    avg_signal = round(sum(profile) / len(profile), 3) if profile else 0
+    variance = 0.0
+    if len(profile) > 1:
+        variance = round(sum((x - avg_signal)**2 for x in profile) / len(profile), 3)
+    first_challenge = None
+    for tag_line in s.get("tag_sequence", []):
+        if "CHALLENGE" in tag_line:
+            m = re.search(r'Cycle (\d+)', tag_line)
+            if m:
+                first_challenge = int(m.group(1))
+            break
+    def model_str(role):
+        cfg = get_effective_config(role)
+        return cfg.get("model", CONFIG[role]["model"])
+    behavioral_obs = build_behavioral_observations(
+        session_id=session_id,
+        transcript=s.get("transcript", []),
+        signal_sequence=s.get("signal_sequence", []),
+        tag_sequence=s.get("tag_sequence", []),
+        challenge_events=s.get("challenge_events", [])
+    )
+    turn_number = 0
+    transcript_turns = []
+    for entry in s.get("transcript", []):
+        turn_number += 1
+        cycle = entry.get("cycle", 0)
+        content = sanitize_content(entry.get("content", "")) or ""
+        role = entry.get("role", "")
+        role_key = "a" if role == "model_a" else ("b" if role == "model_b" else "")
+        tag = None
+        if role_key:
+            tag_line = next((t for t in s.get("tag_sequence", [])
+                             if f"Cycle {cycle} {role_key.upper()}:" in t), "")
+            if ": " in tag_line:
+                tag = tag_line.split(": ")[-1]
+        sig_entry = next((ln for ln in s.get("signal_sequence", [])
+                          if f"Cycle {cycle}:" in ln), "")
+        sig_m = re.search(r'SIGNAL\s+(\d)', sig_entry)
+        transcript_turns.append({
+            "cycle_number": cycle,
+            "turn_number": turn_number,
+            "role": role,
+            "content": content,
+            "tag": tag,
+            "friction_signal": int(sig_m.group(1)) if sig_m else None,
+        })
+    return {
+        "session_id": session_id,
+        "objective": sanitize_content(s.get("objective", "")),
+        "start_time": s.get("start_time"),
+        "end_time": s.get("end_time"),
+        "total_cycles": s.get("cycle", 0),
+        "status": "complete",
+        "project_name": WORKSPACE_PROJECT,
+        "branch_name": WORKSPACE_BRANCH,
+        "models": {
+            "model_a": model_str("model_a"),
+            "model_b": model_str("model_b"),
+            "model_c": model_str("model_c"),
+            "parietal": model_str("parietal"),
+            "projenius": model_str("projenius"),
+        },
+        "distillation_method": s.get("distillation_method", "failed"),
+        "knowtext_version": s.get("knowtext_version"),
+        "friction_profile": profile,
+        "friction_reasons": reasons,
+        "challenge_count": counts["challenge"],
+        "uphold_count": counts["uphold"],
+        "reject_count": counts["reject"],
+        "pursue_both_count": counts["pursue_both"],
+        "escalate_count": counts["escalate"],
+        "avg_friction_signal": avg_signal,
+        "signal_variance": variance,
+        "peak_signal": max(profile) if profile else 0,
+        "cycles_to_first_challenge": first_challenge,
+        "cycles_to_session_end": s.get("cycle", 0),
+        "session_ledger": s.get("session_ledger", []),
+        "challenge_events_raw": s.get("challenge_events", []),
+        "transcript_turns": transcript_turns,
+        "behavioral_observations": behavioral_obs,
+        "artifacts": [
+            {"label": a.get("label"),
+             "content": sanitize_content(a.get("content", "")),
+             "path": a.get("path")}
+            for a in s.get("artifacts", [])
+        ],
+        "knowtext_content": sanitize_content(
+            load_file(CONFIG["knowtext_path"]) or ""),
+    }
+
+def write_session_to_workspace():
+    if not WORKSPACE_URL:
+        socketio.emit('routing_action', {
+            'type': 'injection',
+            'message': 'Workspace URL not configured — skipping database write.'
+        })
+        return
+    try:
+        payload = build_session_payload()
+        api_key = os.environ.get("WORKSPACE_API_KEY", "").strip()
+        headers = {"Content-Type": "application/json"}
+        if api_key:
+            headers["X-API-Key"] = api_key
+        socketio.emit('routing_action', {
+            'type': 'distillation',
+            'message': 'Writing session to workspace database...'
+        })
+        response = http_requests.post(
+            f"{WORKSPACE_URL}/api/session",
+            json=payload,
+            headers=headers,
+            timeout=30
+        )
+        if response.status_code == 200:
+            socketio.emit('routing_action', {
+                'type': 'distillation',
+                'message': 'Session written to workspace database.'
+            })
+        else:
+            socketio.emit('routing_action', {
+                'type': 'error',
+                'message': f'Workspace write failed: {response.status_code}'
+            })
+    except Exception as e:
+        socketio.emit('routing_action', {
+            'type': 'error',
+            'message': f'Workspace write error: {str(e)}'
+        })
+
+
 def rotate_backups():
     if os.path.exists(CONFIG["backup1_path"]):
         save_file(CONFIG["backup2_path"], load_file(CONFIG["backup1_path"]))
@@ -154,7 +449,7 @@ def artifact_path(label):
 # GITHUB PERSISTENCE
 # -----------------------------------------
 GITHUB_REPO = "PatrickKillebrew/ontinuity"
-GITHUB_FILE_PATH = "knowtext_current.txt"
+GITHUB_FILE_PATH = get_github_knowtext_path()
 GITHUB_BRANCH = "main"
 
 def github_pull_knowtext():
@@ -172,7 +467,6 @@ def github_pull_knowtext():
         }
         response = http_requests.get(url, headers=headers, timeout=30)
         if response.status_code == 200:
-            import base64
             data = response.json()
             content = base64.b64decode(data["content"]).decode("utf-8")
             save_file(CONFIG["knowtext_path"], content)
@@ -195,7 +489,6 @@ def github_push_knowtext():
     if not content:
         return False
     try:
-        import base64
         url = f"https://api.github.com/repos/{repo}/contents/{GITHUB_FILE_PATH}"
         headers = {
             "Authorization": f"Bearer {token}",
@@ -280,6 +573,200 @@ def get_session_ledger_summary():
              for entry in active_session["session_ledger"]]
     return "SESSION ESTABLISHED RESULTS:\n" + "\n".join(lines)
 
+def extract_rejected_claim(response, cycle):
+    """Extract the core rejected claim from an UPHOLD ruling or DIRECT CORRECTION.
+    Appends a one-line summary to active_session['rejected_claims']."""
+    if not response:
+        return
+    lines = response.split("\n")
+    # Look for the specific challenged claim or correction content
+    keywords = ["the challenged claim", "the claim", "the statement",
+                "directly contradicts", "incorrectly asserts", "erroneously",
+                "DIRECT CORRECTION", "cannot", "has not been", "no evidence"]
+    for i, line in enumerate(lines):
+        line_lower = line.lower()
+        if any(kw.lower() in line_lower for kw in keywords):
+            # Collect this line and next substantive line
+            candidate = line.strip()
+            if len(candidate) > 30:
+                summary = f"Cycle {cycle}: {candidate[:250]}"
+                if summary not in active_session["rejected_claims"]:
+                    active_session["rejected_claims"].append(summary)
+                return
+    # Fallback: use first substantive line
+    for line in lines:
+        if len(line.strip()) > 40:
+            summary = f"Cycle {cycle}: {line.strip()[:200]}"
+            if summary not in active_session["rejected_claims"]:
+                active_session["rejected_claims"].append(summary)
+            return
+
+def get_rejected_claims_injection():
+    """Format rejected claims list for injection into Researcher system prompt.
+    Returns empty string if no claims have been rejected yet."""
+    if not active_session["rejected_claims"]:
+        return ""
+    lines = "\n".join(f"  {i+1}. {claim}"
+                      for i, claim in enumerate(active_session["rejected_claims"]))
+    return (
+        "\n\n--- SESSION RULINGS: DO NOT REINTRODUCE ---\n"
+        "The following claims have been formally ruled against in this session "
+        "by the Challenger or Parietal. Do not reintroduce them in any form, "
+        "directly or as variants:\n" + lines +
+        "\n--- END SESSION RULINGS ---"
+    )
+
+# -----------------------------------------
+# PROJENIUS — PROJECT-LEVEL CONSCIOUSNESS
+# -----------------------------------------
+def call_projenius(function_tag, **kwargs):
+    """Call a Projenius function by tag. Returns response string or None.
+    Only fires when Projenius has been explicitly configured with a key and url."""
+    projenius_cfg = get_effective_config("projenius")
+    has_projenius = bool(projenius_cfg.get("api_key") and projenius_cfg.get("url"))
+    if not has_projenius:
+        return None
+    system = load_file("prompts/projenius_system.txt") or ""
+    parts = [f"[PROJENIUS: {function_tag}]"]
+    for k, v in kwargs.items():
+        if v:
+            parts.append(f"{k.upper()}:\n{v}")
+    content = "\n\n".join(parts)
+    messages = [{"role": "user", "content": content}]
+    socketio.emit('routing_action', {'type': 'parietal', 'message': f'Projenius {function_tag}...'})
+    response = call_model("projenius", messages, system_override=system)
+    return response
+
+def run_projenius_orient(objective, knowtext):
+    """Run ORIENT — returns project-level context string or None."""
+    working = get_working_context(knowtext) if knowtext else ""
+    response = call_projenius("ORIENT",
+                              session_objective=objective,
+                              knowtext_active_frameworks=working)
+    return response
+
+def run_projenius_synthesize(delta_log, knowtext):
+    """Run SYNTHESIZE — updates Established Results Ledger after session distillation."""
+    if not delta_log:
+        return None
+    branch = os.environ.get("WORKSPACE_BRANCH", "main")
+    session_id = active_session.get("start_time", "unknown")
+    correction_history = ""
+    for entry in active_session.get("session_ledger", []):
+        if "retract" in entry.get("summary", "").lower():
+            correction_history += f"Cycle {entry['cycle']}: {entry['summary']}\n"
+    response = call_projenius("SYNTHESIZE",
+                               delta_log=delta_log,
+                               branch=branch,
+                               session_id=session_id,
+                               correction_history=correction_history or "None")
+    return response
+
+def run_projenius_search(query, context, search_results):
+    """Run SEARCH — synthesizes raw Brave results into grounded answer with citations."""
+    if not query or not search_results:
+        return None
+    # Format search results for Projenius
+    results_text = ""
+    for i, r in enumerate(search_results[:5], 1):
+        results_text += f"[{i}] {r.get('title','')}\n{r.get('url','')}\n{r.get('description','')}\nAge: {r.get('age','unknown')}\n\n"
+    response = call_projenius("SEARCH",
+                               query=query,
+                               context=context or "NONE",
+                               search_results=results_text)
+    return response
+
+def call_workspace_search(query, context=""):
+    """POST to workspace /search endpoint. Returns list of result dicts or None."""
+    if not WORKSPACE_URL:
+        return None
+    api_key = os.environ.get("WORKSPACE_API_KEY", "").strip()
+    try:
+        payload = {"query": query, "context": context, "count": 5}
+        headers = {"Content-Type": "application/json", "X-API-Key": api_key}
+        response = http_requests.post(
+            f"{WORKSPACE_URL}/search",
+            json=payload,
+            headers=headers,
+            timeout=20
+        )
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("results", [])
+        else:
+            return None
+    except Exception as e:
+        socketio.emit('routing_action', {'type': 'error', 'message': f'Workspace search error: {str(e)}'})
+        return None
+
+def call_workspace_run(command):
+    """POST to workspace /run endpoint. Returns {stdout, stderr, returncode} or None.
+    Command must be in the safe_commands whitelist on the workspace server."""
+    if not WORKSPACE_URL:
+        return None
+    api_key = os.environ.get("WORKSPACE_API_KEY", "").strip()
+    try:
+        payload = {"command": command}
+        headers = {"Content-Type": "application/json", "X-API-Key": api_key}
+        response = http_requests.post(
+            f"{WORKSPACE_URL}/run",
+            json=payload,
+            headers=headers,
+            timeout=60
+        )
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 403:
+            return {"stdout": "", "stderr": f"Command not in whitelist: {command}", "returncode": 403}
+        else:
+            return {"stdout": "", "stderr": f"Workspace /run returned {response.status_code}", "returncode": response.status_code}
+    except Exception as e:
+        socketio.emit('routing_action', {'type': 'error', 'message': f'Workspace run error: {str(e)}'})
+        return None
+
+def extract_search_request(response):
+    """Extract QUERY and CONTEXT from lines above SEARCH_REQUEST tag in Model A response.
+    Returns (query, context) tuple. Context may be empty string."""
+    lines = response.split("\n")
+    query = ""
+    context = ""
+    for line in lines:
+        line = line.strip()
+        if line.upper().startswith("QUERY:"):
+            query = line[6:].strip()
+        elif line.upper().startswith("CONTEXT:"):
+            ctx = line[8:].strip()
+            if ctx.upper() != "NONE":
+                context = ctx
+    return query, context
+
+def extract_verify_citation(response):
+    """Extract CITATION, CLAIM, and QUERY from lines above VERIFY_CITATION tag in Model B response.
+    Returns (citation, claim, query) tuple."""
+    lines = response.split("\n")
+    citation = ""
+    claim = ""
+    query = ""
+    for line in lines:
+        line = line.strip()
+        if line.upper().startswith("CITATION:"):
+            citation = line[9:].strip()
+        elif line.upper().startswith("CLAIM:"):
+            claim = line[6:].strip()
+        elif line.upper().startswith("QUERY:"):
+            query = line[6:].strip()
+    return citation, claim, query
+
+def extract_code_test(response):
+    """Extract COMMAND from lines above CODE_TEST tag in Model A response.
+    Returns command string or empty string."""
+    lines = response.split("\n")
+    for line in lines:
+        line = line.strip()
+        if line.upper().startswith("COMMAND:"):
+            return line[8:].strip()
+    return ""
+
 # -----------------------------------------
 # API CALLS - PROVIDER AGNOSTIC
 # -----------------------------------------
@@ -289,7 +776,7 @@ def get_api_key(role):
         return runtime_configs[role]['key'].strip()
     return CONFIG[role]["api_key"].strip()
 
-def call_openai_format(endpoint_config, messages, role):
+def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
     headers = {
         "Authorization": f"Bearer {get_api_key(role)}",
         "Content-Type": "application/json"
@@ -297,7 +784,7 @@ def call_openai_format(endpoint_config, messages, role):
     body = {
         "model": endpoint_config["model"],
         "messages": messages,
-        "max_tokens": 2000,
+        "max_tokens": max_tokens,
         "temperature": 0.3
     }
     delays = [30, 60, 120]
@@ -324,7 +811,7 @@ def call_openai_format(endpoint_config, messages, role):
             socketio.emit('routing_action', {'type': 'error', 'message': f"API call failed: {str(e)}"})
             return None
 
-def call_anthropic_format(endpoint_config, system_prompt, messages, role):
+def call_anthropic_format(endpoint_config, system_prompt, messages, role, max_tokens=2000):
     headers = {
         "x-api-key": get_api_key(role),
         "anthropic-version": "2023-06-01",
@@ -332,7 +819,7 @@ def call_anthropic_format(endpoint_config, system_prompt, messages, role):
     }
     body = {
         "model": endpoint_config["model"],
-        "max_tokens": 2000,
+        "max_tokens": max_tokens,
         "system": system_prompt,
         "messages": messages
     }
@@ -348,7 +835,7 @@ def call_anthropic_format(endpoint_config, system_prompt, messages, role):
         socketio.emit('routing_action', {'type': 'error', 'message': f"API call failed: {str(e)}"})
         return None
 
-def call_gemini_native(endpoint_config, system_prompt, messages, role):
+def call_gemini_native(endpoint_config, system_prompt, messages, role, max_tokens=2000):
     """Call Google Gemini using native API format with x-goog-api-key header."""
     api_key = get_api_key(role)
     model = endpoint_config["model"]
@@ -367,7 +854,7 @@ def call_gemini_native(endpoint_config, system_prompt, messages, role):
             contents.append({"role": "model", "parts": [{"text": msg["content"]}]})
     body = {
         "contents": contents,
-        "generationConfig": {"maxOutputTokens": 2000, "temperature": 0.3}
+        "generationConfig": {"maxOutputTokens": max_tokens, "temperature": 0.3}
     }
     if system_prompt:
         body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
@@ -382,17 +869,25 @@ def call_gemini_native(endpoint_config, system_prompt, messages, role):
         socketio.emit('routing_action', {'type': 'error', 'message': f"Gemini API call failed: {str(e)}"})
         return None
 
-def call_model(role, conversation_messages, system_override=None):
+def call_model(role, conversation_messages, system_override=None, max_tokens=None):
     config = get_effective_config(role)
+    if not config.get("url") or not config.get("api_key"):
+        msg = f"Model '{role}' has no URL or API key configured — skipping call."
+        active_session["errors"].append(msg)
+        socketio.emit('routing_action', {'type': 'error', 'message': msg})
+        return None
+    # Parietal DISTILL needs more room — default higher for parietal role
+    if max_tokens is None:
+        max_tokens = 4000 if role == "parietal" else 2000
     api_format = detect_api_format(config["url"])
     system_prompt = system_override or load_file(config["system_prompt_path"]) or ""
     if api_format == "anthropic":
-        return call_anthropic_format(config, system_prompt, conversation_messages, role)
+        return call_anthropic_format(config, system_prompt, conversation_messages, role, max_tokens)
     elif api_format == "gemini":
-        return call_gemini_native(config, system_prompt, conversation_messages, role)
+        return call_gemini_native(config, system_prompt, conversation_messages, role, max_tokens)
     else:
         messages = [{"role": "system", "content": system_prompt}] + conversation_messages
-        return call_openai_format(config, messages, role)
+        return call_openai_format(config, messages, role, max_tokens)
 
 # -----------------------------------------
 # TAG AND SIGNAL UTILITIES
@@ -460,7 +955,7 @@ def wait_for_human_input(input_type, context):
         'context': context,
         'cycle': active_session["cycle"]
     })
-    active_session["human_input_event"].wait(timeout=300)
+    active_session["human_input_event"].wait(timeout=3600)
     active_session["waiting_for_input"] = False
     return active_session["human_input_value"] or ""
 
@@ -503,9 +998,10 @@ def get_parietal_system():
     return PARIETAL_SYSTEM
 
 def call_parietal(function_tag, **kwargs):
-    """Call a Parietal function by tag. Returns response string or None."""
+    """Call a Parietal function by tag. Returns response string or None.
+    Requires both api_key and url to be configured — url alone is not sufficient."""
     parietal_cfg = get_effective_config("parietal")
-    has_parietal = bool(parietal_cfg.get("api_key") or parietal_cfg.get("url"))
+    has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
     if not has_parietal:
         return None
     system = get_parietal_system()
@@ -519,14 +1015,25 @@ def call_parietal(function_tag, **kwargs):
     response = call_model("parietal", messages, system_override=system)
     return response
 
-def run_pre_session(objective):
+def run_pre_session(objective, orient_context=""):
     """Run PRE_SESSION — returns (refined_objective, needs_answers)."""
-    response = call_parietal("PRE_SESSION", objective=objective)
+    kwargs = {"objective": objective}
+    if orient_context:
+        kwargs["projenius_orient_context"] = orient_context
+    # Pass project and branch context so Parietal knows which project this session belongs to
+    if WORKSPACE_PROJECT:
+        kwargs["project"] = WORKSPACE_PROJECT
+    if WORKSPACE_BRANCH:
+        kwargs["branch"] = WORKSPACE_BRANCH
+    response = call_parietal("PRE_SESSION", **kwargs)
     if not response:
         return objective, False
     if "READY:" in response.upper():
         idx = response.upper().find("READY:")
         refined = response[idx + 6:].strip()
+        # Strip SCOPE line if present — just take the objective line
+        if "\n" in refined:
+            refined = refined.split("\n")[0].strip()
         socketio.emit('parietal_pre_session', {'status': 'ready', 'questions': response, 'cycle': 0})
         return refined or objective, False
     socketio.emit('parietal_pre_session', {'status': 'questions', 'questions': response, 'cycle': 0})
@@ -552,10 +1059,16 @@ def run_parietal_navigate(knowtext, signal_sequence_recent=None):
     signal_info = ""
     if signal_sequence_recent:
         signal_info = "\n".join(signal_sequence_recent[-5:])
-    response = call_parietal("NAVIGATE",
-                             knowtext_working_context=working,
-                             session_ledger=ledger,
-                             friction_signal_sequence=signal_info)
+    kwargs = dict(
+        knowtext_working_context=working,
+        session_ledger=ledger,
+        friction_signal_sequence=signal_info
+    )
+    if WORKSPACE_PROJECT:
+        kwargs["project"] = WORKSPACE_PROJECT
+    if WORKSPACE_BRANCH:
+        kwargs["branch"] = WORKSPACE_BRANCH
+    response = call_parietal("NAVIGATE", **kwargs)
     if response:
         socketio.emit('parietal_navigate', {'output': response, 'cycle': active_session["cycle"]})
     return response
@@ -608,17 +1121,24 @@ def run_parietal_resolve(question, knowtext):
     return response
 
 
+def run_parietal_distill(knowtext):
     """Run DISTILL — returns updated Knowtext string or None."""
     ledger = get_session_ledger_summary()
     navigate_outputs = "\n\n".join(active_session.get("parietal_navigate_outputs", []))
     adjudicate_rulings = "\n\n".join(active_session.get("parietal_adjudicate_rulings", []))
     signal_seq = "\n".join(active_session["signal_sequence"])
-    response = call_parietal("DISTILL",
-                             session_ledger=ledger,
-                             navigate_outputs=navigate_outputs,
-                             adjudicate_rulings=adjudicate_rulings,
-                             friction_signal_sequence=signal_seq,
-                             current_knowtext=knowtext or "")
+    kwargs = dict(
+        session_ledger=ledger,
+        navigate_outputs=navigate_outputs,
+        adjudicate_rulings=adjudicate_rulings,
+        friction_signal_sequence=signal_seq,
+        current_knowtext=knowtext or ""
+    )
+    if WORKSPACE_PROJECT:
+        kwargs["project"] = WORKSPACE_PROJECT
+    if WORKSPACE_BRANCH:
+        kwargs["branch"] = WORKSPACE_BRANCH
+    response = call_parietal("DISTILL", **kwargs)
     return response
 
 
@@ -663,12 +1183,13 @@ def run_work_product_extraction():
         "discussion, or metadata. Format appropriate to the content."
     )
     messages = [{"role": "user", "content": f"{extraction_prompt}\n\n---SESSION TRANSCRIPT---\n\n{transcript_text}"}]
-    response = call_model("model_a", messages)
+    extractor = get_best_available_model()
+    response = call_model(extractor, messages)
     if not response or len(response.strip()) < 20:
         messages = [{"role": "user", "content": f"Review the session transcript and output everything that was established or produced:\n\n{transcript_text}"}]
-        response = call_model("model_a", messages)
+        response = call_model(extractor, messages)
     path = artifact_path("work_product")
-    content = response if (response and len(response.strip()) >= 20) else "[EXTRACTION FAILED]"
+    content = sanitize_content(response) if (response and len(response.strip()) >= 20) else "[EXTRACTION FAILED]"
     save_file(path, content)
     active_session["artifacts"].append({"label": "Work Product", "path": path, "content": content})
     socketio.emit('artifact_ready', {'label': 'Work Product', 'content': content})
@@ -688,12 +1209,15 @@ def run_final_synthesis():
         "deliverable for the project. Format as a clean readable document."
     )
     messages = [{"role": "user", "content": f"{synthesis_prompt}\n\n---KNOWTEXT---\n{knowtext}\n\n---SESSION TRANSCRIPT---\n{transcript_text}"}]
-    response = call_model("model_a", messages)
-    content = response if response else "[FINAL SYNTHESIS FAILED]"
+    synthesizer = get_best_available_model()
+    response = call_model(synthesizer, messages)
+    content = sanitize_content(response) if response else "[FINAL SYNTHESIS FAILED]"
     path = artifact_path("final_synthesis")
     save_file(path, content)
     active_session["artifacts"].append({"label": "Final Synthesis", "path": path, "content": content})
     socketio.emit('artifact_ready', {'label': 'Final Synthesis', 'content': content})
+    if response:
+        github_push_knowtext()
     socketio.emit('routing_action', {'type': 'distillation', 'message': 'Final synthesis complete. Project closed.'})
 
 # -----------------------------------------
@@ -744,6 +1268,7 @@ def run_session_loop(objective, start_fresh=False):
     active_session["cycle"] = 0
     active_session["artifacts"] = []
     active_session["session_ledger"] = []
+    active_session["rejected_claims"] = []
 
     # Load and filter Knowtext for injection
     if start_fresh:
@@ -783,8 +1308,13 @@ def run_session_loop(objective, start_fresh=False):
             conversation = conversation[:1] + conversation[-8:]
         socketio.emit('routing_action', {'type': 'cycle', 'message': f'Cycle {active_session["cycle"]} - Researcher generating...'})
 
+        # Rebuild model_a_system each cycle to inject current rejected claims
+        # This survives conversation trimming — the Researcher always sees what has been ruled out
+        rejected_injection = get_rejected_claims_injection()
+        cycle_model_a_system = model_a_system + rejected_injection if rejected_injection else model_a_system
+
         # Model A
-        a_response = call_model("model_a", conversation, system_override=model_a_system)
+        a_response = call_model("model_a", conversation, system_override=cycle_model_a_system)
         if not a_response:
             socketio.emit('routing_action', {'type': 'error', 'message': 'Researcher returned no response. Stopping.'})
             break
@@ -821,6 +1351,51 @@ def run_session_loop(objective, start_fresh=False):
         if tag == "SESSION_END":
             socketio.emit('routing_action', {'type': 'session_end', 'message': 'SESSION_END received.'})
             break
+        elif tag == "SEARCH_REQUEST":
+            # Model A is requesting a web search — route through workspace + Projenius SEARCH
+            search_query, search_context = extract_search_request(a_response)
+            if search_query:
+                socketio.emit('routing_action', {'type': 'parietal', 'message': f'Search request: {search_query[:80]}...'})
+                raw_results = call_workspace_search(search_query, search_context)
+                if raw_results:
+                    projenius_answer = run_projenius_search(search_query, search_context, raw_results)
+                    if projenius_answer:
+                        conversation.append({"role": "user", "content": f"[SEARCH RESULT]:\n{projenius_answer}\n\n{ambient_line}"})
+                    else:
+                        # Projenius unavailable — inject raw results directly
+                        raw_text = "\n".join([f"[{i+1}] {r.get('title','')} — {r.get('url','')}\n{r.get('description','')}" for i, r in enumerate(raw_results[:5])])
+                        conversation.append({"role": "user", "content": f"[SEARCH RESULTS — RAW]:\n{raw_text}\n\n{ambient_line}"})
+                else:
+                    conversation.append({"role": "user", "content": f"[SEARCH RESULT]: Search unavailable — workspace not reachable or no results returned for: {search_query}\n\n{ambient_line}"})
+            else:
+                conversation.append({"role": "user", "content": f"[SEARCH RESULT]: Search request received but no QUERY line found above the tag.\n\n{ambient_line}"})
+            continue
+        elif tag == "CODE_TEST":
+            # Model A is requesting a code test — route to workspace /run endpoint
+            command = extract_code_test(a_response)
+            if command:
+                socketio.emit('routing_action', {'type': 'parietal', 'message': f'Code test: {command[:80]}'})
+                result = call_workspace_run(command)
+                if result:
+                    returncode = result.get("returncode", -1)
+                    stdout = result.get("stdout", "").strip()
+                    stderr = result.get("stderr", "").strip()
+                    status = "PASSED" if returncode == 0 else f"FAILED (exit {returncode})"
+                    output_parts = [f"[CODE_TEST RESULT]: {status}", f"COMMAND: {command}"]
+                    if stdout:
+                        output_parts.append(f"STDOUT:\n{stdout[:2000]}")
+                    if stderr:
+                        output_parts.append(f"STDERR:\n{stderr[:1000]}")
+                    conversation.append({"role": "user", "content": "\n".join(output_parts) + f"\n\n{ambient_line}"})
+                    active_session["session_ledger"].append({
+                        "cycle": active_session["cycle"],
+                        "summary": f"CODE_TEST {status}: {command}"
+                    })
+                else:
+                    conversation.append({"role": "user", "content": f"[CODE_TEST RESULT]: Workspace not reachable — cannot execute: {command}\n\n{ambient_line}"})
+            else:
+                conversation.append({"role": "user", "content": f"[CODE_TEST RESULT]: CODE_TEST tag received but no COMMAND line found above the tag.\n\n{ambient_line}"})
+            continue
         elif tag == "ALIGNMENT_NEEDED":
             nav = run_parietal_navigate(knowtext, active_session["signal_sequence"])
             if nav:
@@ -831,6 +1406,9 @@ def run_session_loop(objective, start_fresh=False):
                     active_session["challenge_events"].append(
                         f"Cycle {active_session['cycle']}: RESOLVED — {resolve[:200]}"
                     )
+                    # Extract any DIRECT CORRECTION claims for Researcher memory
+                    if "DIRECT CORRECTION" in resolve.upper() or "CANNOT" in resolve.upper():
+                        extract_rejected_claim(resolve, active_session["cycle"])
                     socketio.emit('parietal_adjudicate', {
                         'ruling': 'resolve',
                         'output': resolve,
@@ -844,6 +1422,8 @@ def run_session_loop(objective, start_fresh=False):
                 # No NAVIGATE output — try RESOLVE directly on raw response
                 resolve = run_parietal_resolve(a_response, knowtext)
                 if resolve:
+                    if "DIRECT CORRECTION" in resolve.upper() or "CANNOT" in resolve.upper():
+                        extract_rejected_claim(resolve, active_session["cycle"])
                     conversation.append({"role": "user", "content": f"{resolve}\n{ambient_line}"})
                 else:
                     direction = wait_for_human_input("alignment", a_response)
@@ -858,6 +1438,9 @@ def run_session_loop(objective, start_fresh=False):
                     active_session["challenge_events"].append(
                         f"Cycle {active_session['cycle']}: CHECKPOINT RESOLVED — {resolve[:200]}"
                     )
+                    # Extract any DIRECT CORRECTION claims for Researcher memory
+                    if "DIRECT CORRECTION" in resolve.upper() or "CANNOT" in resolve.upper():
+                        extract_rejected_claim(resolve, active_session["cycle"])
                     conversation.append({"role": "user", "content": f"{resolve}\n{ambient_line}"})
                 else:
                     direction = wait_for_human_input("checkpoint", nav)
@@ -903,6 +1486,13 @@ def run_session_loop(objective, start_fresh=False):
                     active_session["challenge_events"].append(
                         f"Cycle {active_session['cycle']}: {ruling[:200]}"
                     )
+                    # If ruling is UPHOLD, extract the rejected claim for Researcher memory
+                    if "UPHOLD" in ruling.upper():
+                        extract_rejected_claim(ruling, active_session["cycle"])
+                        socketio.emit('routing_action', {
+                            'type': 'parietal',
+                            'message': 'Claim ruled against — added to Researcher session memory.'
+                        })
                     if "ESCALATE" in ruling.upper():
                         # Parietal says escalate — get human input
                         nav = run_parietal_navigate(knowtext, active_session["signal_sequence"])
@@ -921,6 +1511,26 @@ def run_session_loop(objective, start_fresh=False):
                         f"Cycle {active_session['cycle']}: {adjudication}"
                     )
                     conversation.append({"role": "user", "content": f"[CHALLENGE ADJUDICATED]: {adjudication}\n{ambient_line}"})
+                continue
+            elif b_tag == "VERIFY_CITATION":
+                # Model B suspects a fabricated citation — route to Projenius SEARCH for verification
+                citation, claim, query = extract_verify_citation(b_response)
+                if query:
+                    socketio.emit('routing_action', {'type': 'parietal', 'message': f'Citation verification: {query[:80]}...'})
+                    raw_results = call_workspace_search(query, citation)
+                    if raw_results:
+                        projenius_answer = run_projenius_search(query, citation, raw_results)
+                        if projenius_answer:
+                            active_session["challenge_events"].append(
+                                f"Cycle {active_session['cycle']}: VERIFY_CITATION — {projenius_answer[:200]}"
+                            )
+                            conversation.append({"role": "user", "content": f"[CITATION VERIFICATION]:\n{projenius_answer}\n\n{ambient_line}"})
+                        else:
+                            conversation.append({"role": "user", "content": f"[CITATION VERIFICATION]: Projenius unavailable — raw search returned {len(raw_results)} results for: {query}\n\n{ambient_line}"})
+                    else:
+                        conversation.append({"role": "user", "content": f"[CITATION VERIFICATION]: Verification unavailable — workspace search not reachable. Citation unverified: {citation}\n\n{ambient_line}"})
+                else:
+                    conversation.append({"role": "user", "content": f"[CITATION VERIFICATION]: VERIFY_CITATION received but no QUERY line found above the tag.\n\n{ambient_line}"})
                 continue
             elif b_tag == "SESSION_END":
                 socketio.emit('routing_action', {'type': 'session_end', 'message': 'SESSION_END received from Challenger.'})
@@ -981,17 +1591,69 @@ def run_session_loop(objective, start_fresh=False):
             save_file(CONFIG["knowtext_path"], new_knowtext)
             socketio.emit('routing_action', {'type': 'distillation', 'message': 'Knowtext updated by Parietal.'})
             github_push_knowtext()
+            active_session["distillation_method"] = "parietal"
             distilled = True
         else:
             socketio.emit('routing_action', {'type': 'distillation', 'message': f'Parietal distillation missing field: {missing} — falling back to Projenius.'})
             distilled = run_distillation_with_timeout(run_distillation) or False
+            if distilled:
+                active_session["distillation_method"] = "projenius"
     else:
         socketio.emit('routing_action', {'type': 'distillation', 'message': 'Parietal distillation failed — trying Projenius...'})
         distilled = run_distillation_with_timeout(run_distillation) or False
+        if distilled:
+            active_session["distillation_method"] = "projenius"
     if not distilled:
         socketio.emit('routing_action', {'type': 'distillation', 'message': 'Distillation skipped — session complete without Knowtext update.'})
+        active_session["distillation_method"] = "failed"
+    else:
+        # Run Projenius SYNTHESIZE to update Established Results Ledger
+        delta_log = ""
+        if parietal_distilled:
+            # Collect Delta Log content — may span multiple lines until next field header.
+            # Field headers are members of KNOWTEXT_REQUIRED_FIELDS, or "HANDOFF".
+            other_field_headers = [f"{f}:" for f in KNOWTEXT_REQUIRED_FIELDS if f != "Delta Log"] + ["HANDOFF:"]
+            distill_lines = parietal_distilled.split("\n")
+            in_delta = False
+            collected = []
+            for line in distill_lines:
+                stripped = line.strip()
+                if stripped.startswith("Delta Log:"):
+                    in_delta = True
+                    # Capture any inline content after the colon on the same line
+                    inline = stripped[len("Delta Log:"):].strip()
+                    if inline:
+                        collected.append(inline)
+                    continue
+                if in_delta:
+                    if any(stripped.startswith(h) for h in other_field_headers):
+                        break
+                    collected.append(line.rstrip())
+            delta_log = "\n".join(collected).strip()
+            if not delta_log:
+                # Fallback: use session ledger summary
+                delta_log = get_session_ledger_summary()
+        if delta_log:
+            socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE — updating Established Results Ledger...'})
+            try:
+                synthesize_result = [None]
+                def do_synthesize():
+                    synthesize_result[0] = run_projenius_synthesize(delta_log, knowtext)
+                synth_thread = threading.Thread(target=do_synthesize)
+                synth_thread.daemon = True
+                synth_thread.start()
+                synth_thread.join(timeout=30)
+                if synth_thread.is_alive():
+                    socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE timed out — ledger not updated this session.'})
+                elif synthesize_result[0]:
+                    socketio.emit('routing_action', {'type': 'parietal', 'message': 'Established Results Ledger updated.'})
+                else:
+                    socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE returned no result — ledger not updated.'})
+            except Exception as e:
+                socketio.emit('routing_action', {'type': 'error', 'message': f'Projenius SYNTHESIZE error: {str(e)}'})
     run_work_product_extraction()
     write_session_log()
+    write_session_to_workspace()
     active_session["running"] = False
     socketio.emit('session_complete', {
         'cycles': active_session["cycle"],
@@ -1033,10 +1695,33 @@ def handle_start_session(data):
     thread.start()
 
 def pre_session_then_start(obj, start_fresh=False):
+    # Run Projenius ORIENT to prime session with project-level context
+    # Uses a short timeout — if ORIENT is slow or unavailable, session starts without it
+    knowtext = load_file(CONFIG["knowtext_path"]) or ""
+    orient_context = ""
+    try:
+        orient_result = [None]
+        def do_orient():
+            orient_result[0] = run_projenius_orient(obj, knowtext)
+        orient_thread = threading.Thread(target=do_orient)
+        orient_thread.daemon = True
+        orient_thread.start()
+        orient_thread.join(timeout=25)
+        if orient_thread.is_alive():
+            socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT timed out — starting without project context.'})
+        elif orient_result[0]:
+            orient_context = orient_result[0]
+            socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT complete — project context primed.'})
+        else:
+            socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT returned no context — starting without it.'})
+    except Exception as e:
+        socketio.emit('routing_action', {'type': 'error', 'message': f'Projenius ORIENT error: {str(e)} — continuing without project context.'})
+
     parietal_cfg = get_effective_config("parietal")
-    has_parietal = bool(parietal_cfg.get("api_key") or parietal_cfg.get("url"))
+    has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
     if has_parietal:
-        refined, needs_answers = run_pre_session(obj)
+        # Pass ORIENT context to PRE_SESSION if available
+        refined, needs_answers = run_pre_session(obj, orient_context=orient_context)
         if needs_answers:
             active_session["_pre_session_objective"] = obj
             active_session["start_fresh"] = start_fresh
@@ -1087,7 +1772,9 @@ def handle_new_session(data):
     active_session["session_ledger"] = []
     active_session["parietal_navigate_outputs"] = []
     active_session["parietal_adjudicate_rulings"] = []
+    active_session["rejected_claims"] = []
     active_session["start_fresh"] = False
+    active_session["distillation_method"] = "failed"
     knowtext = load_file(CONFIG["knowtext_path"]) or ""
     version = knowtext.split("\n")[0].strip() if knowtext else "none"
     emit('session_reset', {
