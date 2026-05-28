@@ -1,22 +1,27 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Climate Notes —
+**Climate Notes**  
+Operator appears satisfied and confident; the session concluded with a clear final determination and no evident frustration or confusion.
+
+**Delta Log**  
+- Established that Spontaneous Symmetry Breaking (SSB) is **not formally identical** to wavefunction collapse; SSB is a static, unitary boundary‑condition selection, while collapse is a dynamical, non‑unitary reduction.  
+- Added a deeper topological disanalogy: in the infinite‑volume limit SSB yields a **direct‑sum decomposition into orthogonal superselection sectors** (unitarily inequivalent representations), whereas wavefunction collapse operates within a **single connected Hilbert space**.  
+- Clarified that SSB’s “choice” is a **kinematic sectoring** (selection of a superselection sector), while decoherence/einselection is **dynamic sectoring** (environment‑induced suppression of interference within one Hilbert space).  
+- Confirmed that SSB preserves unitarity throughout evolution within the chosen sector; all standard collapse models (Copenhagen projection, GRW, CSL) violate unitarity.  
+- Final determination: the formal identity between SSB and wavefunction collapse (including einselection) is **negative**.
+
+**Active Frameworks**  
+- Core claim updated to: *SSB ≠ wavefunction collapse*; the disanalogy rests on (1) unitarity preservation vs. violation and (2) state‑space topology (superselection sector vs. single Hilbert space).  
+- New sub‑framework introduced: **Kinematic vs. Dynamic Sectoring** – SSB = kinematic (sector fracture), Collapse/Einselection = dynamic (sector isolation within a connected space).
+
+**Open Questions**  
 NO CHANGE
 
-Delta Log —
+**Correction History**  
 NO CHANGE
 
-Active Frameworks —
+**Valence Mapping**  
 NO CHANGE
 
-Open Questions —
-NO CHANGE
-
-Correction History —
-NO CHANGE
-
-Valence Mapping —
-NO CHANGE
-
-Identity —
+**Identity**  
 NO CHANGE
