@@ -757,6 +757,7 @@ class OntinuityDB:
                                  distillation_method: str = None) -> str:
         version_id = new_id()
         clean = sanitize(content_full) or ""
+        schema_version = schema_version or "KNOWTEXT SCHEMA VERSION: 1.1"
         fields = _parse_knowtext_fields(clean)
         self.connect().execute(
             """INSERT INTO knowtext_versions (
