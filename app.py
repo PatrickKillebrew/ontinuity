@@ -905,11 +905,41 @@ def _f3_find_entries(command):
             hits.append(e)
     return hits
 
+F3_FAILURE_ASSERTION = re.compile(
+    r"\b(not\s+in\s+(the\s+)?whitelist|failed|was\s+not\s+executed|could\s+not\s+be\s+executed"
+    r"|did\s+not\s+(run|execute|return)|no\s+output|blocked|rejected|unsuccessful)\b",
+    re.IGNORECASE
+)
+
+def check_denied_successes(text):
+    """F.3 v2 — FABRICATED FAILURE detection (the June 4 evening specimen: the
+    deliverable listed `python --version` as 'Not in whitelist' while the log
+    held two PASSED entries for it). For every chunk that NAMES a command and
+    asserts its failure/non-execution, check the log: a PASSED entry for that
+    command makes the denial MISREPORTED. Negation cannot shield a claim that
+    names a command with a successful log entry."""
+    verdicts = []
+    for chunk in _f3_chunks(text):
+        commands = [a or b for a, b in F3_CMDREF.findall(chunk)]
+        commands = [c.strip() for c in commands if c and not c.strip().startswith("[")]
+        if not commands or not F3_FAILURE_ASSERTION.search(chunk):
+            continue
+        for cmd in commands:
+            passed = [e for e in _f3_find_entries(cmd) if e["status"].upper().startswith("PASSED")]
+            if passed:
+                e = passed[-1]
+                shown = (" Its recorded output: " + e["result"][:120]) if e.get("result") else ""
+                verdicts.append({"verdict": "MISREPORTED", "claim": chunk[:240],
+                                 "reason": f"`{cmd}` is asserted to have failed or been blocked, but the execution log shows it PASSED in cycle {e['cycle']}.{shown}"})
+    return verdicts
+
 def check_execution_claims(text):
     """F.3 core: every execution claim in `text` is checked against the execution
     log. Returns list of verdict dicts {verdict, claim, reason}. Deterministic —
-    no model judgment anywhere in this path."""
-    verdicts = []
+    no model judgment anywhere in this path. Includes the v2 anti-denial check:
+    fabricated failures (denying logged successes) are caught symmetrically with
+    fabricated successes."""
+    verdicts = list(check_denied_successes(text))
     log = active_session["execution_log"]
     for claim in extract_execution_claims(text):
         if claim["generic"]:
@@ -1681,9 +1711,12 @@ def run_session_loop(objective, start_fresh=False):
                     if stderr:
                         output_parts.append(f"STDERR:\n{stderr[:1000]}")
                     conversation.append({"role": "user", "content": "\n".join(output_parts) + f"\n\n{ambient_line}"})
+                    ledger_summary_line = f"CODE_TEST {status}: {command}"
+                    if returncode == 0 and stdout:
+                        ledger_summary_line += f" -> {stdout[:120]}"
                     active_session["session_ledger"].append({
                         "cycle": active_session["cycle"],
-                        "summary": f"CODE_TEST {status}: {command}"
+                        "summary": ledger_summary_line
                     })
                     record_execution("code_test", command, status, result=stdout[:400])  # F.3: ground truth incl. output
                 else:
@@ -1756,9 +1789,10 @@ def run_session_loop(objective, start_fresh=False):
         if cycle_f3:
             b_context_parts.append(f"[F.3 EXECUTION AUDIT — deterministic check of claims against the execution log]\n{f3_summary(cycle_f3)}")
         elif active_session["execution_log"]:
-            recent = active_session["execution_log"][-3:]
-            b_context_parts.append("[EXECUTION LOG — ground truth, most recent]\n" + "\n".join(
-                f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:80]}" for e in recent))
+            full = active_session["execution_log"]
+            b_context_parts.append("[EXECUTION LOG — ground truth, FULL session]\n" + "\n".join(
+                f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:80]}" + (f" -> {e['result'][:60]}" if e.get('result') else "")
+                for e in full[-25:]))
         b_context_parts.append(f"[CURRENT OUTPUT TO REVIEW]\n{a_response}\n\n{ambient_line}")
         b_content = "\n\n".join(b_context_parts)
         b_system = model_b_base
