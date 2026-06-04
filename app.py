@@ -1614,8 +1614,13 @@ def run_session_loop(objective, start_fresh=False):
         else:
             active_session["claim_warning_count"] = 0
 
-        # Signal 4 override
-        if signal == 4:
+        # Signal 4 override — DEFERRED when the response carries an action tag.
+        # A false-positive Signal 4 that blocks a CODE_TEST/SEARCH_REQUEST starves
+        # the session of the ground truth that would resolve the drift (the June 4
+        # doom loop: correct `python --version` emitted twice, preempted twice).
+        if signal == 4 and tag in ("CODE_TEST", "SEARCH_REQUEST"):
+            socketio.emit('routing_action', {'type': 'error', 'message': 'Signal 4 raised but response carries an action tag — executing first; override deferred one cycle.'})
+        elif signal == 4:
             socketio.emit('routing_action', {'type': 'error', 'message': 'Signal 4 — critical drift. Running NAVIGATE for context...'})
             nav = run_parietal_navigate(knowtext, active_session["signal_sequence"])
             if nav:
@@ -2313,7 +2318,9 @@ def handle_start_session(data):
             elif isinstance(cfg, str) and cfg.strip():
                 # Backward compat: plain key string
                 runtime_configs[role] = {'key': cfg.strip()}
-    thread = threading.Thread(target=pre_session_then_start, args=(objective, data.get('start_fresh', False)))
+    received_fresh = bool(data.get('start_fresh', False))
+    emit('routing_action', {'type': 'injection', 'message': f'start_fresh received from dashboard: {received_fresh}'})
+    thread = threading.Thread(target=pre_session_then_start, args=(objective, received_fresh))
     thread.daemon = True
     thread.start()
 
