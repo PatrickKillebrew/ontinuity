@@ -605,6 +605,14 @@ def extract_rejected_claim(response, cycle):
                 active_session["rejected_claims"].append(summary)
             return
 
+def get_datetime_injection():
+    """F.4: inject the real current date/time from the system clock. The model has
+    no clock; without this line any date it states is a fabrication by construction."""
+    now = datetime.datetime.utcnow().strftime("%A, %Y-%m-%d %H:%M UTC")
+    return ("\n\n[GROUND TRUTH — CURRENT DATE/TIME]: " + now +
+            ". Injected by the system clock. Use this for any date or time reference. "
+            "Never state a current date or time from memory.")
+
 def get_rejected_claims_injection():
     """Format rejected claims list for injection into Researcher system prompt.
     Returns empty string if no claims have been rejected yet."""
@@ -774,15 +782,17 @@ def extract_code_test(response):
 # -----------------------------------------
 # F.2: EXECUTION LOG + CLAIM-WITHOUT-EXECUTION DETECTION
 # -----------------------------------------
-def record_execution(kind, detail, status):
+def record_execution(kind, detail, status, result=""):
     """Record a real workspace execution in the session's deterministic execution log.
     kind: 'code_test' | 'search' | 'citation'. This log is the ground truth the
-    F.3 fabrication detector will check claims against."""
+    F.3 fabrication detector checks claims against. `result` stores a snippet of
+    the real output so misreported values can be detected, not just missing runs."""
     active_session["execution_log"].append({
         "cycle": active_session["cycle"],
         "kind": kind,
         "detail": str(detail)[:300],
         "status": str(status)[:100],
+        "result": str(result)[:400],
         "at": timestamp()
     })
 
@@ -829,6 +839,127 @@ def claims_execution_without_log(response):
     return not ran_this_cycle
 
 # -----------------------------------------
+# F.3 — DETERMINISTIC FABRICATION DETECTOR
+# Claims about executions are parsed and checked against the execution log as a
+# structured lookup. Three verdicts: CORROBORATED (log entry matches),
+# FABRICATED (no entry exists), MISREPORTED (entry exists, reported result
+# contradicts the stored output). Negated/honest statements ("was not executed",
+# "could not be verified", "UNMEASURED") are not claims and are skipped — which
+# retires the close-gate negation false positive by construction.
+# -----------------------------------------
+F3_NEGATION = re.compile(
+    r"(\bnot\s+(executed|run|injected|returned|available|reachable|measured|verified|determined)\b"
+    r"|\b(was|were|is|are)\s+(never|not)\b"
+    r"|\bno\s+(result|output|response|entry|version|command|execution)\b"
+    r"|\b(could\s*not|couldn't|cannot|can't|unable\s+to|failed\s+to|fail\s+to)\b"
+    r"|\bUNMEASURED\b|\bUNDETERMINED\b|\bunverified\b|\bunreachable\b"
+    r"|\b(missing|absent|pending|awaiting|without)\b"
+    r"|\bopen\s+question\b|\bresolution\s+path\b)",
+    re.IGNORECASE
+)
+
+F3_CMDREF = re.compile(r"`([^`\n]{2,120})`|\"([a-zA-Z0-9_./\\-]+ [^\"\n]{1,100})\"")
+F3_VALUE = re.compile(r"\b\d+\.\d+(?:\.\d+)?\b")  # version-like values: 3.11.9, 3.10
+
+def _f3_chunks(text):
+    """Split prose into checkable chunks: line-ish sentences."""
+    raw = re.split(r"(?<=[.!?])\s+|\n+", text or "")
+    return [c.strip() for c in raw if c and len(c.strip()) > 8]
+
+F3_RESULT_VERB = re.compile(
+    r"\b(returned|confirmed|produced|output|outputs|printed|retrieved|reported|showed|shows|gave|yielded|executed|ran|succeeded|passed|verified)\b",
+    re.IGNORECASE
+)
+
+def extract_execution_claims(text):
+    """Parse execution claims from prose. Returns list of dicts:
+    {chunk, commands[], values[], generic} — generic=True when the chunk claims
+    an execution without naming a specific command. A chunk is a claim when the
+    prose patterns match OR when it references a concrete command alongside a
+    result verb (catches `cmd` returned X, confirmed by `cmd`, etc.)."""
+    claims = []
+    for chunk in _f3_chunks(text):
+        if F3_NEGATION.search(chunk):
+            continue  # honest non-claims are exempt by construction
+        commands = [a or b for a, b in F3_CMDREF.findall(chunk)]
+        commands = [c.strip() for c in commands if c and not c.strip().startswith("[")]
+        is_claim = bool(CLAIM_PATTERN.search(chunk)) or (bool(commands) and bool(F3_RESULT_VERB.search(chunk)))
+        if not is_claim:
+            continue
+        values = F3_VALUE.findall(chunk)
+        claims.append({
+            "chunk": chunk[:240],
+            "commands": commands,
+            "values": values,
+            "generic": not commands
+        })
+    return claims
+
+def _f3_find_entries(command):
+    """Log entries whose recorded detail overlaps the claimed command (either direction)."""
+    cl = command.lower().strip()
+    hits = []
+    for e in active_session["execution_log"]:
+        dl = e["detail"].lower().strip()
+        if cl and dl and (cl in dl or dl in cl):
+            hits.append(e)
+    return hits
+
+def check_execution_claims(text):
+    """F.3 core: every execution claim in `text` is checked against the execution
+    log. Returns list of verdict dicts {verdict, claim, reason}. Deterministic —
+    no model judgment anywhere in this path."""
+    verdicts = []
+    log = active_session["execution_log"]
+    for claim in extract_execution_claims(text):
+        if claim["generic"]:
+            if not log:
+                verdicts.append({"verdict": "FABRICATED", "claim": claim["chunk"],
+                                 "reason": "Execution claimed but the execution log is empty — nothing has run this session."})
+            elif claim["values"]:
+                # A claimed value must appear in at least one stored result snippet,
+                # when any snippets exist to check against.
+                snippets = [e.get("result", "") for e in log if e.get("result")]
+                if snippets and not any(v in s for v in claim["values"] for s in snippets):
+                    verdicts.append({"verdict": "MISREPORTED", "claim": claim["chunk"],
+                                     "reason": f"Claimed value(s) {claim['values']} do not appear in any recorded execution output."})
+                else:
+                    verdicts.append({"verdict": "CORROBORATED", "claim": claim["chunk"], "reason": "Execution log is non-empty and no recorded output contradicts the claim."})
+            else:
+                verdicts.append({"verdict": "CORROBORATED", "claim": claim["chunk"], "reason": "Execution log is non-empty."})
+            continue
+        for cmd in claim["commands"]:
+            entries = _f3_find_entries(cmd)
+            if not entries:
+                verdicts.append({"verdict": "FABRICATED", "claim": claim["chunk"],
+                                 "reason": f"No execution log entry exists for `{cmd}` — this command never ran."})
+                continue
+            entry = entries[-1]
+            failed = entry["status"].upper().startswith("FAILED")
+            asserts_success = bool(re.search(r"\b(success|passed|confirmed|verified|retrieved|returned)\b", claim["chunk"], re.IGNORECASE))
+            if failed and asserts_success:
+                verdicts.append({"verdict": "MISREPORTED", "claim": claim["chunk"],
+                                 "reason": f"`{cmd}` ran but its recorded status is {entry['status']} — the claim asserts success."})
+            elif claim["values"] and entry.get("result") and not any(v in entry["result"] for v in claim["values"]):
+                verdicts.append({"verdict": "MISREPORTED", "claim": claim["chunk"],
+                                 "reason": f"`{cmd}` ran, but claimed value(s) {claim['values']} do not appear in its recorded output."})
+            else:
+                verdicts.append({"verdict": "CORROBORATED", "claim": claim["chunk"],
+                                 "reason": f"Log entry for `{cmd}` ({entry['status']}) supports the claim."})
+    return verdicts
+
+def f3_bad(verdicts):
+    return [v for v in verdicts if v["verdict"] in ("FABRICATED", "MISREPORTED")]
+
+def f3_summary(verdicts):
+    if not verdicts:
+        return "No execution claims present."
+    lines = []
+    for v in verdicts[:6]:
+        lines.append(f"{v['verdict']}: \"{v['claim'][:100]}\" — {v['reason']}")
+    return "\n".join(lines)
+
+# -----------------------------------------
 # API CALLS - PROVIDER AGNOSTIC
 # -----------------------------------------
 def get_api_key(role):
@@ -867,6 +998,15 @@ def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"]
+        except http_requests.exceptions.Timeout as e:
+            # Read-timeout flake (Novita): retry instead of killing the session.
+            if delay is not None:
+                socketio.emit('routing_action', {'type': 'error', 'message': f"API read timeout — retrying in 5s (attempt {attempt + 1}/3)..."})
+                time.sleep(5)
+                continue
+            active_session["errors"].append(f"API error: {str(e)}")
+            socketio.emit('routing_action', {'type': 'error', 'message': f"API call failed after retries: {str(e)}"})
+            return None
         except Exception as e:
             active_session["errors"].append(f"API error: {str(e)}")
             socketio.emit('routing_action', {'type': 'error', 'message': f"API call failed: {str(e)}"})
@@ -1402,7 +1542,9 @@ def run_session_loop(objective, start_fresh=False):
         # Rebuild model_a_system each cycle to inject current rejected claims
         # This survives conversation trimming — the Researcher always sees what has been ruled out
         rejected_injection = get_rejected_claims_injection()
-        cycle_model_a_system = model_a_system + rejected_injection if rejected_injection else model_a_system
+        cycle_model_a_system = model_a_system + get_datetime_injection()  # F.4: real clock every cycle
+        if rejected_injection:
+            cycle_model_a_system += rejected_injection
 
         # Model A
         a_response = call_model("model_a", conversation, system_override=cycle_model_a_system)
@@ -1444,23 +1586,30 @@ def run_session_loop(objective, start_fresh=False):
         else:
             active_session["malformed_count"] = 0
 
-        # F.2: Claim-without-execution check (deterministic, conservative).
-        # Fires only when the Researcher's prose claims an execution AND the response
-        # carries no action tag this cycle AND nothing actually ran. A response that
-        # claims results but ALSO emits SEARCH_REQUEST/CODE_TEST is allowed through —
+        # F.3: Deterministic fabrication detection (replaces the F.2 tripwire).
+        # Every execution claim is parsed and checked against the execution log.
+        # A response that ALSO emits SEARCH_REQUEST/CODE_TEST is allowed through —
         # the action branch will execute and inject real results next.
-        if tag not in ("SEARCH_REQUEST", "CODE_TEST") and claims_execution_without_log(a_response):
+        cycle_f3 = []
+        if tag not in ("SEARCH_REQUEST", "CODE_TEST"):
+            cycle_f3 = check_execution_claims(a_response)
+        bad_f3 = f3_bad(cycle_f3)
+        if bad_f3:
             active_session["claim_warning_count"] += 1
+            first = bad_f3[0]
+            socketio.emit('routing_action', {'type': 'error', 'message': f"F.3 {first['verdict']}: {first['reason']}"})
+            active_session["challenge_events"].append(
+                f"Cycle {active_session['cycle']}: F.3 {first['verdict']} — {first['claim'][:140]}"
+            )
             if active_session["claim_warning_count"] >= 2:
-                socketio.emit('routing_action', {'type': 'error', 'message': 'Researcher claimed execution results twice with no real execution — escalating for fabrication review.'})
+                socketio.emit('routing_action', {'type': 'error', 'message': 'F.3 fired twice consecutively — escalating for fabrication review.'})
                 nav = run_parietal_navigate(knowtext, active_session["signal_sequence"])
-                escalate_ctx = nav if nav else f"Cycle {active_session['cycle']}: Researcher prose claims executions but the execution log shows nothing ran. Possible procedural fabrication."
+                escalate_ctx = nav if nav else f"Cycle {active_session['cycle']}: F.3 detector verdicts:\n{f3_summary(bad_f3)}"
                 direction = wait_for_human_input("result_absent", escalate_ctx)
                 active_session["claim_warning_count"] = 0
                 conversation.append({"role": "user", "content": f"[OPERATOR — RESULT VERIFICATION]: {direction}\n{ambient_line}"})
                 continue
-            socketio.emit('routing_action', {'type': 'error', 'message': 'Researcher described an execution but no execution occurred — requesting real tag emission.'})
-            conversation.append({"role": "user", "content": f"Your last response described running or testing something, but no execution occurred this session. Nothing runs unless you emit a tag. To actually execute, reissue with a CODE_TEST or SEARCH_REQUEST tag and the required COMMAND/QUERY line; otherwise restate your reasoning without claiming results.\n{ambient_line}"})
+            conversation.append({"role": "user", "content": f"[F.3 EXECUTION AUDIT — DETERMINISTIC]: The following claims were checked against the session's execution log:\n{f3_summary(bad_f3)}\n\nNothing runs unless you emit a tag. To actually execute, reissue with a CODE_TEST or SEARCH_REQUEST tag and the required COMMAND/QUERY line; otherwise restate your reasoning without claiming results.\n{ambient_line}"})
             continue
         else:
             active_session["claim_warning_count"] = 0
@@ -1531,7 +1680,7 @@ def run_session_loop(objective, start_fresh=False):
                         "cycle": active_session["cycle"],
                         "summary": f"CODE_TEST {status}: {command}"
                     })
-                    record_execution("code_test", command, status)  # F.2: ground-truth log
+                    record_execution("code_test", command, status, result=stdout[:400])  # F.3: ground truth incl. output
                 else:
                     conversation.append({"role": "user", "content": f"[CODE_TEST RESULT]: Workspace not reachable — cannot execute: {command}\n\n{ambient_line}"})
             else:
@@ -1599,6 +1748,12 @@ def run_session_loop(objective, start_fresh=False):
             b_context_parts.append(f"[PROJECT CONTEXT]\n{knowtext_for_b}")
         if ledger_summary:
             b_context_parts.append(f"[{ledger_summary}]")
+        if cycle_f3:
+            b_context_parts.append(f"[F.3 EXECUTION AUDIT — deterministic check of claims against the execution log]\n{f3_summary(cycle_f3)}")
+        elif active_session["execution_log"]:
+            recent = active_session["execution_log"][-3:]
+            b_context_parts.append("[EXECUTION LOG — ground truth, most recent]\n" + "\n".join(
+                f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:80]}" for e in recent))
         b_context_parts.append(f"[CURRENT OUTPUT TO REVIEW]\n{a_response}\n\n{ambient_line}")
         b_content = "\n\n".join(b_context_parts)
         b_system = model_b_base
@@ -1704,14 +1859,23 @@ def run_session_loop(objective, start_fresh=False):
 
             # End decision — only at or above the floor, when an end was requested this cycle.
             if researcher_requested_end and active_session["cycle"] >= 2:
-                # F.2 close gate: a session that executed NOTHING cannot close on a
-                # deliverable that claims executed results. Deterministic — checks the
-                # execution log, not any model's judgment. Aggressive pattern by design:
-                # a false positive here costs one real execution, never lost work.
+                # F.3 close gate: every execution claim in the closing response and the
+                # session ledger is checked against the execution log as a structured
+                # lookup. FABRICATED or MISREPORTED claims block the close. Honest
+                # negative statements ("could not be verified", "UNMEASURED") contain
+                # no checkable claim and pass by construction. Deterministic — checks
+                # the log, not any model's judgment.
                 ledger_texts = [e.get("summary", "") for e in active_session["session_ledger"]]
-                if not active_session["execution_log"] and session_claims_execution([a_response] + ledger_texts):
-                    socketio.emit('routing_action', {'type': 'error', 'message': 'CLOSE REFUSED — deliverable claims executed results but the execution log is empty. Demanding real execution.'})
-                    conversation.append({"role": "user", "content": f"The session cannot close: the deliverable claims executed or verified results, but no execution occurred this entire session. Nothing has actually run. Emit a CODE_TEST or SEARCH_REQUEST tag with the required COMMAND/QUERY line and obtain the real result before requesting SESSION_END again.\n{ambient_line}"})
+                close_verdicts = []
+                for t in [a_response] + ledger_texts:
+                    close_verdicts.extend(check_execution_claims(t))
+                close_bad = f3_bad(close_verdicts)
+                if close_bad:
+                    socketio.emit('routing_action', {'type': 'error', 'message': f"CLOSE REFUSED — F.3: {close_bad[0]['verdict']} claim in the deliverable. {close_bad[0]['reason']}"})
+                    active_session["challenge_events"].append(
+                        f"Cycle {active_session['cycle']}: CLOSE REFUSED — F.3 {close_bad[0]['verdict']}: {close_bad[0]['claim'][:140]}"
+                    )
+                    conversation.append({"role": "user", "content": f"The session cannot close. F.3 deterministic audit of the deliverable against the execution log:\n{f3_summary(close_bad)}\n\nEither obtain the real result (emit CODE_TEST or SEARCH_REQUEST with the required COMMAND/QUERY line) or restate the deliverable without the unsupported claims, then request SESSION_END again.\n{ambient_line}"})
                     continue
                 if assessment["deliverable"] == "complete":
                     socketio.emit('routing_action', {'type': 'session_end', 'message': 'Deliverable assessed complete and end requested — closing session.'})
@@ -2156,25 +2320,30 @@ def handle_start_session(data):
 def pre_session_then_start(obj, start_fresh=False):
     # Run Projenius ORIENT to prime session with project-level context
     # Uses a short timeout — if ORIENT is slow or unavailable, session starts without it
+    # F.7: start_fresh skips ORIENT entirely — otherwise prior-session knowledge
+    # leaks into the objective even though Knowtext injection is correctly skipped.
     knowtext = load_file(CONFIG["knowtext_path"]) or ""
     orient_context = ""
-    try:
-        orient_result = [None]
-        def do_orient():
-            orient_result[0] = run_projenius_orient(obj, knowtext)
-        orient_thread = threading.Thread(target=do_orient)
-        orient_thread.daemon = True
-        orient_thread.start()
-        orient_thread.join(timeout=25)
-        if orient_thread.is_alive():
-            socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT timed out — starting without project context.'})
-        elif orient_result[0]:
-            orient_context = orient_result[0]
-            socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT complete — project context primed.'})
-        else:
-            socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT returned no context — starting without it.'})
-    except Exception as e:
-        socketio.emit('routing_action', {'type': 'error', 'message': f'Projenius ORIENT error: {str(e)} — continuing without project context.'})
+    if start_fresh:
+        socketio.emit('routing_action', {'type': 'injection', 'message': 'Starting fresh — skipping Projenius ORIENT (no project context).'})
+    else:
+        try:
+            orient_result = [None]
+            def do_orient():
+                orient_result[0] = run_projenius_orient(obj, knowtext)
+            orient_thread = threading.Thread(target=do_orient)
+            orient_thread.daemon = True
+            orient_thread.start()
+            orient_thread.join(timeout=25)
+            if orient_thread.is_alive():
+                socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT timed out — starting without project context.'})
+            elif orient_result[0]:
+                orient_context = orient_result[0]
+                socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT complete — project context primed.'})
+            else:
+                socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT returned no context — starting without it.'})
+        except Exception as e:
+            socketio.emit('routing_action', {'type': 'error', 'message': f'Projenius ORIENT error: {str(e)} — continuing without project context.'})
 
     parietal_cfg = get_effective_config("parietal")
     has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
@@ -2260,6 +2429,21 @@ def handle_pre_session_answer(data):
 def handle_end_session_final(data):
     if active_session["running"]:
         emit('routing_action', {'type': 'error', 'message': 'Stop the current session before ending the project.'})
+        return
+    # F.8: accept configs with the event (survives Railway restarts between
+    # session end and synthesis click) and fail loud with recovery guidance
+    # instead of silently skipping the model call.
+    configs = (data or {}).get('api_keys', {})
+    if configs:
+        runtime_configs.clear()
+        for role, cfg in configs.items():
+            if isinstance(cfg, dict):
+                runtime_configs[role] = cfg
+            elif isinstance(cfg, str) and cfg.strip():
+                runtime_configs[role] = {'key': cfg.strip()}
+    synth_cfg = get_effective_config("model_a")
+    if not synth_cfg.get("url") or not synth_cfg.get("api_key"):
+        emit('routing_action', {'type': 'error', 'message': 'Final synthesis blocked: model configs are not in server memory (the server may have restarted). Open KEYS, press Save, then click End Session — Final Synthesis again.'})
         return
     thread = threading.Thread(target=run_final_synthesis)
     thread.daemon = True
