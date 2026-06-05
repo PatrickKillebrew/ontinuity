@@ -933,7 +933,7 @@ F3_NEGATION = re.compile(
     re.IGNORECASE
 )
 
-F3_CMDREF = re.compile(r"`([^`\n]{2,120})`|\"([a-zA-Z0-9_./\\-]+ [^\"\n]{1,100})\"")
+F3_CMDREF = re.compile(r"`([^`\n]{2,120})`")  # backticks ONLY — quoted strings are outputs, not commands (June 5 lesson)
 F3_VALUE = re.compile(r"\b\d+\.\d+(?:\.\d+)?\b")  # version-like values: 3.11.9, 3.10
 
 def _f3_chunks(text):
@@ -956,7 +956,7 @@ def extract_execution_claims(text):
     for chunk in _f3_chunks(text):
         if F3_NEGATION.search(chunk):
             continue  # honest non-claims are exempt by construction
-        commands = [a or b for a, b in F3_CMDREF.findall(chunk)]
+        commands = list(F3_CMDREF.findall(chunk))
         commands = [c.strip() for c in commands if c and not c.strip().startswith("[")]
         is_claim = bool(CLAIM_PATTERN.search(chunk)) or (bool(commands) and bool(F3_RESULT_VERB.search(chunk)))
         if not is_claim:
@@ -995,7 +995,7 @@ def check_denied_successes(text):
     names a command with a successful log entry."""
     verdicts = []
     for chunk in _f3_chunks(text):
-        commands = [a or b for a, b in F3_CMDREF.findall(chunk)]
+        commands = list(F3_CMDREF.findall(chunk))
         commands = [c.strip() for c in commands if c and not c.strip().startswith("[")]
         if not commands or not F3_FAILURE_ASSERTION.search(chunk):
             continue
@@ -1046,8 +1046,13 @@ def check_execution_claims(text):
                 verdicts.append({"verdict": "MISREPORTED", "claim": claim["chunk"],
                                  "reason": f"`{cmd}` ran but its recorded status is {entry['status']} — the claim asserts success."})
             elif claim["values"] and entry.get("result") and not any(v in entry["result"] for v in claim["values"]):
-                verdicts.append({"verdict": "MISREPORTED", "claim": claim["chunk"],
-                                 "reason": f"`{cmd}` ran, but claimed value(s) {claim['values']} do not appear in its recorded output."})
+                all_outputs = [e.get("result", "") for e in log if e.get("result")]
+                if any(v in s for v in claim["values"] for s in all_outputs):
+                    verdicts.append({"verdict": "CORROBORATED", "claim": claim["chunk"],
+                                     "reason": f"Claimed value(s) {claim['values']} are recorded in another execution's output this session (cross-attribution in prose, not fabrication)."})
+                else:
+                    verdicts.append({"verdict": "MISREPORTED", "claim": claim["chunk"],
+                                     "reason": f"`{cmd}` ran, but claimed value(s) {claim['values']} do not appear in any recorded output."})
             else:
                 verdicts.append({"verdict": "CORROBORATED", "claim": claim["chunk"],
                                  "reason": f"Log entry for `{cmd}` ({entry['status']}) supports the claim."})
