@@ -663,6 +663,21 @@ def get_datetime_injection():
             ". Injected by the system clock. Use this for any date or time reference. "
             "Never state a current date or time from memory.")
 
+def get_results_board_injection():
+    """F.9: format the session results board for injection. Empty string if no results yet.
+    Mirrors rejected_claims: survives conversation trimming, so early results never evaporate."""
+    board = active_session.get("results_board", [])
+    if not board:
+        return ""
+    lines = "\n".join(f"  {i+1}. {r}" for i, r in enumerate(board))
+    return (
+        "\n\n--- ESTABLISHED THIS SESSION (ground truth, full values) ---\n"
+        "These results were really executed and their outputs recorded. Repeat them, "
+        "build on them, cite them in the deliverable. Do not re-derive or re-run "
+        "them unless verification requires it:\n" + lines +
+        "\n--- END ESTABLISHED RESULTS ---"
+    )
+
 def get_rejected_claims_injection():
     """Format rejected claims list for injection into Researcher system prompt.
     Returns empty string if no claims have been rejected yet."""
@@ -852,7 +867,7 @@ def record_execution(kind, detail, status, result=""):
         "kind": kind,
         "detail": str(detail)[:300],
         "status": str(status)[:100],
-        "result": str(result)[:400],
+        "result": str(result)[:2000],
         "at": timestamp()
     })
 
@@ -1394,10 +1409,15 @@ def run_parietal_adjudicate(disputed_claim, grounds, knowtext):
     working = get_working_context(knowtext) if knowtext else ""
     ledger = get_session_ledger_summary()
     signal = active_session["signal_sequence"][-1] if active_session["signal_sequence"] else ""
+    exec_log = "\n".join(
+        f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:100]}" + (f" -> {e['result'][:400]}" if e.get('result') else "")
+        for e in active_session["execution_log"][-10:]
+    ) or "No executions this session."
     response = call_parietal("ADJUDICATE",
                              disputed_claim=disputed_claim,
                              grounds=grounds,
                              session_ledger=ledger,
+                             execution_log_ground_truth=exec_log,
                              knowtext_active_frameworks=working,
                              current_ambient_signal=signal)
     if response:
@@ -1492,13 +1512,19 @@ def run_distillation():
 def run_work_product_extraction():
     socketio.emit('routing_action', {'type': 'extraction', 'message': 'Extracting session work product...'})
     transcript_text = "\n\n".join([f"[{e['role'].upper()}] {e['content']}" for e in active_session["transcript"]])
+    board = active_session.get("results_board", [])
+    board_text = ("\n\n---ESTABLISHED RESULTS (ground truth, authoritative over the transcript)---\n"
+                  + "\n".join(board)) if board else ""
     extraction_prompt = (
         "You are reviewing a completed Ontinuity session. Extract the work product - "
         "everything that was established, built, decided, or completed in this session. "
+        "Where the ESTABLISHED RESULTS section provides recorded values, use those exact "
+        "values in the deliverable - they are real executions and take precedence over "
+        "any retraction or hedging in the transcript. "
         "Output a clean document containing only the deliverables. Do not include process, "
         "discussion, or metadata. Format appropriate to the content."
     )
-    messages = [{"role": "user", "content": f"{extraction_prompt}\n\n---SESSION TRANSCRIPT---\n\n{transcript_text}"}]
+    messages = [{"role": "user", "content": f"{extraction_prompt}{board_text}\n\n---SESSION TRANSCRIPT---\n\n{transcript_text}"}]
     extractor = get_best_available_model()
     response = call_model(extractor, messages)
     if not response or len(response.strip()) < 20:
@@ -1585,6 +1611,7 @@ def run_session_loop(objective, start_fresh=False):
     active_session["artifacts"] = []
     active_session["session_ledger"] = []
     active_session["rejected_claims"] = []
+    active_session["results_board"] = []   # F.9: every PASSED result + value, banked at injection time
     active_session["no_progress_count"] = 0
     active_session["malformed_count"] = 0
     active_session["execution_log"] = []       # F.2: fresh deterministic execution record per session
@@ -1633,6 +1660,9 @@ def run_session_loop(objective, start_fresh=False):
         # This survives conversation trimming — the Researcher always sees what has been ruled out
         rejected_injection = get_rejected_claims_injection()
         cycle_model_a_system = model_a_system + get_datetime_injection()  # F.4: real clock every cycle
+        board_injection = get_results_board_injection()  # F.9: banked results, full values, every cycle
+        if board_injection:
+            cycle_model_a_system += board_injection
         if rejected_injection:
             cycle_model_a_system += rejected_injection
 
@@ -1773,12 +1803,16 @@ def run_session_loop(objective, start_fresh=False):
                     conversation.append({"role": "user", "content": "\n".join(output_parts) + f"\n\n{ambient_line}"})
                     ledger_summary_line = f"CODE_TEST {status}: {command}"
                     if returncode == 0 and stdout:
-                        ledger_summary_line += f" -> {stdout[:120]}"
+                        ledger_summary_line += f" -> {stdout[:500]}"
                     active_session["session_ledger"].append({
                         "cycle": active_session["cycle"],
                         "summary": ledger_summary_line
                     })
-                    record_execution("code_test", command, status, result=stdout[:400])  # F.3: ground truth incl. output
+                    record_execution("code_test", command, status, result=stdout[:2000])  # F.3: ground truth incl. output
+                    if returncode == 0:
+                        active_session["results_board"].append(
+                            f"`{command}` -> {(stdout[:500] + ('...' if len(stdout) > 500 else '')) if stdout else '(no output)'}"
+                        )
                 else:
                     conversation.append({"role": "user", "content": f"[CODE_TEST RESULT]: Workspace not reachable — cannot execute: {command}\n\n{ambient_line}"})
             else:
@@ -1846,12 +1880,15 @@ def run_session_loop(objective, start_fresh=False):
             b_context_parts.append(f"[PROJECT CONTEXT]\n{knowtext_for_b}")
         if ledger_summary:
             b_context_parts.append(f"[{ledger_summary}]")
+        board_injection_b = get_results_board_injection()  # F.9: judges see the same ground truth as the claimant
+        if board_injection_b:
+            b_context_parts.append(board_injection_b)
         if cycle_f3:
             b_context_parts.append(f"[F.3 EXECUTION AUDIT — deterministic check of claims against the execution log]\n{f3_summary(cycle_f3)}")
         elif active_session["execution_log"]:
             full = active_session["execution_log"]
             b_context_parts.append("[EXECUTION LOG — ground truth, FULL session]\n" + "\n".join(
-                f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:80]}" + (f" -> {e['result'][:60]}" if e.get('result') else "")
+                f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:80]}" + (f" -> {e['result'][:300]}" if e.get('result') else "")
                 for e in full[-25:]))
         b_context_parts.append(f"[CURRENT OUTPUT TO REVIEW]\n{a_response}\n\n{ambient_line}")
         b_content = "\n\n".join(b_context_parts)
@@ -1879,7 +1916,32 @@ def run_session_loop(objective, start_fresh=False):
                 active_session["no_progress_count"] = 0
 
             if b_tag == "CHALLENGE":
-                # Try Parietal ADJUDICATE first
+                # F.3-FIRST DISPUTE ROUTING: a dispute about an execution result is
+                # answered by the execution log, not by a model. If every execution
+                # claim in the challenged response is CORROBORATED by the log, the
+                # challenge is resolved deterministically with the stored ground
+                # truth — no ADJUDICATE, no testimony. Model adjudication remains
+                # for disputes the log cannot decide (reasoning, scope, quality).
+                a_verdicts = check_execution_claims(a_response)
+                if a_verdicts and not f3_bad(a_verdicts):
+                    cited = []
+                    for v in a_verdicts[:4]:
+                        cited.append(f"CORROBORATED: \"{v['claim'][:160]}\" — {v['reason'][:200]}")
+                    log_lines_full = []
+                    for e in active_session["execution_log"][-6:]:
+                        log_lines_full.append(f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:100]}" + (f"\n  OUTPUT: {e['result'][:800]}" if e.get('result') else ""))
+                    resolution = ("[F.3 GROUND TRUTH RESOLUTION — deterministic]: The challenged claims were "
+                                  "checked against the session execution log and are corroborated by real "
+                                  "recorded output. The challenge is answered by ground truth:\n"
+                                  + "\n".join(cited)
+                                  + "\n\nFULL RECORDED OUTPUT (authoritative):\n" + "\n".join(log_lines_full))
+                    active_session["challenge_events"].append(
+                        f"Cycle {active_session['cycle']}: F.3 RESOLVED — challenge against corroborated claims answered by execution log"
+                    )
+                    socketio.emit('routing_action', {'type': 'parietal', 'message': 'Challenge resolved by execution log — claims corroborated; ADJUDICATE skipped.'})
+                    conversation.append({"role": "user", "content": f"{resolution}\n{ambient_line}"})
+                    continue
+                # Try Parietal ADJUDICATE (log cannot decide this dispute)
                 ruling = run_parietal_adjudicate(b_response, "", knowtext)
                 if ruling:
                     active_session["parietal_adjudicate_rulings"].append(
@@ -2547,6 +2609,7 @@ def handle_new_session(data):
     active_session["parietal_navigate_outputs"] = []
     active_session["parietal_adjudicate_rulings"] = []
     active_session["rejected_claims"] = []
+    active_session["results_board"] = []
     active_session["start_fresh"] = False
     active_session["distillation_method"] = "failed"
     knowtext = load_file(CONFIG["knowtext_path"]) or ""
