@@ -689,7 +689,8 @@ def get_contract_injection():
     lines = []
     for c in contract:
         ev = f" | evidence: {c['evidence']}" if c["evidence"] else ""
-        lines.append(f"  {c['id']} [{c['kind']}] {c['text']}{ev}")
+        wv = f" | WAIVED: {c['waived']}" if c.get("waived") else ""
+        lines.append(f"  {c['id']} [{c['kind']}] {c['text']}{ev}{wv}")
     return (
         "\n\n--- SESSION CONTRACT (frozen at session start) ---\n"
         "The deliverable is complete when and only when every criterion below is met. "
@@ -708,17 +709,26 @@ def contract_close_check():
     JUDGED criteria are never checked here — they are the Challenger's call."""
     unmet = []
     for c in active_session.get("contract", []):
+        if c.get("waived"):
+            continue
         if c["kind"] != "VERIFIABLE":
             continue
         ev = c.get("evidence", "")
         cmds = re.findall(r"`([^`]{2,120})`", ev)
         if cmds:
             for cmd in cmds:
-                passed = [e for e in _f3_find_entries(cmd)
-                          if e["status"].upper().startswith("PASSED")]
+                entries = _f3_find_entries(cmd)
+                passed = [e for e in entries if e["status"].upper().startswith("PASSED")]
                 if not passed:
-                    unmet.append({"id": c["id"], "text": c["text"],
-                                  "reason": f"requires a successful execution of `{cmd}` — no PASSED log entry exists."})
+                    # Structural refusal: the command was genuinely attempted and the
+                    # environment refused it (403 / not whitelisted). No amount of
+                    # honest work can ever satisfy this criterion — operator territory.
+                    structural = bool(entries) and all(
+                        "403" in e.get("status", "") or "not in whitelist" in (e.get("result", "") or "").lower()
+                        for e in entries)
+                    unmet.append({"id": c["id"], "text": c["text"], "structural": structural,
+                                  "reason": f"requires a successful execution of `{cmd}` — no PASSED log entry exists."
+                                            + (" All attempts were refused by the environment (not whitelisted)." if structural else "")})
                     break
         elif re.search(r"inject|ground.?truth", ev, re.IGNORECASE):
             continue  # the injection is always present by construction
@@ -872,6 +882,32 @@ def call_workspace_run(command):
     except Exception as e:
         socketio.emit('routing_action', {'type': 'error', 'message': f'Workspace run error: {str(e)}'})
         return None
+
+_whitelist_cache = {"at": 0.0, "commands": []}
+
+def get_workspace_whitelist():
+    """Fetch the workspace command whitelist via the F.10 path: a deliberately
+    invalid /run returns 403 carrying safe_commands. Cached for 10 minutes.
+    Returns [] when unreachable — consumers must treat [] as 'unknown'."""
+    if not WORKSPACE_URL:
+        return []
+    if _whitelist_cache["commands"] and (time.time() - _whitelist_cache["at"]) < 600:
+        return _whitelist_cache["commands"]
+    api_key = os.environ.get("WORKSPACE_API_KEY", "").strip()
+    try:
+        r = http_requests.post(f"{WORKSPACE_URL}/run",
+                               json={"command": "__whitelist_probe__"},
+                               headers={"Content-Type": "application/json", "X-API-Key": api_key},
+                               timeout=10)
+        if r.status_code == 403:
+            cmds = r.json().get("safe_commands", [])
+            if cmds:
+                _whitelist_cache["commands"] = cmds
+                _whitelist_cache["at"] = time.time()
+            return cmds
+    except Exception:
+        pass
+    return []
 
 def extract_search_request(response):
     """Extract QUERY and CONTEXT from lines above SEARCH_REQUEST tag in Model A response.
@@ -1416,6 +1452,12 @@ def call_parietal(function_tag, **kwargs):
 def run_pre_session(objective, orient_context=""):
     """Run PRE_SESSION — returns (refined_objective, needs_answers, contract)."""
     kwargs = {"objective": objective}
+    whitelist = get_workspace_whitelist()
+    if whitelist:
+        # The contract author must know the legal moves: VERIFIABLE criteria may
+        # only cite commands that can actually pass. (June 5: a frozen criterion
+        # against non-whitelisted `echo` made a session unclosable.)
+        kwargs["available_commands"] = "; ".join(whitelist)
     if orient_context:
         kwargs["projenius_orient_context"] = orient_context
     # Pass project and branch context so Parietal knows which project this session belongs to
@@ -1588,6 +1630,10 @@ def build_verified_results_block():
         return ""
     lines = ["## Verified Results", ""]
     for c in contract:
+        if c.get("waived"):
+            lines.append(f"**{c['id']} — {c['text']}**: WAIVED — {c['waived']}")
+            lines.append("")
+            continue
         if c["kind"] == "VERIFIABLE":
             cmds = re.findall(r"`([^`]{2,120})`", c.get("evidence", ""))
             if cmds:
@@ -2184,6 +2230,33 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                     conversation.append({"role": "user", "content": f"The session cannot close. F.3 deterministic audit of the deliverable against the execution log:\n{f3_summary(close_bad)}\n\nEither obtain the real result (emit CODE_TEST or SEARCH_REQUEST with the required COMMAND/QUERY line) or restate the deliverable without the unsupported claims, then request SESSION_END again.\n{ambient_line}"})
                     continue
                 unmet = contract_close_check()
+                if unmet and all(u.get("structural") for u in unmet):
+                    # Every unmet criterion is structurally unsatisfiable: the evidence
+                    # command was attempted and refused by the environment. Looping is
+                    # pointless and dishonesty is the only other exit — escalate to the
+                    # operator for an on-the-record amendment.
+                    amend_ctx = ("SESSION CONTRACT — AMENDMENT REQUIRED\n"
+                                 "The following VERIFIABLE criteria cannot be satisfied in this "
+                                 "environment (their evidence commands were attempted and refused "
+                                 "as not whitelisted):\n"
+                                 + "\n".join(f"  {u['id']}: {u['text']} — {u['reason']}" for u in unmet)
+                                 + "\n\nReply WAIVE to waive these criteria (recorded as an operator "
+                                   "amendment in the session record), or reply with anything else to "
+                                   "uphold the contract and continue the session.")
+                    decision = wait_for_human_input("CONTRACT_AMENDMENT", amend_ctx)
+                    if decision.strip().lower().startswith("waive"):
+                        for u in unmet:
+                            for c in active_session["contract"]:
+                                if c["id"] == u["id"]:
+                                    c["waived"] = f"operator amendment, cycle {active_session['cycle']} (evidence command refused by environment)"
+                        active_session["challenge_events"].append(
+                            f"Cycle {active_session['cycle']}: CONTRACT AMENDED — operator waived {', '.join(u['id'] for u in unmet)} (structurally unsatisfiable)")
+                        socketio.emit('routing_action', {'type': 'parietal',
+                            'message': f"Contract amended by operator — waived: {', '.join(u['id'] for u in unmet)}. Recorded in the session record."})
+                        unmet = contract_close_check()
+                    else:
+                        active_session["challenge_events"].append(
+                            f"Cycle {active_session['cycle']}: CONTRACT UPHELD by operator — {', '.join(u['id'] for u in unmet)} remain binding")
                 if unmet:
                     u = unmet[0]
                     socketio.emit('routing_action', {'type': 'error', 'message': f"CLOSE REFUSED — contract criterion {u['id']} unmet: {u['reason']}"})
