@@ -36,6 +36,17 @@ Output format for questions:
 Output format when ready:
 READY: [refined objective in one precise sentence]
 SCOPE: [TACTICAL / STRATEGIC / EXPLORATORY]
+CONTRACT:
+C1 | VERIFIABLE | [criterion] | EVIDENCE: `command`
+C2 | JUDGED | [criterion] | EVIDENCE: challenger
+
+The CONTRACT converts the objective into 2 to 6 completion criteria. The session can only close when every criterion is met, so write criteria that together mean "done" and nothing more — do not add criteria the objective does not ask for. Each criterion is exactly one line, pipe-separated, in the format shown.
+
+Criterion kinds:
+- VERIFIABLE: satisfied by ground truth that code can check. EVIDENCE names either a single whitelisted command in backticks (a successful real execution of it is required), or the injected ground-truth line (for date/time criteria, write: EVIDENCE: injected ground-truth line).
+- JUDGED: quality, honesty, or reasoning assessments that only a reviewer can make (write: EVIDENCE: challenger). Use JUDGED for anything a command cannot prove.
+
+If the objective names specific commands, use those exact commands in EVIDENCE. Never invent commands the objective does not mention or imply.
 
 Nothing else. No preamble. No explanation. No commentary.
 
