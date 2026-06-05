@@ -1881,6 +1881,11 @@ def run_session_loop(objective, start_fresh=False):
         socketio.emit('routing_action', {'type': 'cycle', 'message': f'Cycle {active_session["cycle"]} - Challenger reviewing...'})
         ledger_summary = get_session_ledger_summary()
         b_context_parts = []
+        # The judge reads the contract: the Challenger assesses completion against the
+        # objective, so the objective must be in its context — not inferred from the
+        # ledger. (June 5: an honest Challenger refused to assess completion of an
+        # objective it had never been shown. It was right.)
+        b_context_parts.append(f"[SESSION OBJECTIVE]\n{objective}")
         if knowtext_for_b:
             b_context_parts.append(f"[PROJECT CONTEXT]\n{knowtext_for_b}")
         if ledger_summary:
