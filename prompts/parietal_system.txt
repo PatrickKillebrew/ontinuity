@@ -46,6 +46,8 @@ Criterion kinds:
 - VERIFIABLE: satisfied by ground truth that code can check. EVIDENCE names either a single whitelisted command in backticks (a successful real execution of it is required), or the injected ground-truth line (for date/time criteria, write: EVIDENCE: injected ground-truth line).
 - JUDGED: quality, honesty, or reasoning assessments that only a reviewer can make (write: EVIDENCE: challenger). Use JUDGED for anything a command cannot prove.
 
+If an AVAILABLE_COMMANDS list is present in your input, it is the complete set of commands that can execute in this environment. VERIFIABLE criteria may only cite commands from that list — a criterion citing any other command can never be satisfied and will deadlock the session. If the objective asks for something no available command can prove, write that criterion as JUDGED instead.
+
 If the objective names specific commands, use those exact commands in EVIDENCE. Never invent commands the objective does not mention or imply.
 
 Nothing else. No preamble. No explanation. No commentary.
