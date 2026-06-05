@@ -1578,22 +1578,70 @@ def run_distillation():
 # -----------------------------------------
 # WORK PRODUCT EXTRACTION
 # -----------------------------------------
+def build_verified_results_block():
+    """Assemble the Verified Results section of the work product BY CODE, from the
+    contract and the execution log. The deliverable's spine is a receipt, not a
+    retelling: each VERIFIABLE criterion is shown with its real recorded output.
+    Returns "" when no contract exists (pre-contract sessions keep old behavior)."""
+    contract = active_session.get("contract", [])
+    if not contract:
+        return ""
+    lines = ["## Verified Results", ""]
+    for c in contract:
+        if c["kind"] == "VERIFIABLE":
+            cmds = re.findall(r"`([^`]{2,120})`", c.get("evidence", ""))
+            if cmds:
+                entry = None
+                for cmd in cmds:
+                    passed = [e for e in _f3_find_entries(cmd) if e["status"].upper().startswith("PASSED")]
+                    if passed:
+                        entry = passed[-1]
+                        break
+                if entry:
+                    out = entry.get("result", "").strip()
+                    shown = out[:800] + ("..." if len(out) > 800 else "") if out else "(no output)"
+                    lines.append(f"**{c['id']} — {c['text']}**: MET")
+                    lines.append(f"Evidence: `{entry['detail']}` (cycle {entry['cycle']}, {entry['status']})")
+                    lines.append(f"```\n{shown}\n```")
+                else:
+                    lines.append(f"**{c['id']} — {c['text']}**: UNMET — no successful execution recorded.")
+            else:
+                lines.append(f"**{c['id']} — {c['text']}**: satisfied by injected ground truth (see transcript).")
+        else:
+            lines.append(f"**{c['id']} — {c['text']}**: JUDGED criterion — assessed by the Challenger at close.")
+        lines.append("")
+    return "\n".join(lines)
+
 def run_work_product_extraction():
     socketio.emit('routing_action', {'type': 'extraction', 'message': 'Extracting session work product...'})
     transcript_text = "\n\n".join([f"[{e['role'].upper()}] {e['content']}" for e in active_session["transcript"]])
+    verified_block = build_verified_results_block()
     board = active_session.get("results_board", [])
     board_text = ("\n\n---ESTABLISHED RESULTS (ground truth, authoritative over the transcript)---\n"
                   + "\n".join(board)) if board else ""
-    extraction_prompt = (
-        "You are reviewing a completed Ontinuity session. Extract the work product - "
-        "everything that was established, built, decided, or completed in this session. "
-        "Where the ESTABLISHED RESULTS section provides recorded values, use those exact "
-        "values in the deliverable - they are real executions and take precedence over "
-        "any retraction or hedging in the transcript. "
-        "Output a clean document containing only the deliverables. Do not include process, "
-        "discussion, or metadata. Format appropriate to the content."
-    )
-    messages = [{"role": "user", "content": f"{extraction_prompt}{board_text}\n\n---SESSION TRANSCRIPT---\n\n{transcript_text}"}]
+    if verified_block:
+        extraction_prompt = (
+            "You are writing the work product for a completed Ontinuity session. "
+            "The VERIFIED RESULTS section below was assembled by code directly from the "
+            "execution log — it is authoritative and must appear VERBATIM as the first "
+            "section of the document, unchanged. After it, add only the supporting "
+            "narrative, context, and any non-execution deliverables from the transcript. "
+            "Never contradict, restate with different values, or hedge the verified section. "
+            "Output a clean document. No process, discussion, or metadata."
+        )
+        head = f"{extraction_prompt}\n\n---VERIFIED RESULTS (reproduce verbatim)---\n{verified_block}{board_text}"
+    else:
+        extraction_prompt = (
+            "You are reviewing a completed Ontinuity session. Extract the work product - "
+            "everything that was established, built, decided, or completed in this session. "
+            "Where the ESTABLISHED RESULTS section provides recorded values, use those exact "
+            "values in the deliverable - they are real executions and take precedence over "
+            "any retraction or hedging in the transcript. "
+            "Output a clean document containing only the deliverables. Do not include process, "
+            "discussion, or metadata. Format appropriate to the content."
+        )
+        head = f"{extraction_prompt}{board_text}"
+    messages = [{"role": "user", "content": f"{head}\n\n---SESSION TRANSCRIPT---\n\n{transcript_text}"}]
     extractor = get_best_available_model()
     response = call_model(extractor, messages)
     if not response or len(response.strip()) < 20:
@@ -1601,6 +1649,16 @@ def run_work_product_extraction():
         response = call_model(extractor, messages)
     path = artifact_path("work_product")
     content = sanitize_content(response) if (response and len(response.strip()) >= 20) else "[EXTRACTION FAILED]"
+    # F.3 audits the deliverable itself — the last unaudited artifact in the system.
+    # Flagged claims are annotated loudly, never silently shipped.
+    if content != "[EXTRACTION FAILED]":
+        try:
+            wp_bad = f3_bad(check_execution_claims(content))
+            if wp_bad:
+                content += "\n\n--- F.3 AUDIT ANNOTATION (automatic) ---\n" + f3_summary(wp_bad)
+                socketio.emit('routing_action', {'type': 'error', 'message': f"WP audit: F.3 flagged {len(wp_bad)} claim(s) in the extracted work product — annotated in the document."})
+        except Exception as e:
+            print(f"[WP AUDIT] audit error: {e}", flush=True)
     save_file(path, content)
     active_session["artifacts"].append({"label": "Work Product", "path": path, "content": content})
     socketio.emit('artifact_ready', {'label': 'Work Product', 'content': content})
