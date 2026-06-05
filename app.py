@@ -396,44 +396,94 @@ def build_session_payload():
             load_file(CONFIG["knowtext_path"]) or ""),
     }
 
-def write_session_to_workspace():
-    if not WORKSPACE_URL:
-        socketio.emit('routing_action', {
-            'type': 'injection',
-            'message': 'Workspace URL not configured — skipping database write.'
-        })
-        return
+def record_workspace_write_failure(msg, payload=None):
+    """On a failed workspace write: append to the session error list,
+    update the already-written Session Log artifact in place so the
+    session carries the record of its own failed persistence, and dump
+    the payload to /tmp so a dead write is recoverable, not just mourned."""
+    active_session["errors"].append(msg)
     try:
-        payload = build_session_payload()
-        api_key = os.environ.get("WORKSPACE_API_KEY", "").strip()
-        headers = {"Content-Type": "application/json"}
-        if api_key:
-            headers["X-API-Key"] = api_key
-        socketio.emit('routing_action', {
-            'type': 'distillation',
-            'message': 'Writing session to workspace database...'
-        })
-        response = http_requests.post(
-            f"{WORKSPACE_URL}/api/session",
-            json=payload,
-            headers=headers,
-            timeout=30
-        )
-        if response.status_code == 200:
-            socketio.emit('routing_action', {
-                'type': 'distillation',
-                'message': 'Session written to workspace database.'
-            })
-        else:
+        for a in active_session["artifacts"]:
+            if a.get("label") == "Session Log" and a.get("path"):
+                a["content"] = a["content"] + "\n" + msg
+                save_file(a["path"], a["content"])
+                break
+    except Exception as e:
+        print(f"[WORKSPACE WRITE] could not update session log artifact: {e}", flush=True)
+    if payload is not None:
+        try:
+            import json as _json
+            sid = str(payload.get("session_id", "unknown")).replace("/", "_")
+            dump_path = f"/tmp/failed_session_{sid}.json"
+            with open(dump_path, "w", encoding="utf-8") as f:
+                _json.dump(payload, f)
+            print(f"[WORKSPACE WRITE] payload dumped to {dump_path} for recovery", flush=True)
             socketio.emit('routing_action', {
                 'type': 'error',
-                'message': f'Workspace write failed: {response.status_code}'
+                'message': f'Failed-write payload saved to {dump_path} — recoverable until next redeploy.'
             })
+        except Exception as e:
+            print(f"[WORKSPACE WRITE] payload dump failed: {e}", flush=True)
+
+
+def write_session_to_workspace():
+    """Write the completed session to the workspace database. Fail-loud:
+    announces entry BEFORE building the payload, prints every step to
+    stdout (Railway logs persist), retries 3x treating any non-200 OR
+    exception as retryable, and on final failure records the failure in
+    the session itself plus a /tmp recovery dump."""
+    print("[WORKSPACE WRITE] entering write_session_to_workspace", flush=True)
+    socketio.emit('routing_action', {
+        'type': 'distillation',
+        'message': 'Writing session to workspace database...'
+    })
+    if not WORKSPACE_URL:
+        msg = 'Workspace write SKIPPED — WORKSPACE_URL not configured.'
+        print(f"[WORKSPACE WRITE] {msg}", flush=True)
+        socketio.emit('routing_action', {'type': 'error', 'message': msg})
+        record_workspace_write_failure(msg, payload=None)
+        return False
+    try:
+        payload = build_session_payload()
     except Exception as e:
-        socketio.emit('routing_action', {
-            'type': 'error',
-            'message': f'Workspace write error: {str(e)}'
-        })
+        msg = f'Workspace write FAILED building payload: {type(e).__name__}: {e}'
+        print(f"[WORKSPACE WRITE] {msg}", flush=True)
+        socketio.emit('routing_action', {'type': 'error', 'message': msg})
+        record_workspace_write_failure(msg, payload=None)
+        return False
+    api_key = os.environ.get("WORKSPACE_API_KEY", "").strip()
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["X-API-Key"] = api_key
+    last_error = None
+    for attempt in range(1, 4):
+        try:
+            print(f"[WORKSPACE WRITE] POST attempt {attempt}/3 to {WORKSPACE_URL}/api/session", flush=True)
+            response = http_requests.post(
+                f"{WORKSPACE_URL}/api/session",
+                json=payload,
+                headers=headers,
+                timeout=30
+            )
+            if response.status_code == 200:
+                print("[WORKSPACE WRITE] SUCCESS — 200 from workspace", flush=True)
+                socketio.emit('routing_action', {
+                    'type': 'distillation',
+                    'message': 'Session written to workspace database.'
+                })
+                return True
+            last_error = f'HTTP {response.status_code}: {response.text[:200]}'
+            print(f"[WORKSPACE WRITE] attempt {attempt} failed — {last_error}", flush=True)
+        except Exception as e:
+            last_error = f'{type(e).__name__}: {e}'
+            print(f"[WORKSPACE WRITE] attempt {attempt} exception — {last_error}", flush=True)
+        if attempt < 3:
+            time.sleep(5)
+    msg = f'Workspace write FAILED after 3 attempts — {last_error}'
+    print(f"[WORKSPACE WRITE] {msg}", flush=True)
+    socketio.emit('routing_action', {'type': 'error', 'message': msg})
+    record_workspace_write_failure(msg, payload=payload)
+    return False
 
 
 def rotate_backups():
@@ -1999,85 +2049,100 @@ def run_session_loop(objective, start_fresh=False):
             return None
         return result[0]
 
-    # Try Parietal DISTILL first
-    parietal_distilled = run_distillation_with_timeout(lambda: run_parietal_distill(knowtext))
-    distilled = False
-    if parietal_distilled:
-        valid, missing = validate_knowtext_response(parietal_distilled)
-        if valid:
-            rotate_backups()
-            new_knowtext = f"{SCHEMA_VERSION}\n\n{parietal_distilled}"
-            save_file(CONFIG["knowtext_path"], new_knowtext)
-            socketio.emit('routing_action', {'type': 'distillation', 'message': 'Knowtext updated by Parietal.'})
-            github_push_knowtext()
-            active_session["distillation_method"] = "parietal"
-            distilled = True
+    # Try Parietal DISTILL first — entire distillation phase guarded so a
+    # failure here can never skip the session log or the workspace write.
+    try:
+        parietal_distilled = run_distillation_with_timeout(lambda: run_parietal_distill(knowtext))
+        distilled = False
+        if parietal_distilled:
+            valid, missing = validate_knowtext_response(parietal_distilled)
+            if valid:
+                rotate_backups()
+                new_knowtext = f"{SCHEMA_VERSION}\n\n{parietal_distilled}"
+                save_file(CONFIG["knowtext_path"], new_knowtext)
+                socketio.emit('routing_action', {'type': 'distillation', 'message': 'Knowtext updated by Parietal.'})
+                github_push_knowtext()
+                active_session["distillation_method"] = "parietal"
+                distilled = True
+            else:
+                socketio.emit('routing_action', {'type': 'distillation', 'message': f'Parietal distillation missing field: {missing} — falling back to Projenius.'})
+                distilled = run_distillation_with_timeout(run_distillation) or False
+                if distilled:
+                    active_session["distillation_method"] = "projenius"
         else:
-            socketio.emit('routing_action', {'type': 'distillation', 'message': f'Parietal distillation missing field: {missing} — falling back to Projenius.'})
+            socketio.emit('routing_action', {'type': 'distillation', 'message': 'Parietal distillation failed — trying Projenius...'})
             distilled = run_distillation_with_timeout(run_distillation) or False
             if distilled:
                 active_session["distillation_method"] = "projenius"
-    else:
-        socketio.emit('routing_action', {'type': 'distillation', 'message': 'Parietal distillation failed — trying Projenius...'})
-        distilled = run_distillation_with_timeout(run_distillation) or False
-        if distilled:
-            active_session["distillation_method"] = "projenius"
-    if not distilled:
-        socketio.emit('routing_action', {'type': 'distillation', 'message': 'Distillation skipped — session complete without Knowtext update.'})
-        active_session["distillation_method"] = "failed"
-    else:
-        # Run Projenius SYNTHESIZE to update Established Results Ledger
-        delta_log = ""
-        if parietal_distilled:
-            # Collect Delta Log content — may span multiple lines until next field header.
-            # Field headers are members of KNOWTEXT_REQUIRED_FIELDS, or "HANDOFF".
-            other_field_headers = [f"{f}:" for f in KNOWTEXT_REQUIRED_FIELDS if f != "Delta Log"] + ["HANDOFF:"]
-            distill_lines = parietal_distilled.split("\n")
-            in_delta = False
-            collected = []
-            for line in distill_lines:
-                stripped = line.strip()
-                if stripped.startswith("Delta Log:"):
-                    in_delta = True
-                    # Capture any inline content after the colon on the same line
-                    inline = stripped[len("Delta Log:"):].strip()
-                    if inline:
-                        collected.append(inline)
-                    continue
-                if in_delta:
-                    if any(stripped.startswith(h) for h in other_field_headers):
-                        break
-                    collected.append(line.rstrip())
-            delta_log = "\n".join(collected).strip()
-            if not delta_log:
-                # Fallback: use session ledger summary
-                delta_log = get_session_ledger_summary()
-        if delta_log:
-            socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE — updating Established Results Ledger...'})
+        if not distilled:
+            socketio.emit('routing_action', {'type': 'distillation', 'message': 'Distillation skipped — session complete without Knowtext update.'})
+            active_session["distillation_method"] = "failed"
+        else:
+            # Run Projenius SYNTHESIZE to update Established Results Ledger
+            delta_log = ""
+            if parietal_distilled:
+                # Collect Delta Log content — may span multiple lines until next field header.
+                # Field headers are members of KNOWTEXT_REQUIRED_FIELDS, or "HANDOFF".
+                other_field_headers = [f"{f}:" for f in KNOWTEXT_REQUIRED_FIELDS if f != "Delta Log"] + ["HANDOFF:"]
+                distill_lines = parietal_distilled.split("\n")
+                in_delta = False
+                collected = []
+                for line in distill_lines:
+                    stripped = line.strip()
+                    if stripped.startswith("Delta Log:"):
+                        in_delta = True
+                        # Capture any inline content after the colon on the same line
+                        inline = stripped[len("Delta Log:"):].strip()
+                        if inline:
+                            collected.append(inline)
+                        continue
+                    if in_delta:
+                        if any(stripped.startswith(h) for h in other_field_headers):
+                            break
+                        collected.append(line.rstrip())
+                delta_log = "\n".join(collected).strip()
+                if not delta_log:
+                    # Fallback: use session ledger summary
+                    delta_log = get_session_ledger_summary()
+            if delta_log:
+                socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE — updating Established Results Ledger...'})
+                try:
+                    synthesize_result = [None]
+                    def do_synthesize():
+                        synthesize_result[0] = run_projenius_synthesize(delta_log, knowtext)
+                    synth_thread = threading.Thread(target=do_synthesize)
+                    synth_thread.daemon = True
+                    synth_thread.start()
+                    synth_thread.join(timeout=30)
+                    if synth_thread.is_alive():
+                        socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE timed out — ledger not updated this session.'})
+                    elif synthesize_result[0]:
+                        socketio.emit('routing_action', {'type': 'parietal', 'message': 'Established Results Ledger updated.'})
+                    else:
+                        socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE returned no result — ledger not updated.'})
+                except Exception as e:
+                    socketio.emit('routing_action', {'type': 'error', 'message': f'Projenius SYNTHESIZE error: {str(e)}'})
+    except Exception as e:
+        print(f"[END SEQUENCE] distillation phase error: {e}", flush=True)
+        active_session["errors"].append(f"Distillation phase error: {e}")
+        socketio.emit('routing_action', {'type': 'error', 'message': f'Distillation phase error — proceeding to log and write: {str(e)}'})
+    finally:
+        for _step_name, _step_fn in (
+                ("Work product extraction", run_work_product_extraction),
+                ("Session log", write_session_log),
+                ("Workspace write", write_session_to_workspace)):
             try:
-                synthesize_result = [None]
-                def do_synthesize():
-                    synthesize_result[0] = run_projenius_synthesize(delta_log, knowtext)
-                synth_thread = threading.Thread(target=do_synthesize)
-                synth_thread.daemon = True
-                synth_thread.start()
-                synth_thread.join(timeout=30)
-                if synth_thread.is_alive():
-                    socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE timed out — ledger not updated this session.'})
-                elif synthesize_result[0]:
-                    socketio.emit('routing_action', {'type': 'parietal', 'message': 'Established Results Ledger updated.'})
-                else:
-                    socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE returned no result — ledger not updated.'})
+                _step_fn()
             except Exception as e:
-                socketio.emit('routing_action', {'type': 'error', 'message': f'Projenius SYNTHESIZE error: {str(e)}'})
-    run_work_product_extraction()
-    write_session_log()
-    write_session_to_workspace()
-    active_session["running"] = False
-    socketio.emit('session_complete', {
-        'cycles': active_session["cycle"],
-        'artifacts_count': len(active_session["artifacts"])
-    })
+                msg = f"{_step_name} failed: {type(e).__name__}: {e}"
+                print(f"[END SEQUENCE] {msg}", flush=True)
+                active_session["errors"].append(msg)
+                socketio.emit('routing_action', {'type': 'error', 'message': msg})
+        active_session["running"] = False
+        socketio.emit('session_complete', {
+            'cycles': active_session["cycle"],
+            'artifacts_count': len(active_session["artifacts"])
+        })
 
 # -----------------------------------------
 # FLASK ROUTES
