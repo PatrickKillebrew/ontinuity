@@ -1134,6 +1134,16 @@ def check_execution_claims(text):
         for cmd in claim["commands"]:
             entries = _f3_find_entries(cmd)
             if not entries:
+                # Backticked VALUES are not command references. `Python 3.14.4` is an
+                # output, not a command (June 5 cycle-59 soak specimen: F.3 declared
+                # FABRICATED on a backticked version string). A backticked string that
+                # appears verbatim in any recorded output is evidence being QUOTED,
+                # which is exactly the honest behavior every prompt teaches.
+                all_outputs = [e.get("result", "") for e in log if e.get("result")]
+                if any(cmd.strip() and cmd.strip() in s for s in all_outputs):
+                    verdicts.append({"verdict": "CORROBORATED", "claim": claim["chunk"],
+                                     "reason": f"`{cmd}` is a recorded output value being quoted, not a command reference."})
+                    continue
                 verdicts.append({"verdict": "FABRICATED", "claim": claim["chunk"],
                                  "reason": f"No execution log entry exists for `{cmd}` — this command never ran."})
                 continue
@@ -1786,6 +1796,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["rejected_claims"] = []
     active_session["results_board"] = []   # F.9: every PASSED result + value, banked at injection time
     active_session["contract"] = contract or []  # frozen criteria from PRE_SESSION; empty = no contract
+    active_session["close_refusal_count"] = 0     # consecutive refused closes — the 59-cycle guard
     if active_session["contract"]:
         contract_display = "\n".join(
             f"{c['id']} [{c['kind']}] {c['text']}" + (f" — evidence: {c['evidence']}" if c['evidence'] else "")
@@ -2227,6 +2238,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                     active_session["challenge_events"].append(
                         f"Cycle {active_session['cycle']}: CLOSE REFUSED — F.3 {close_bad[0]['verdict']}: {close_bad[0]['claim'][:140]}"
                     )
+                    active_session["close_refusal_count"] = active_session.get("close_refusal_count", 0) + 1
                     conversation.append({"role": "user", "content": f"The session cannot close. F.3 deterministic audit of the deliverable against the execution log:\n{f3_summary(close_bad)}\n\nEither obtain the real result (emit CODE_TEST or SEARCH_REQUEST with the required COMMAND/QUERY line) or restate the deliverable without the unsupported claims, then request SESSION_END again.\n{ambient_line}"})
                     continue
                 unmet = contract_close_check()
@@ -2258,12 +2270,28 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         active_session["challenge_events"].append(
                             f"Cycle {active_session['cycle']}: CONTRACT UPHELD by operator — {', '.join(u['id'] for u in unmet)} remain binding")
                 if unmet:
+                    active_session["close_refusal_count"] = active_session.get("close_refusal_count", 0) + 1
                     u = unmet[0]
                     socketio.emit('routing_action', {'type': 'error', 'message': f"CLOSE REFUSED — contract criterion {u['id']} unmet: {u['reason']}"})
                     active_session["challenge_events"].append(
                         f"Cycle {active_session['cycle']}: CLOSE REFUSED — contract {u['id']} unmet"
                     )
                     unmet_lines = "\n".join(f"{x['id']}: {x['text']} — {x['reason']}" for x in unmet)
+                    if active_session.get("close_refusal_count", 0) >= 3:
+                        # The 59-cycle guard (June 5): refused closes used to loop forever
+                        # because the refusal path bypassed every escalation. Three
+                        # consecutive refusals now stop the treadmill and ask the operator.
+                        guard_ctx = ("CLOSE DEADLOCK — " + str(active_session["close_refusal_count"]) +
+                                     " consecutive refused close attempts.\nLatest refusal:\n" + unmet_lines +
+                                     "\n\nReply STOP to end the session now (the end sequence and write will run), "
+                                     "or reply with direction for the Researcher to continue.")
+                        decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
+                        active_session["close_refusal_count"] = 0
+                        if decision.strip().lower().startswith("stop"):
+                            socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
+                            break
+                        conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
+                        continue
                     conversation.append({"role": "user", "content": f"The session cannot close. The session contract has unmet VERIFIABLE criteria:\n{unmet_lines}\n\nObtain the required real execution(s) via CODE_TEST, then request SESSION_END again.\n{ambient_line}"})
                     continue
                 if assessment["deliverable"] == "complete":
@@ -2445,7 +2473,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
 # workspace response verbatim. No write surface is exposed.
 DIAG_ALLOWED = {"status", "log", "manifest", "history",
                 "api/health", "api/ledger", "api/project_state",
-                "api/behavioral_corpus", "api/query"}
+                "api/behavioral_corpus", "api/query", "engine"}
 
 @app.route('/diag/<path:endpoint>')
 def diag_relay(endpoint):
@@ -2457,6 +2485,15 @@ def diag_relay(endpoint):
     base = endpoint.split("?")[0].strip("/")
     if base not in DIAG_ALLOWED and not base.startswith("history/"):
         return jsonify({"error": f"endpoint not in diag whitelist", "allowed": sorted(DIAG_ALLOWED)}), 403
+    if base == "engine":
+        # Local engine state — never relayed. Exists so the BUILDER agent can
+        # check for a live session BEFORE instructing any commit (June 5: a
+        # deploy mid-session killed a 59-cycle run; this check makes the
+        # never-deploy-during-a-session rule mechanically enforceable).
+        return jsonify({"running": bool(active_session.get("running")),
+                        "cycle": active_session.get("cycle", 0),
+                        "waiting_for_input": bool(active_session.get("waiting_for_input")),
+                        "contract_criteria": len(active_session.get("contract", []))})
     if not WORKSPACE_URL:
         return jsonify({"error": "WORKSPACE_URL not configured"}), 503
     try:
@@ -2840,6 +2877,7 @@ def handle_new_session(data):
     active_session["rejected_claims"] = []
     active_session["results_board"] = []
     active_session["contract"] = []
+    active_session["close_refusal_count"] = 0
     active_session["start_fresh"] = False
     active_session["distillation_method"] = "failed"
     knowtext = load_file(CONFIG["knowtext_path"]) or ""
