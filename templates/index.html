@@ -829,7 +829,7 @@ body.observer-mode .message-role {
         <div class="start-title">The loop is ready.<br><em>What shall we work on?</em></div>
       </div>
       <div class="start-subtitle" id="startSubtitle">
-        Tell the models what you want to explore. The Researcher will advance it, the Challenger will pressure-test it, and the Friction model will keep the session honest.
+        Tell the session what you want established. The Researcher advances it, the Challenger contests it, and nothing closes until the evidence agrees.
       </div>
       <div class="objective-form" id="objectiveForm">
         <textarea class="objective-input" id="objectiveInput" placeholder="What should this session establish or produce?"></textarea>
@@ -1076,6 +1076,28 @@ body.observer-mode .message-role {
 
 <script>
 const socket = io();
+
+// ── SERVER RE-ARM ──
+// Configs live in the browser (localStorage), never on the server. The server
+// holds them in process memory only, so any restart/redeploy wipes them. This
+// handler re-pushes stored configs on EVERY socket connect — initial load and
+// every reconnect — making server restarts invisible to the user. Product
+// pattern: BYO keys, nothing credential-shaped persists server-side.
+socket.on('connect', function() {
+  try {
+    const keys = getStoredKeys();
+    if (Object.keys(keys).length === 0) return;
+    const githubCfg = {};
+    const t = localStorage.getItem('ontinuity_github_token');
+    const r = localStorage.getItem('ontinuity_github_repo');
+    if (t) githubCfg.token = t;
+    if (r) githubCfg.repo = r;
+    socket.emit('save_api_keys', { api_keys: keys, github: githubCfg });
+  } catch (e) {
+    console.error('Config re-arm failed:', e);
+  }
+});
+
 let currentMode = 'operator';
 let sessionRunning = false;
 const tagFirstTime = { cleared: false };
