@@ -663,6 +663,68 @@ def get_datetime_injection():
             ". Injected by the system clock. Use this for any date or time reference. "
             "Never state a current date or time from memory.")
 
+CONTRACT_LINE = re.compile(
+    r"^\s*C(\d+)\s*\|\s*(VERIFIABLE|JUDGED)\s*\|\s*([^|]+?)\s*(?:\|\s*EVIDENCE:\s*(.+?))?\s*$",
+    re.IGNORECASE | re.MULTILINE)
+
+def parse_contract(text):
+    """Parse CONTRACT criteria lines from a PRE_SESSION response.
+    Returns list of {id, kind, text, evidence}. Empty list when none found —
+    every consumer treats an empty contract as 'no contract' (backward compatible)."""
+    out = []
+    for m in CONTRACT_LINE.finditer(text or ""):
+        out.append({
+            "id": f"C{m.group(1)}",
+            "kind": m.group(2).upper(),
+            "text": m.group(3).strip()[:300],
+            "evidence": (m.group(4) or "").strip()[:200],
+        })
+    return out
+
+def get_contract_injection():
+    """Format the frozen session contract for injection into BOTH models, every cycle."""
+    contract = active_session.get("contract", [])
+    if not contract:
+        return ""
+    lines = []
+    for c in contract:
+        ev = f" | evidence: {c['evidence']}" if c["evidence"] else ""
+        lines.append(f"  {c['id']} [{c['kind']}] {c['text']}{ev}")
+    return (
+        "\n\n--- SESSION CONTRACT (frozen at session start) ---\n"
+        "The deliverable is complete when and only when every criterion below is met. "
+        "Criteria cannot be added, removed, or reinterpreted mid-session. VERIFIABLE "
+        "criteria are checked by code against the execution log at close; JUDGED "
+        "criteria are assessed by the Challenger.\n" + "\n".join(lines) +
+        "\n--- END SESSION CONTRACT ---"
+    )
+
+def contract_close_check():
+    """Deterministic close-gate walk of the contract. Returns list of unmet
+    VERIFIABLE criteria as {id, text, reason}. Rules:
+    - evidence names a `command` -> requires a PASSED execution log entry for it
+    - evidence mentions the injection/ground-truth line -> satisfied by construction
+    - otherwise uncheckable by code -> left to the Challenger (skipped here)
+    JUDGED criteria are never checked here — they are the Challenger's call."""
+    unmet = []
+    for c in active_session.get("contract", []):
+        if c["kind"] != "VERIFIABLE":
+            continue
+        ev = c.get("evidence", "")
+        cmds = re.findall(r"`([^`]{2,120})`", ev)
+        if cmds:
+            for cmd in cmds:
+                passed = [e for e in _f3_find_entries(cmd)
+                          if e["status"].upper().startswith("PASSED")]
+                if not passed:
+                    unmet.append({"id": c["id"], "text": c["text"],
+                                  "reason": f"requires a successful execution of `{cmd}` — no PASSED log entry exists."})
+                    break
+        elif re.search(r"inject|ground.?truth", ev, re.IGNORECASE):
+            continue  # the injection is always present by construction
+        # else: uncheckable by code — Challenger territory, not a code refusal
+    return unmet
+
 def get_results_board_injection():
     """F.9: format the session results board for injection. Empty string if no results yet.
     Mirrors rejected_claims: survives conversation trimming, so early results never evaporate."""
@@ -1352,7 +1414,7 @@ def call_parietal(function_tag, **kwargs):
     return response
 
 def run_pre_session(objective, orient_context=""):
-    """Run PRE_SESSION — returns (refined_objective, needs_answers)."""
+    """Run PRE_SESSION — returns (refined_objective, needs_answers, contract)."""
     kwargs = {"objective": objective}
     if orient_context:
         kwargs["projenius_orient_context"] = orient_context
@@ -1363,7 +1425,7 @@ def run_pre_session(objective, orient_context=""):
         kwargs["branch"] = WORKSPACE_BRANCH
     response = call_parietal("PRE_SESSION", **kwargs)
     if not response:
-        return objective, False
+        return objective, False, []
     if "READY:" in response.upper():
         idx = response.upper().find("READY:")
         refined = response[idx + 6:].strip()
@@ -1371,22 +1433,24 @@ def run_pre_session(objective, orient_context=""):
         if "\n" in refined:
             refined = refined.split("\n")[0].strip()
         socketio.emit('parietal_pre_session', {'status': 'ready', 'questions': response, 'cycle': 0})
-        return refined or objective, False
+        return refined or objective, False, parse_contract(response)
     socketio.emit('parietal_pre_session', {'status': 'questions', 'questions': response, 'cycle': 0})
-    return objective, True
+    return objective, True, []
 
 def run_pre_session_with_answers(raw_objective, answers):
-    """Run PRE_SESSION with operator answers — returns refined objective."""
+    """Run PRE_SESSION with operator answers — returns (refined_objective, contract)."""
     response = call_parietal("PRE_SESSION",
                              objective=raw_objective,
                              operator_answers=answers)
     if not response:
-        return raw_objective
+        return raw_objective, []
     if "READY:" in response.upper():
         idx = response.upper().find("READY:")
         refined = response[idx + 6:].strip()
-        return refined or raw_objective
-    return raw_objective
+        if "\n" in refined:
+            refined = refined.split("\n")[0].strip()
+        return refined or raw_objective, parse_contract(response)
+    return raw_objective, []
 
 def run_parietal_navigate(knowtext, signal_sequence_recent=None):
     """Run NAVIGATE — returns structured orientation string or None."""
@@ -1604,7 +1668,7 @@ def write_session_log():
 # -----------------------------------------
 # MAIN SESSION LOOP
 # -----------------------------------------
-def run_session_loop(objective, start_fresh=False):
+def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["running"] = True
     active_session["start_time"] = timestamp()
     active_session["transcript"] = []
@@ -1617,6 +1681,13 @@ def run_session_loop(objective, start_fresh=False):
     active_session["session_ledger"] = []
     active_session["rejected_claims"] = []
     active_session["results_board"] = []   # F.9: every PASSED result + value, banked at injection time
+    active_session["contract"] = contract or []  # frozen criteria from PRE_SESSION; empty = no contract
+    if active_session["contract"]:
+        contract_display = "\n".join(
+            f"{c['id']} [{c['kind']}] {c['text']}" + (f" — evidence: {c['evidence']}" if c['evidence'] else "")
+            for c in active_session["contract"])
+        socketio.emit('routing_action', {'type': 'parietal',
+            'message': f"Session contract frozen ({len(active_session['contract'])} criteria):\n{contract_display}"})
     active_session["no_progress_count"] = 0
     active_session["malformed_count"] = 0
     active_session["execution_log"] = []       # F.2: fresh deterministic execution record per session
@@ -1665,6 +1736,9 @@ def run_session_loop(objective, start_fresh=False):
         # This survives conversation trimming — the Researcher always sees what has been ruled out
         rejected_injection = get_rejected_claims_injection()
         cycle_model_a_system = model_a_system + get_datetime_injection()  # F.4: real clock every cycle
+        contract_injection = get_contract_injection()  # frozen criteria, every cycle
+        if contract_injection:
+            cycle_model_a_system += contract_injection
         board_injection = get_results_board_injection()  # F.9: banked results, full values, every cycle
         if board_injection:
             cycle_model_a_system += board_injection
@@ -1886,6 +1960,9 @@ def run_session_loop(objective, start_fresh=False):
         # ledger. (June 5: an honest Challenger refused to assess completion of an
         # objective it had never been shown. It was right.)
         b_context_parts.append(f"[SESSION OBJECTIVE]\n{objective}")
+        contract_injection_b = get_contract_injection()
+        if contract_injection_b:
+            b_context_parts.append(contract_injection_b)
         if knowtext_for_b:
             b_context_parts.append(f"[PROJECT CONTEXT]\n{knowtext_for_b}")
         if ledger_summary:
@@ -2048,8 +2125,18 @@ def run_session_loop(objective, start_fresh=False):
                     )
                     conversation.append({"role": "user", "content": f"The session cannot close. F.3 deterministic audit of the deliverable against the execution log:\n{f3_summary(close_bad)}\n\nEither obtain the real result (emit CODE_TEST or SEARCH_REQUEST with the required COMMAND/QUERY line) or restate the deliverable without the unsupported claims, then request SESSION_END again.\n{ambient_line}"})
                     continue
+                unmet = contract_close_check()
+                if unmet:
+                    u = unmet[0]
+                    socketio.emit('routing_action', {'type': 'error', 'message': f"CLOSE REFUSED — contract criterion {u['id']} unmet: {u['reason']}"})
+                    active_session["challenge_events"].append(
+                        f"Cycle {active_session['cycle']}: CLOSE REFUSED — contract {u['id']} unmet"
+                    )
+                    unmet_lines = "\n".join(f"{x['id']}: {x['text']} — {x['reason']}" for x in unmet)
+                    conversation.append({"role": "user", "content": f"The session cannot close. The session contract has unmet VERIFIABLE criteria:\n{unmet_lines}\n\nObtain the required real execution(s) via CODE_TEST, then request SESSION_END again.\n{ambient_line}"})
+                    continue
                 if assessment["deliverable"] == "complete":
-                    socketio.emit('routing_action', {'type': 'session_end', 'message': 'Deliverable assessed complete and end requested — closing session.'})
+                    socketio.emit('routing_action', {'type': 'session_end', 'message': 'Deliverable assessed complete, contract satisfied, end requested — closing session.'})
                     break
                 else:
                     # End requested but Challenger judges the deliverable incomplete — override, continue.
@@ -2567,7 +2654,7 @@ def pre_session_then_start(obj, start_fresh=False):
     has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
     if has_parietal:
         # Pass ORIENT context to PRE_SESSION if available
-        refined, needs_answers = run_pre_session(obj, orient_context=orient_context)
+        refined, needs_answers, contract = run_pre_session(obj, orient_context=orient_context)
         if needs_answers:
             active_session["_pre_session_objective"] = obj
             active_session["start_fresh"] = start_fresh
@@ -2575,7 +2662,8 @@ def pre_session_then_start(obj, start_fresh=False):
         obj = refined
     else:
         socketio.emit('routing_action', {'type': 'error', 'message': 'Parietal not configured — starting without PRE_SESSION.'})
-    run_session_loop(obj, start_fresh=start_fresh)
+        contract = []
+    run_session_loop(obj, start_fresh=start_fresh, contract=contract)
 
 @socketio.on('save_api_keys')
 def handle_save_api_keys(data):
@@ -2620,6 +2708,7 @@ def handle_new_session(data):
     active_session["parietal_adjudicate_rulings"] = []
     active_session["rejected_claims"] = []
     active_session["results_board"] = []
+    active_session["contract"] = []
     active_session["start_fresh"] = False
     active_session["distillation_method"] = "failed"
     knowtext = load_file(CONFIG["knowtext_path"]) or ""
@@ -2638,8 +2727,8 @@ def handle_pre_session_answer(data):
     answers = data.get('answers', '').strip()
     start_fresh = active_session.get("start_fresh", False)
     def answer_then_start():
-        objective = run_pre_session_with_answers(raw_objective, answers)
-        run_session_loop(objective, start_fresh=start_fresh)
+        objective, contract = run_pre_session_with_answers(raw_objective, answers)
+        run_session_loop(objective, start_fresh=start_fresh, contract=contract)
     thread = threading.Thread(target=answer_then_start)
     thread.daemon = True
     thread.start()
