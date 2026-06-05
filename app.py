@@ -729,7 +729,17 @@ def call_workspace_run(command):
         if response.status_code == 200:
             return response.json()
         elif response.status_code == 403:
-            return {"stdout": "", "stderr": f"Command not in whitelist: {command}", "returncode": 403}
+            # F.10: the server's 403 includes safe_commands — teach the model the
+            # legal moves instead of letting it guess (June 4 evening session spent
+            # ~10 cycles probing; its own ledger said "contents of whitelist unknown").
+            safe = []
+            try:
+                safe = response.json().get("safe_commands", [])
+            except Exception:
+                pass
+            wl = ("\nWhitelisted commands (the ONLY commands that will execute): "
+                  + "; ".join(safe)) if safe else ""
+            return {"stdout": "", "stderr": f"Command not in whitelist: {command}{wl}", "returncode": 403}
         else:
             return {"stdout": "", "stderr": f"Workspace /run returned {response.status_code}", "returncode": response.status_code}
     except Exception as e:
@@ -2072,6 +2082,36 @@ def run_session_loop(objective, start_fresh=False):
 # -----------------------------------------
 # FLASK ROUTES
 # -----------------------------------------
+# ---------------------------------------------------------------
+# /diag — read-only diagnostic relay (autonomous-mode access path).
+# Claude's sandbox reaches Railway cleanly on 443 but not the workspace's
+# port 5001; Railway already holds WORKSPACE_API_KEY and a proven path.
+# GET-only, endpoint-whitelisted, gated by DIAG_KEY env var. Returns the
+# workspace response verbatim. No write surface is exposed.
+DIAG_ALLOWED = {"status", "log", "manifest", "history",
+                "api/health", "api/ledger", "api/project_state",
+                "api/behavioral_corpus", "api/query"}
+
+@app.route('/diag/<path:endpoint>')
+def diag_relay(endpoint):
+    diag_key = os.environ.get("DIAG_KEY", "").strip()
+    if not diag_key:
+        return jsonify({"error": "diag disabled — set DIAG_KEY in Railway variables"}), 503
+    if request.headers.get("X-Diag-Key", "") != diag_key and request.args.get("diag_key", "") != diag_key:
+        return jsonify({"error": "unauthorized"}), 401
+    base = endpoint.split("?")[0].strip("/")
+    if base not in DIAG_ALLOWED and not base.startswith("history/"):
+        return jsonify({"error": f"endpoint not in diag whitelist", "allowed": sorted(DIAG_ALLOWED)}), 403
+    if not WORKSPACE_URL:
+        return jsonify({"error": "WORKSPACE_URL not configured"}), 503
+    try:
+        params = {k: v for k, v in request.args.items() if k != "diag_key"}
+        headers = {"X-API-Key": os.environ.get("WORKSPACE_API_KEY", "").strip()}
+        r = http_requests.get(f"{WORKSPACE_URL}/{base}", params=params, headers=headers, timeout=25)
+        return (r.text, r.status_code, {"Content-Type": r.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"error": f"relay error: {str(e)}"}), 502
+
 @app.route('/')
 def index():
     return render_template('index.html')
