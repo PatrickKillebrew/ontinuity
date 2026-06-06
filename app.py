@@ -1101,6 +1101,20 @@ def check_denied_successes(text):
             passed = [e for e in _f3_find_entries(cmd) if e["status"].upper().startswith("PASSED")]
             if passed:
                 e = passed[-1]
+                # TEMPORAL NARRATION EXEMPTION (June 5 evening specimen): "it was
+                # blocked, then it passed" is honest history, not denial. A failure
+                # mention is only a DENIAL when the success is credited NOWHERE —
+                # if the same chunk credits success, or the document quotes the
+                # command's recorded output, the failure mention is narration.
+                success_credit = re.search(
+                    r"\b(passed|succeed\w*|successful\w*|re-?ran|re-?run|restored|resolved|recovered)\b",
+                    chunk, re.IGNORECASE)
+                first_out = (e.get("result") or "").strip().split("\n")[0][:80]
+                output_credited = bool(first_out) and first_out in (text or "")
+                if success_credit or output_credited:
+                    verdicts.append({"verdict": "CORROBORATED", "claim": chunk[:240],
+                                     "reason": f"Failure mention for `{cmd}` is temporal narration — the success is credited in the document (recorded output present)."})
+                    continue
                 shown = (" Its recorded output: " + e["result"][:120]) if e.get("result") else ""
                 verdicts.append({"verdict": "MISREPORTED", "claim": chunk[:240],
                                  "reason": f"`{cmd}` is asserted to have failed or been blocked, but the execution log shows it PASSED in cycle {e['cycle']}.{shown}"})
@@ -2075,6 +2089,12 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         # ledger. (June 5: an honest Challenger refused to assess completion of an
         # objective it had never been shown. It was right.)
         b_context_parts.append(f"[SESSION OBJECTIVE]\n{objective}")
+        # The judge sees the same ground-truth clock as the claimant (June 5
+        # evening: the Challenger refused a correct date claim because the
+        # injection only existed in the Researcher's context — an honest judge
+        # reporting blindness. Same lesson as the contract: evidence a criterion
+        # cites must be IN the judge's context, not vouched for).
+        b_context_parts.append(get_datetime_injection().strip())
         contract_injection_b = get_contract_injection()
         if contract_injection_b:
             b_context_parts.append(contract_injection_b)
@@ -2239,6 +2259,21 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         f"Cycle {active_session['cycle']}: CLOSE REFUSED — F.3 {close_bad[0]['verdict']}: {close_bad[0]['claim'][:140]}"
                     )
                     active_session["close_refusal_count"] = active_session.get("close_refusal_count", 0) + 1
+                    if active_session["close_refusal_count"] >= 3:
+                        # The guard covers BOTH refusal paths (June 5 evening: F.3
+                        # refusals counted but never escalated — the counter's check
+                        # only existed in the contract path, so an F.3 loop ran free).
+                        guard_ctx = ("CLOSE DEADLOCK — " + str(active_session["close_refusal_count"]) +
+                                     " consecutive refused close attempts.\nLatest refusal (F.3 audit):\n" + f3_summary(close_bad) +
+                                     "\n\nReply STOP to end the session now (the end sequence and write will run), "
+                                     "or reply with direction for the Researcher to continue.")
+                        decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
+                        active_session["close_refusal_count"] = 0
+                        if decision.strip().lower().startswith("stop"):
+                            socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
+                            break
+                        conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
+                        continue
                     conversation.append({"role": "user", "content": f"The session cannot close. F.3 deterministic audit of the deliverable against the execution log:\n{f3_summary(close_bad)}\n\nEither obtain the real result (emit CODE_TEST or SEARCH_REQUEST with the required COMMAND/QUERY line) or restate the deliverable without the unsupported claims, then request SESSION_END again.\n{ambient_line}"})
                     continue
                 unmet = contract_close_check()
@@ -2299,7 +2334,23 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                     break
                 else:
                     # End requested but Challenger judges the deliverable incomplete — override, continue.
+                    # This is the third close-refusal path; it joins the guard (June 5
+                    # evening: an unguarded incomplete-loop ran free after both other
+                    # paths were capped).
+                    active_session["close_refusal_count"] = active_session.get("close_refusal_count", 0) + 1
                     socketio.emit('routing_action', {'type': 'session_end', 'message': 'End requested but Challenger assesses deliverable incomplete — continuing.'})
+                    if active_session["close_refusal_count"] >= 3:
+                        guard_ctx = ("CLOSE DEADLOCK — " + str(active_session["close_refusal_count"]) +
+                                     " consecutive refused close attempts.\nLatest refusal (Challenger assessment):\n" + (b_response or "")[:1200] +
+                                     "\n\nReply STOP to end the session now (the end sequence and write will run), "
+                                     "or reply with direction for the Researcher to continue.")
+                        decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
+                        active_session["close_refusal_count"] = 0
+                        if decision.strip().lower().startswith("stop"):
+                            socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
+                            break
+                        conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
+                        continue
                     conversation.append({"role": "user", "content": f"The session cannot close yet: review indicates the deliverable is not complete. Continue the work.\n\n[CHALLENGER REVIEW]: {b_response}\n{ambient_line}"})
                     continue
 
@@ -2350,6 +2401,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                 conversation.append({"role": "user", "content": f"[OPERATOR CHECKPOINT]: {direction}\n{ambient_line}"})
 
     # End sequence
+    active_session["finalizing"] = True   # write-in-progress: guards new_session and SIGTERM flush
     socketio.emit('routing_action', {'type': 'distillation', 'message': 'Waiting 5s before distillation...'})
     time.sleep(5)
 
@@ -2457,6 +2509,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                 active_session["errors"].append(msg)
                 socketio.emit('routing_action', {'type': 'error', 'message': msg})
         active_session["running"] = False
+        active_session["finalizing"] = False
         socketio.emit('session_complete', {
             'cycles': active_session["cycle"],
             'artifacts_count': len(active_session["artifacts"])
@@ -2855,8 +2908,8 @@ def handle_save_api_keys(data):
 
 @socketio.on('new_session')
 def handle_new_session(data):
-    if active_session["running"]:
-        emit('routing_action', {'type': 'error', 'message': 'Stop the current session before starting a new one.'})
+    if active_session["running"] or active_session.get("finalizing"):
+        emit('routing_action', {'type': 'error', 'message': 'Stop the current session before starting a new one.' if active_session["running"] else 'Session is finalizing (writing records) — wait for completion before resetting.'})
         return
     active_session["transcript"] = []
     active_session["tag_sequence"] = []
@@ -2948,6 +3001,34 @@ def handle_get_status(data):
         'waiting_for_input': active_session["waiting_for_input"],
         'input_type': active_session["input_type"]
     })
+
+# ---------------------------------------------------------------
+# GRACEFUL SHUTDOWN — Railway sends SIGTERM when a new deploy replaces this
+# container. June 5: a dying session's own Knowtext push auto-deployed a new
+# container, which killed this process mid-end-sequence — the DB write was
+# lost. On SIGTERM, if a session is running or finalizing, flush the records
+# that need no model calls (session log + workspace write) inside the grace
+# window, then exit. Best-effort by design: a partial record with a receipt
+# beats a perfect record that never lands.
+import signal as _signal
+
+def _graceful_shutdown(signum, frame):
+    try:
+        if active_session.get("running") or active_session.get("finalizing"):
+            active_session["running"] = False
+            print("[SIGTERM] session in flight — emergency flush of log + workspace write", flush=True)
+            try:
+                write_session_log()
+            except Exception as e:
+                print(f"[SIGTERM] log flush failed: {e}", flush=True)
+            try:
+                write_session_to_workspace()
+            except Exception as e:
+                print(f"[SIGTERM] workspace flush failed: {e}", flush=True)
+    finally:
+        os._exit(0)
+
+_signal.signal(_signal.SIGTERM, _graceful_shutdown)
 
 if __name__ == '__main__':
     socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False, allow_unsafe_werkzeug=True)
