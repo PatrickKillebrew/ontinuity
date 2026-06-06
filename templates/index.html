@@ -1146,7 +1146,11 @@ function areModelsConfigured() {
   const required = ['model_a', 'model_b', 'model_c', 'projenius', 'parietal'];
   return required.every(slot => {
     const cfg = saved[slot];
-    return cfg && cfg.key && cfg.key.length > 0;
+    if (!cfg) return false;
+    // External Researcher seat (deploy 10): url 'external' routes Model A
+    // through the mailbox — no API key exists or is required for that slot.
+    if (slot === 'model_a' && cfg.url && cfg.url.trim().toLowerCase().startsWith('external')) return true;
+    return cfg.key && cfg.key.length > 0;
   });
 }
 
