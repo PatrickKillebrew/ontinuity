@@ -1304,6 +1304,12 @@ def call_gemini_native(endpoint_config, system_prompt, messages, role, max_token
 
 def call_model(role, conversation_messages, system_override=None, max_tokens=None):
     config = get_effective_config(role)
+    # External Researcher seat: url == "external" routes Model A through the
+    # mailbox instead of an API. No api_key required. Everything downstream
+    # is untouched — the engine cannot tell what occupies the seat.
+    if role == "model_a" and (config.get("url") or "").strip().lower().startswith("external"):
+        system_prompt = system_override or load_file(config["system_prompt_path"]) or ""
+        return mailbox_researcher_turn(system_prompt, conversation_messages)
     if not config.get("url") or not config.get("api_key"):
         msg = f"Model '{role}' has no URL or API key configured — skipping call."
         active_session["errors"].append(msg)
@@ -1403,6 +1409,61 @@ def extract_ledger_entry(response, cycle):
 # -----------------------------------------
 # HUMAN INPUT
 # -----------------------------------------
+# -----------------------------------------
+# EXTERNAL RESEARCHER MAILBOX (deploy 10)
+# The Researcher seat as a mailbox instead of an API call: the engine posts
+# the fully-rendered turn here and waits; an external agent (Claude) polls
+# GET /mailbox/turn, composes, POSTs /mailbox/respond. Deliberately a
+# PARALLEL channel to wait_for_human_input — the operator-modal slot fires
+# mid-session (amendments, deadlock guards) and must never cross wires with
+# the Researcher seat. Same glass downstream: tag extraction, CODE_TEST,
+# F.3, and the contract gate apply to the external agent's words because
+# call_model's caller cannot tell the difference.
+external_mailbox = {
+    "turn_id": 0,        # increments per posted turn; stale responses rejected
+    "waiting": False,
+    "system": "",
+    "conversation": [],
+    "cycle": 0,
+    "session_id": "",
+    "response": None,
+    "event": threading.Event(),
+}
+
+MAILBOX_TIMEOUT_S = 900  # a missed poll ends the session through the normal write path
+
+def mailbox_researcher_turn(system_prompt, conversation_messages):
+    """Post the Researcher turn to the mailbox and wait for the external agent."""
+    external_mailbox["turn_id"] += 1
+    external_mailbox["system"] = system_prompt or ""
+    external_mailbox["conversation"] = list(conversation_messages or [])
+    external_mailbox["cycle"] = active_session.get("cycle", 0)
+    external_mailbox["session_id"] = active_session.get("start_time", "")
+    external_mailbox["response"] = None
+    external_mailbox["event"].clear()
+    external_mailbox["waiting"] = True
+    socketio.emit('routing_action', {'type': 'cycle',
+        'message': f"Researcher turn {external_mailbox['turn_id']} posted to external mailbox — waiting for agent."})
+    external_mailbox["event"].wait(timeout=MAILBOX_TIMEOUT_S)
+    external_mailbox["waiting"] = False
+    return external_mailbox["response"]
+
+def mailbox_deliver(turn_id, response):
+    """Deliver an external agent's response. Returns (ok, error)."""
+    if not external_mailbox["waiting"]:
+        return False, "no turn is waiting"
+    try:
+        tid = int(turn_id)
+    except (TypeError, ValueError):
+        return False, "turn_id must be an integer"
+    if tid != external_mailbox["turn_id"]:
+        return False, f"stale turn_id {tid} — current is {external_mailbox['turn_id']}"
+    if not (response or "").strip():
+        return False, "empty response"
+    external_mailbox["response"] = response.strip()
+    external_mailbox["event"].set()
+    return True, ""
+
 def wait_for_human_input(input_type, context):
     active_session["waiting_for_input"] = True
     active_session["input_type"] = input_type
@@ -1766,6 +1827,8 @@ def write_session_log():
     active_session["end_time"] = timestamp()
     def get_runtime_model(role):
         cfg = get_effective_config(role)
+        if role == "model_a" and (cfg.get("url") or "").strip().lower().startswith("external"):
+            return f"external-mailbox ({cfg.get('model') or 'agent'})"  # lineage must say who really sat here
         return cfg.get("model", CONFIG[role]["model"])
     log_lines = [
         "ONTINUITY SESSION LOG",
@@ -2517,6 +2580,40 @@ def run_session_loop(objective, start_fresh=False, contract=None):
 
 # -----------------------------------------
 # FLASK ROUTES
+import hmac as _hmac
+
+def _mailbox_auth_ok():
+    key = os.environ.get("MAILBOX_KEY", "").strip()
+    given = (request.args.get("mailbox_key") or (request.get_json(silent=True) or {}).get("mailbox_key") or "").strip()
+    return bool(key) and _hmac.compare_digest(key, given)
+
+@app.route('/mailbox/turn', methods=['GET'])
+def mailbox_turn():
+    if not os.environ.get("MAILBOX_KEY", "").strip():
+        return jsonify({"error": "mailbox disabled — set MAILBOX_KEY in Railway variables"}), 503
+    if not _mailbox_auth_ok():
+        return jsonify({"error": "bad mailbox key"}), 403
+    if not external_mailbox["waiting"]:
+        return jsonify({"waiting": False, "turn_id": external_mailbox["turn_id"]})
+    return jsonify({"waiting": True,
+                    "turn_id": external_mailbox["turn_id"],
+                    "session_id": external_mailbox["session_id"],
+                    "cycle": external_mailbox["cycle"],
+                    "system": external_mailbox["system"],
+                    "conversation": external_mailbox["conversation"]})
+
+@app.route('/mailbox/respond', methods=['POST'])
+def mailbox_respond():
+    if not os.environ.get("MAILBOX_KEY", "").strip():
+        return jsonify({"error": "mailbox disabled — set MAILBOX_KEY in Railway variables"}), 503
+    if not _mailbox_auth_ok():
+        return jsonify({"error": "bad mailbox key"}), 403
+    body = request.get_json(silent=True) or {}
+    ok, err = mailbox_deliver(body.get("turn_id", -1), body.get("response", ""))
+    if not ok:
+        return jsonify({"error": err}), 409
+    return jsonify({"ok": True, "turn_id": external_mailbox["turn_id"]})
+
 # -----------------------------------------
 # ---------------------------------------------------------------
 # /diag — read-only diagnostic relay (autonomous-mode access path).
