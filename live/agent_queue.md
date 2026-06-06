@@ -33,3 +33,11 @@ Evidence inventory and day's score preserved in git history of this file (sha 08
 
 ## ERRATUM LEDGER
 - Receipt #12 (Dweller lap 1): the #1-ranking rationale asserted an unverified cause ("provider timeouts") contradicted by the same day's postmortem; caught by the OPERATOR, not by the glass. Lesson promoted to a queue item-class: judged-only criteria can certify unhedged causal claims. Fix direction: causal assertions in-session require either an evidence channel or a mandatory ASSUMED marker, with the Challenger prompt instructed to hunt unmarked causality.
+
+
+## PROBE 1 AMENDMENTS — June 6 evening (session 2026-06-06_22-35-20, receipt #13, CERTIFIED "UNDECIDABLE")
+**FINDING (major): the behavioral corpus measures no behavior.** All metric columns (model_a/b word, hedging, certainty counts) sum to ZERO across all 154 observations — instrumentation never wired. Every behavioral claim must source from session-log text analysis outside this table until repaired. The R²=0.91 sigmoid's evidence necessarily lives outside this corpus.
+**NEW item (HIGH, promoted by finding): Phase-0 instrumentation repair** — populate metric columns at write time from actual output text; acceptance: nonzero sums next session; museum fixture test. Certified spec in receipt #13.
+**NEW item: Phase-1 causality experiment** — randomized exogenous signal injection (EXPERIMENT_MODE flag, Bernoulli coin flip, computed/injected/randomized columns, pre-registered metrics, permutation analysis, placebo check, n≥200 randomized cycles). Full certified protocol in receipt #13. The Psychology-of-AI-Data thread's next empirical step.
+**NEW item: contract-gate kind-aware matching** — bare `DB_QUERY` evidence tokens are unmatchable (gate matches SQL text only); receipt #13's session required a transparent gate-marker query to close. Matcher should match execution kind OR detail.
+**PROBE VERDICT:** the architecture certifies calibrated uncertainty and demands rigor of it (uphold forced the experiment to full spec, not the conclusion to overclaim). Epistemic-health probe passed.
