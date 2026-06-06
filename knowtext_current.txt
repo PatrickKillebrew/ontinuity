@@ -1,29 +1,20 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Identity:
-NO CHANGE
-
-Active Frameworks:
-NO CHANGE
-
-Open Questions:
-NO CHANGE
-
-Valence Mapping:
-NO CHANGE
-
-Delta Log:
-- Established a new defect class “honest failure semantics” linking structural‑waiver broadening (H) and exit‑code hygiene (I) as the same failure‑masking defect (Cycle 1).  
-- Adopted the ordering rule “session‑blockers outrank annoyances” as a central session‑blocking principle (Cycle 3).  
-- Recorded DB_QUERY result showing recent session IDs, statuses, and total cycles (Cycle 3).  
-- Advanced the Queue Curation to its final version per adversarial review (Cycle 4).  
-- Upheld a challenge to a JUDGED criterion (C2) concerning deterministic calibration of the signal‑0/1 boundary, confirming the criterion remains judged rather than verifiable (Cycle 5).  
-- Rejected a challenger’s claim that C2 was incomplete after a “C2 requalified” step, confirming the criterion now meets its judged requirement (Cycle 7).  
-- Upheld a challenge to Model A’s claim of session completion, noting no new executions occurred and judged criteria remain unmet (Cycle 2).  
-
-Correction History:
-- Re‑qualified criterion C2 based on injected DB_QUERY results, correcting the earlier incomplete status (Cycle 7).  
-- Upheld multiple erroneous claims (Cycles 2, 5) leading to removal of unsupported assertions from the session record.  
-
-Climate Notes:
-The session experienced low friction overall (signals 0) with a brief spike to signal 2 in Cycle 3 due to conflicting UPHOLD rulings, which was resolved through adjudication by Cycle 4. Operator engagement remained steady, and the team successfully aligned on the final curation and criterion status.
+Identity: NO CHANGE
+Active Frameworks: NO CHANGE
+Open Questions: Is there any corpus segment containing non‑zero behavioral metrics that would allow a causal analysis of friction‑signal transitions versus researcher behavior?
+Valence Mapping: NO CHANGE
+Delta Log: 
+- Cycle 3 DB_QUERY confirmed that across 154 rows of `behavioral_observations` all metric columns (`model_a_word_count`, `model_a_hedging_count`, `model_a_certainty_count`, etc.) are zero, establishing a lack of observable behavior variation. 
+- Cycles 4, 6, 7 determined the relationship between the friction signal and researcher behavior to be **UNDECIDABLE** because the corpus provides no behavioral data to support causal inference. 
+- Cycle 5 gate‑grammar note clarified that the contract’s bare `DB_QUERY` token does not match any logged SQL text, and a marker query was logged to document this mismatch. 
+- Cycle 7 completed the full experimental design (C4) and recorded it as the final determination for the session. 
+- Contract criteria were updated: C2 was requalified based on the injected DB_QUERY results; C4 was revised to require a concrete experimental design whenever the relationship is deemed undecidable. 
+- Adjudication outcomes were logged: Cycle 5 UPHOLD on a judged C2 criterion; Cycle 7 REJECT of a challenger claim regarding C2 incompleteness; Cycle 2 UPHOLD of Model A’s premature session‑completion claim; Cycle 6 UPHOLD that the “UNDECIDABLE” claim violated the contract’s requirement for a concrete design. 
+- The session’s deliverable status moved from incomplete (Cycle 6) to complete (Cycle 7) per the friction‑signal assessments. 
+Correction History: 
+- Cycle 5: UPHOLD – corrected C2 to a judged criterion based on aggregate correlation data, confirming its requalification. 
+- Cycle 7: REJECT – rejected challenger’s assertion that C2 remained incomplete; retained the requalified C2 as valid. 
+- Cycle 2: UPHOLD – retracted Model A’s claim of session completion; required further evidence. 
+- Cycle 6: UPHOLD – enforced contract requirement that an “UNDECIDABLE” outcome must be accompanied by a concrete experimental design, leading to the final C4 design. 
+Climate Notes: The session began with low friction (signals 0) and smooth progress, but tension rose as contradictory claims emerged (signals 1 and 2), prompting multiple UPHOLD rulings. Despite procedural friction, the team converged on a final determination and completed the experimental design, restoring a sense of closure.
