@@ -2669,6 +2669,75 @@ def agent_start():
     t.start()
     return jsonify({"ok": True, "started_by": "external-mailbox", "start_fresh": start_fresh})
 
+AGENT_QUEUE_PATH = "live/agent_queue.md"  # UNWATCHED path — a queue commit can never
+                                           # trigger the deploy that kills its own session.
+
+@app.route('/agent/queue', methods=['GET'])
+def agent_queue_read():
+    """Read the shared work queue from GitHub (engine-relayed so the agent gets
+    uncached API content, never raw CDN staleness)."""
+    if not os.environ.get("MAILBOX_KEY", "").strip():
+        return jsonify({"error": "mailbox disabled — set MAILBOX_KEY in Railway variables"}), 503
+    if not _mailbox_auth_ok():
+        return jsonify({"error": "bad mailbox key"}), 403
+    token = runtime_github.get("token") or os.environ.get("GITHUB_TOKEN", "").strip()
+    repo = runtime_github.get("repo") or GITHUB_REPO
+    if not token:
+        return jsonify({"error": "no GitHub token configured"}), 503
+    try:
+        url = f"https://api.github.com/repos/{repo}/contents/{AGENT_QUEUE_PATH}"
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+                   "X-GitHub-Api-Version": "2022-11-28"}
+        r = http_requests.get(url, headers=headers, timeout=30)
+        if r.status_code == 404:
+            return jsonify({"exists": False, "path": AGENT_QUEUE_PATH, "content": ""})
+        r.raise_for_status()
+        data = r.json()
+        content = base64.b64decode(data.get("content", "")).decode("utf-8")
+        return jsonify({"exists": True, "path": AGENT_QUEUE_PATH, "sha": data.get("sha", ""), "content": content})
+    except Exception as e:
+        return jsonify({"error": f"queue read failed: {e}"}), 502
+
+@app.route('/agent/queue_update', methods=['POST'])
+def agent_queue_update():
+    """Commit an updated work queue through the engine's push machinery.
+    The fold-learnings-back step of the contract-queue loop: sessions amend
+    the queue ON THE RECORD (a GitHub commit with provenance in the message),
+    and the next contract is authored against the amended list."""
+    if not os.environ.get("MAILBOX_KEY", "").strip():
+        return jsonify({"error": "mailbox disabled — set MAILBOX_KEY in Railway variables"}), 503
+    if not _mailbox_auth_ok():
+        return jsonify({"error": "bad mailbox key"}), 403
+    body = request.get_json(silent=True) or {}
+    content = body.get("content", "")
+    note = (body.get("note") or "queue update").strip()[:120]
+    if not content.strip():
+        return jsonify({"error": "empty queue content refused"}), 409
+    token = runtime_github.get("token") or os.environ.get("GITHUB_TOKEN", "").strip()
+    repo = runtime_github.get("repo") or GITHUB_REPO
+    if not token:
+        return jsonify({"error": "no GitHub token configured"}), 503
+    try:
+        url = f"https://api.github.com/repos/{repo}/contents/{AGENT_QUEUE_PATH}"
+        headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+                   "X-GitHub-Api-Version": "2022-11-28"}
+        get_r = http_requests.get(url, headers=headers, timeout=30)
+        sha = get_r.json().get("sha", "") if get_r.status_code == 200 else ""
+        encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+        commit_body = {"message": f"Agent queue: {note} — {timestamp()}",
+                       "content": encoded, "branch": GITHUB_BRANCH}
+        if sha:
+            commit_body["sha"] = sha
+        put_r = http_requests.put(url, headers=headers, json=commit_body, timeout=30)
+        if put_r.status_code in (200, 201):
+            new_sha = put_r.json().get("content", {}).get("sha", "")
+            socketio.emit('routing_action', {'type': 'injection',
+                'message': f"Agent queue committed to GitHub: {note}"})
+            return jsonify({"ok": True, "path": AGENT_QUEUE_PATH, "sha": new_sha})
+        return jsonify({"error": f"GitHub returned {put_r.status_code}", "detail": put_r.text[:300]}), 502
+    except Exception as e:
+        return jsonify({"error": f"queue update failed: {e}"}), 502
+
 @app.route('/mailbox/turn', methods=['GET'])
 def mailbox_turn():
     if not os.environ.get("MAILBOX_KEY", "").strip():
