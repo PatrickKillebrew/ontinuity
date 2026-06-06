@@ -1,16 +1,31 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Identity: NO CHANGE
-Active Frameworks: NO CHANGE
-Open Questions: NO CHANGE
-Valence Mapping: NO CHANGE
-Delta Log: 
-- Cycle 1 executed `python push_to_github.py /opt/ontinuity/push_test.txt`; result block reported a sync error due to missing `github_token` and `github_repo` in `config.json`.
-- Cycle 2 operator supplied the missing configuration keys (validated JSON); re‑run produced the same sync error, confirming the missing credentials were the cause.
-- Cycle 3 operator corrected a typo in the script’s credential lookup key; re‑run succeeded, pushing `live/sessions/push_test.txt` (commit d71384b8…) and establishing successful GitHub push functionality.
-- Cycle 4 consolidated the three executions as verified evidence that the `push_to_github.py` command now works as intended.
-- Adjudication ruling (Cycle 2) upheld a challenge to Model A’s audit report, noting the report lacked verifiable evidence and conflicted with the project‑level result of the failed CODE_TEST.
-Correction History: 
-- Upheld challenge to Model A’s audit report (Cycle 2) for lacking verifiable evidence; the claim was recorded as erroneous and corrected in the session record.
-Climate Notes: 
-The session proceeded with low friction (signal 0 throughout), reflecting steady operator engagement and iterative debugging. The operator responded promptly to configuration issues and script errors, leading to a successful resolution without conflict.
+Identity:
+NO CHANGE
+
+Active Frameworks:
+NO CHANGE
+
+Open Questions:
+NO CHANGE
+
+Valence Mapping:
+NO CHANGE
+
+Delta Log:
+- Established C1 (distribution counts via corpus evidence) in Cycle 1.
+- Retrieved and recorded full rows for friction_signal = 2 (C3) in Cycle 2 and friction_signal = 4 (C4) in Cycle 3.
+- Added aggregate evidence for C2 (adversarial evidence by signal level) in Cycle 4.
+- Produced the Friction Calibration Audit Final Report compiling all DB_QUERY figures in Cycle 5.
+- Withdrew the original calibration claim (deterministic signal‑0/1 boundary) and re‑qualified C2 based on per‑row overlap in Cycle 6.
+- Re‑qualified C2 with explicit determination using injected DB_QUERY results in Cycle 7.
+- adjudicated: Cycle 5 ruling UPHOLD confirmed withdrawal of the deterministic claim; Cycle 7 ruling REJECT upheld the re‑qualified C2 and rejected the challenger’s objection.
+- Completed all five contract criteria; final report delivered and accepted in Cycle 8.
+
+Correction History:
+- Withdrawal of the deterministic calibration claim (original C2 phrasing) in Cycle 6.
+- Re‑qualification of C2 with explicit per‑row overlap determination in Cycle 7.
+- Rejection of the challenger’s objection to C2 in Cycle 7 (RULING: REJECT).
+
+Climate Notes:
+The session experienced moderate friction (signals 2 and 1) during cycles 6‑7 as the calibration claim was contested and re‑qualified, but the team maintained focus and resolved the dispute through adjudication. Operator remained engaged and collaborative, leading to a clear final deliverable with all criteria satisfied.
