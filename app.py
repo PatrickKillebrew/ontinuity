@@ -21,6 +21,28 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ontinuity-secret-key'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
+# Deploy 16: the engine's narration was socket-only — the dashboard heard it,
+# nobody kept it. The June 6 lap-3 failure was undiagnosable remotely because
+# of exactly this. Every narrated event now also lands in a ring buffer served
+# at /diag/console. (In-handler flask_socketio.emit() responses bypass this
+# wrapper; engine-thread narration — the part that matters — uses socketio.emit.)
+import collections as _collections
+_console_buffer = _collections.deque(maxlen=400)
+_orig_socketio_emit = socketio.emit
+def _logging_emit(event, *args, **kwargs):
+    if event in ("routing_action", "parietal_pre_session", "human_input_needed", "session_complete"):
+        try:
+            p = args[0] if args else {}
+            _console_buffer.append({
+                "t": datetime.datetime.utcnow().strftime("%H:%M:%S"),
+                "event": event,
+                "type": (p or {}).get("type", ""),
+                "message": ((p or {}).get("message") or (p or {}).get("questions") or (p or {}).get("context") or "")[:500]})
+        except Exception:
+            pass
+    return _orig_socketio_emit(event, *args, **kwargs)
+socketio.emit = _logging_emit
+
 # -----------------------------------------
 # WORKSPACE / KNOWTEXT PATH RESOLUTION
 # -----------------------------------------
@@ -1477,8 +1499,10 @@ external_mailbox = {
 
 MAILBOX_TIMEOUT_S = 900  # a missed poll ends the session through the normal write path
 
-def mailbox_researcher_turn(system_prompt, conversation_messages):
-    """Post the Researcher turn to the mailbox and wait for the external agent."""
+def mailbox_researcher_turn(system_prompt, conversation_messages, kind="researcher_turn"):
+    """Post a turn to the mailbox and wait for the external agent. kind
+    distinguishes Researcher-seat turns from pre-session authorship questions."""
+    external_mailbox["kind"] = kind
     external_mailbox["turn_id"] += 1
     external_mailbox["system"] = system_prompt or ""
     external_mailbox["conversation"] = list(conversation_messages or [])
@@ -1615,6 +1639,7 @@ def run_pre_session(objective, orient_context=""):
         socketio.emit('parietal_pre_session', {'status': 'ready', 'questions': response, 'cycle': 0})
         return refined or objective, False, parse_contract(response)
     socketio.emit('parietal_pre_session', {'status': 'questions', 'questions': response, 'cycle': 0})
+    active_session["_pre_session_questions"] = response
     return objective, True, []
 
 def run_pre_session_with_answers(raw_objective, answers):
@@ -2817,6 +2842,7 @@ def mailbox_turn():
     if not external_mailbox["waiting"]:
         return jsonify({"waiting": False, "turn_id": external_mailbox["turn_id"]})
     return jsonify({"waiting": True,
+                    "kind": external_mailbox.get("kind", "researcher_turn"),
                     "turn_id": external_mailbox["turn_id"],
                     "session_id": external_mailbox["session_id"],
                     "cycle": external_mailbox["cycle"],
@@ -2844,7 +2870,7 @@ def mailbox_respond():
 # workspace response verbatim. No write surface is exposed.
 DIAG_ALLOWED = {"status", "log", "manifest", "history",
                 "api/health", "api/ledger", "api/project_state",
-                "api/behavioral_corpus", "api/query", "engine"}
+                "api/behavioral_corpus", "api/query", "engine", "console"}
 
 @app.route('/diag/<path:endpoint>')
 def diag_relay(endpoint):
@@ -2856,6 +2882,10 @@ def diag_relay(endpoint):
     base = endpoint.split("?")[0].strip("/")
     if base not in DIAG_ALLOWED and not base.startswith("history/"):
         return jsonify({"error": f"endpoint not in diag whitelist", "allowed": sorted(DIAG_ALLOWED)}), 403
+    if base == "console":
+        # Local engine narration — never relayed. The remote diagnosis channel
+        # the lap-3 silent failure proved necessary.
+        return jsonify(list(_console_buffer))
     if base == "engine":
         # Local engine state — never relayed. Exists so the BUILDER agent can
         # check for a live session BEFORE instructing any commit (June 5: a
@@ -3199,6 +3229,25 @@ def pre_session_then_start(obj, start_fresh=False):
         # Pass ORIENT context to PRE_SESSION if available
         refined, needs_answers, contract = run_pre_session(obj, orient_context=orient_context)
         if needs_answers:
+            if active_session.get("started_by") == "external-mailbox":
+                # Deploy 16: authorship questions go to the author. An agent-started
+                # session's PRE_SESSION questions route to the mailbox, not to a
+                # dashboard modal the operator may never see (June 6: two starts
+                # died invisible behind a stale completion panel).
+                q = active_session.get("_pre_session_questions", "")
+                answers = mailbox_researcher_turn(
+                    "PRE_SESSION QUESTIONS — you are the session starter; answer the "
+                    "Parietal's questions below so the contract can be authored. Reply "
+                    "with plain answers, no status tag.\n\n" + q,
+                    [{"role": "user", "content": f"Original objective: {obj}"}],
+                    kind="pre_session_questions")
+                if answers:
+                    obj2, contract = run_pre_session_with_answers(obj, answers)
+                    run_session_loop(obj2, start_fresh=start_fresh, contract=contract)
+                    return
+                socketio.emit('routing_action', {'type': 'error',
+                    'message': 'PRE_SESSION questions unanswered (mailbox timeout) — agent start aborted.'})
+                return
             active_session["_pre_session_objective"] = obj
             active_session["start_fresh"] = start_fresh
             return
