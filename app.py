@@ -942,6 +942,50 @@ def extract_verify_citation(response):
             query = line[6:].strip()
     return citation, claim, query
 
+def extract_db_query(response):
+    """Extract QUERY from lines above a DB_QUERY tag. Returns query or empty."""
+    for line in response.split("\n"):
+        line = line.strip()
+        if line.upper().startswith("QUERY:"):
+            return line[6:].strip()
+    return ""
+
+def db_query_guard(sql):
+    """Deploy 14: in-session corpus evidence channel admits exactly one read-only
+    SELECT. Returns (ok, reason). The lap-1 UPHOLD established the rule this
+    serves: labeled provenance is not verification — corpus figures must arrive
+    through a channel the session can check."""
+    s = (sql or "").strip().rstrip(";").strip()
+    if not s:
+        return False, "empty query"
+    if len(s) > 1200:
+        return False, "query too long (1200 char cap)"
+    if ";" in s:
+        return False, "multiple statements not allowed"
+    if not s.lower().startswith("select"):
+        return False, "only SELECT statements are allowed"
+    forbidden = ("pragma", "attach", "insert", "update", "delete", "drop", "alter", "create", "replace", "vacuum")
+    low = s.lower()
+    if any(f" {w} " in f" {low} " or low.startswith(w) for w in forbidden[:1]) :
+        return False, "PRAGMA not allowed"
+    if any(w in low for w in forbidden[3:]):
+        # write verbs anywhere (incl. subqueries/CTE smuggling) are refused outright
+        return False, "write keywords not allowed"
+    return True, s
+
+def call_workspace_query(sql):
+    """Run a guarded SELECT against the workspace database. Returns dict or None."""
+    if not WORKSPACE_URL:
+        return None
+    try:
+        headers = {"X-API-Key": os.environ.get("WORKSPACE_API_KEY", "").strip()}
+        r = http_requests.get(f"{WORKSPACE_URL}/api/query", params={"sql": sql}, headers=headers, timeout=25)
+        if r.status_code == 200:
+            return r.json()
+        return {"error": f"workspace returned {r.status_code}", "detail": r.text[:300]}
+    except Exception as e:
+        return {"error": f"query relay error: {e}"}
+
 def extract_code_test(response):
     """Extract COMMAND from lines above CODE_TEST tag in Model A response.
     Returns command string or empty string."""
@@ -2098,6 +2142,31 @@ def run_session_loop(objective, start_fresh=False, contract=None):
             else:
                 conversation.append({"role": "user", "content": f"[CODE_TEST RESULT]: CODE_TEST tag received but no COMMAND line found above the tag.\n\n{ambient_line}"})
             continue
+        elif tag == "DB_QUERY":
+            # Deploy 14: corpus evidence channel. Results inject as blocks the
+            # session can cite and F.3 can check — the fix for lap 1's correct
+            # UPHOLD against agent-channel statistics.
+            raw = extract_db_query(a_response)
+            ok, guarded = db_query_guard(raw)
+            if not ok:
+                conversation.append({"role": "user", "content": f"[DB_QUERY RESULT]: REFUSED — {guarded}\n\n{ambient_line}"})
+                record_execution("db_query", raw[:200], "REFUSED", result=guarded)
+            else:
+                socketio.emit('routing_action', {'type': 'parietal', 'message': f'DB query: {guarded[:80]}'})
+                res = call_workspace_query(guarded)
+                if res and "error" not in res:
+                    payload = json.dumps({"columns": res.get("columns", []), "rows": res.get("rows", [])[:50]})[:2400]
+                    conversation.append({"role": "user", "content": f"[DB_QUERY RESULT]: PASSED\nQUERY: {guarded}\nRESULT:\n{payload}\n\n{ambient_line}"})
+                    active_session["session_ledger"].append({"cycle": active_session["cycle"],
+                        "summary": f"DB_QUERY PASSED: {guarded[:200]} -> {payload[:300]}"})
+                    record_execution("db_query", guarded, "PASSED", result=payload[:2000])
+                    active_session["results_board"].append(f"`{guarded[:200]}` -> {payload[:400]}")
+                else:
+                    err = (res or {}).get("error", "workspace not reachable")
+                    detail = (res or {}).get("detail", "")
+                    conversation.append({"role": "user", "content": f"[DB_QUERY RESULT]: FAILED — {err}\n{detail}\n\n{ambient_line}"})
+                    record_execution("db_query", guarded, "FAILED", result=err)
+            continue
         elif tag == "ALIGNMENT_NEEDED":
             nav = run_parietal_navigate(knowtext, active_session["signal_sequence"])
             if nav:
@@ -3243,6 +3312,13 @@ def handle_stop_session(data):
     if active_session["waiting_for_input"]:
         active_session["human_input_value"] = "[SESSION STOPPED BY OPERATOR]"
         active_session["human_input_event"].set()
+    if external_mailbox.get("waiting"):
+        # Deploy 14: a stop during a pending external turn must wake the wait —
+        # response stays None, so the loop exits through the no-response stop
+        # path and the end sequence writes immediately (June 6 zombie specimen:
+        # stopped sessions slept up to 15 minutes before writing).
+        external_mailbox["response"] = None
+        external_mailbox["event"].set()
     socketio.emit('routing_action', {'type': 'error', 'message': 'Session stopped by operator.'})
 
 @socketio.on('get_status')

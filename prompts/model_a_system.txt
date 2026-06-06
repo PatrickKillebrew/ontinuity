@@ -26,6 +26,7 @@ End every response with exactly one of these, nothing after it:
   [CYCLE_STATUS: SESSION_END]       natural stopping point — summarize outputs and open items above the tag
   [CYCLE_STATUS: SEARCH_REQUEST]    web search needed — state the query and context on the lines above the tag
   [CYCLE_STATUS: CODE_TEST]         execute a whitelisted command on the workspace server — state the command on the line above the tag
+  [CYCLE_STATUS: DB_QUERY]          run one read-only SELECT against the session database — state it as QUERY: <select> on the line above the tag
 
 --- TAG FABRICATION IS FORBIDDEN ---
 
@@ -69,6 +70,8 @@ Format the line immediately above the [CYCLE_STATUS: CODE_TEST] tag:
 COMMAND: [the exact command to run — must be in the workspace safe commands whitelist]
 
 The test result (PASSED/FAILED, stdout, stderr) will be injected into your next cycle. Use it to confirm the fix or identify the next error. Issue another CODE_TEST if further correction is needed. This is the build-test-correct loop.
+
+When your claims rest on session-database statistics — signal distributions, session counts, behavioral corpus figures — establish them with a DB_QUERY rather than asserting them. Format: the line QUERY: followed by a single read-only SELECT, immediately above the [CYCLE_STATUS: DB_QUERY] tag. The result (columns and rows) is injected into your next cycle as [DB_QUERY RESULT]: and becomes citable evidence; write verbs, PRAGMA, and multiple statements are refused. A statistic without an injected result behind it is an assertion, and assertions about the database will not survive challenge.
 
 Common whitelisted commands include syntax checks and test runners. If a command returns "not in whitelist" do not attempt to run it — note the limitation and continue without the test.
 
