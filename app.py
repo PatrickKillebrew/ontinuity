@@ -1464,6 +1464,14 @@ def mailbox_deliver(turn_id, response):
     external_mailbox["event"].set()
     return True, ""
 
+def corroborated_challenge_should_close(end_requested, assessment):
+    """Deploy 11: a challenge answered by ground truth must not consume a close
+    attempt. True only when an end was requested this cycle AND the Challenger's
+    own parsed assessment says the deliverable is complete — the judge objected
+    and approved in the same breath; ground truth resolved the objection, so the
+    approval proceeds to the close gates (which all still run)."""
+    return bool(end_requested) and (assessment or {}).get("deliverable") == "complete"
+
 def wait_for_human_input(input_type, context):
     active_session["waiting_for_input"] = True
     active_session["input_type"] = input_type
@@ -2224,8 +2232,32 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         f"Cycle {active_session['cycle']}: F.3 RESOLVED — challenge against corroborated claims answered by execution log"
                     )
                     socketio.emit('routing_action', {'type': 'parietal', 'message': 'Challenge resolved by execution log — claims corroborated; ADJUDICATE skipped.'})
-                    conversation.append({"role": "user", "content": f"{resolution}\n{ambient_line}"})
-                    continue
+                    if corroborated_challenge_should_close(researcher_requested_end, assessment):
+                        # June 6 first-external-session specimen: three identical laps
+                        # where the log certified the claims and routing ate the close.
+                        # Fall through to the termination decision rule — every close
+                        # gate below still runs.
+                        socketio.emit('routing_action', {'type': 'parietal', 'message': 'Corroborated challenge during close attempt — proceeding to close gates.'})
+                    else:
+                        if researcher_requested_end:
+                            # A close attempt died in the challenge flow — it counts.
+                            active_session["close_refusal_count"] = active_session.get("close_refusal_count", 0) + 1
+                            if active_session["close_refusal_count"] >= 3:
+                                guard_ctx = ("CLOSE DEADLOCK — " + str(active_session["close_refusal_count"]) +
+                                             " consecutive refused close attempts.\nLatest: challenge raised during close; "
+                                             "F.3 corroborated the claims but the judge's assessment did not certify completion.\n"
+                                             + resolution[:1200] +
+                                             "\n\nReply STOP to end the session now (the end sequence and write will run), "
+                                             "or reply with direction for the Researcher to continue.")
+                                decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
+                                active_session["close_refusal_count"] = 0
+                                if decision.strip().lower().startswith("stop"):
+                                    socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
+                                    break
+                                conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
+                                continue
+                        conversation.append({"role": "user", "content": f"{resolution}\n{ambient_line}"})
+                        continue
                 # Try Parietal ADJUDICATE (log cannot decide this dispute)
                 ruling = run_parietal_adjudicate(b_response, "", knowtext)
                 if ruling:
