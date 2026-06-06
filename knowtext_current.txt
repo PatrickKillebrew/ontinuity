@@ -13,19 +13,17 @@ Valence Mapping:
 NO CHANGE
 
 Delta Log:
-- Established C1 (distribution counts via corpus evidence) in Cycle 1.
-- Retrieved and recorded full rows for friction_signal = 2 (C3) in Cycle 2 and friction_signal = 4 (C4) in Cycle 3.
-- Added aggregate evidence for C2 (adversarial evidence by signal level) in Cycle 4.
-- Produced the Friction Calibration Audit Final Report compiling all DB_QUERY figures in Cycle 5.
-- Withdrew the original calibration claim (deterministic signal‑0/1 boundary) and re‑qualified C2 based on per‑row overlap in Cycle 6.
-- Re‑qualified C2 with explicit determination using injected DB_QUERY results in Cycle 7.
-- adjudicated: Cycle 5 ruling UPHOLD confirmed withdrawal of the deterministic claim; Cycle 7 ruling REJECT upheld the re‑qualified C2 and rejected the challenger’s objection.
-- Completed all five contract criteria; final report delivered and accepted in Cycle 8.
+- Established a new defect class “honest failure semantics” linking structural‑waiver broadening (H) and exit‑code hygiene (I) as the same failure‑masking defect (Cycle 1).  
+- Adopted the ordering rule “session‑blockers outrank annoyances” as a central session‑blocking principle (Cycle 3).  
+- Recorded DB_QUERY result showing recent session IDs, statuses, and total cycles (Cycle 3).  
+- Advanced the Queue Curation to its final version per adversarial review (Cycle 4).  
+- Upheld a challenge to a JUDGED criterion (C2) concerning deterministic calibration of the signal‑0/1 boundary, confirming the criterion remains judged rather than verifiable (Cycle 5).  
+- Rejected a challenger’s claim that C2 was incomplete after a “C2 requalified” step, confirming the criterion now meets its judged requirement (Cycle 7).  
+- Upheld a challenge to Model A’s claim of session completion, noting no new executions occurred and judged criteria remain unmet (Cycle 2).  
 
 Correction History:
-- Withdrawal of the deterministic calibration claim (original C2 phrasing) in Cycle 6.
-- Re‑qualification of C2 with explicit per‑row overlap determination in Cycle 7.
-- Rejection of the challenger’s objection to C2 in Cycle 7 (RULING: REJECT).
+- Re‑qualified criterion C2 based on injected DB_QUERY results, correcting the earlier incomplete status (Cycle 7).  
+- Upheld multiple erroneous claims (Cycles 2, 5) leading to removal of unsupported assertions from the session record.  
 
 Climate Notes:
-The session experienced moderate friction (signals 2 and 1) during cycles 6‑7 as the calibration claim was contested and re‑qualified, but the team maintained focus and resolved the dispute through adjudication. Operator remained engaged and collaborative, leading to a clear final deliverable with all criteria satisfied.
+The session experienced low friction overall (signals 0) with a brief spike to signal 2 in Cycle 3 due to conflicting UPHOLD rulings, which was resolved through adjudication by Cycle 4. Operator engagement remained steady, and the team successfully aligned on the final curation and criterion status.
