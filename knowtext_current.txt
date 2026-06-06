@@ -1,20 +1,30 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Identity: NO CHANGE
-Active Frameworks: NO CHANGE
-Open Questions: Is there any corpus segment containing non‑zero behavioral metrics that would allow a causal analysis of friction‑signal transitions versus researcher behavior?
-Valence Mapping: NO CHANGE
-Delta Log: 
-- Cycle 3 DB_QUERY confirmed that across 154 rows of `behavioral_observations` all metric columns (`model_a_word_count`, `model_a_hedging_count`, `model_a_certainty_count`, etc.) are zero, establishing a lack of observable behavior variation. 
-- Cycles 4, 6, 7 determined the relationship between the friction signal and researcher behavior to be **UNDECIDABLE** because the corpus provides no behavioral data to support causal inference. 
-- Cycle 5 gate‑grammar note clarified that the contract’s bare `DB_QUERY` token does not match any logged SQL text, and a marker query was logged to document this mismatch. 
-- Cycle 7 completed the full experimental design (C4) and recorded it as the final determination for the session. 
-- Contract criteria were updated: C2 was requalified based on the injected DB_QUERY results; C4 was revised to require a concrete experimental design whenever the relationship is deemed undecidable. 
-- Adjudication outcomes were logged: Cycle 5 UPHOLD on a judged C2 criterion; Cycle 7 REJECT of a challenger claim regarding C2 incompleteness; Cycle 2 UPHOLD of Model A’s premature session‑completion claim; Cycle 6 UPHOLD that the “UNDECIDABLE” claim violated the contract’s requirement for a concrete design. 
-- The session’s deliverable status moved from incomplete (Cycle 6) to complete (Cycle 7) per the friction‑signal assessments. 
-Correction History: 
-- Cycle 5: UPHOLD – corrected C2 to a judged criterion based on aggregate correlation data, confirming its requalification. 
-- Cycle 7: REJECT – rejected challenger’s assertion that C2 remained incomplete; retained the requalified C2 as valid. 
-- Cycle 2: UPHOLD – retracted Model A’s claim of session completion; required further evidence. 
-- Cycle 6: UPHOLD – enforced contract requirement that an “UNDECIDABLE” outcome must be accompanied by a concrete experimental design, leading to the final C4 design. 
-Climate Notes: The session began with low friction (signals 0) and smooth progress, but tension rose as contradictory claims emerged (signals 1 and 2), prompting multiple UPHOLD rulings. Despite procedural friction, the team converged on a final determination and completed the experimental design, restoring a sense of closure.
+Identity:
+NO CHANGE
+
+Active Frameworks:
+NO CHANGE
+
+Open Questions:
+NO CHANGE
+
+Valence Mapping:
+NO CHANGE
+
+Delta Log:
+- Established Result Cycle 1: Completed “Re‑curation under the corrected record – Dweller Lap 2.”
+- Established Result Cycle 2: Submitted the re‑curation for adversarial review; noted that demotion in item (2) and promotion in item (3) follow a single ranking rule (“rank by what the receiver…”) and the submission stands as delivered.
+- adjudicate Cycle 2 UPHOLD: Rejected Model A’s claim of session completion; confirmed that no new executions occurred, the prior curation has not been reviewed, and judged contract criteria remain unmet.
+- adjudicate Cycle 5 UPHOLD: Confirmed that judged criterion C2 (precise calibration of the signal‑0/1 boundary) cannot be satisfied by aggregate correlation data alone; the claim was invalidated.
+- adjudicate Cycle 6 UPHOLD: Rejected Model A’s “UNDECIDABLE” claim; enforced contract requirement for a concrete experimental design when a relationship is deemed undecidable, and noted that JUDGED criterion C4 remains unmet.
+- adjudicate Cycle 7 REJECT: Dismissed challenger’s assertion that C2 remains incomplete; recorded that C2 was re‑qualified in Cycle 7 using injected DB_QUERY results, thereby satisfying the judged criterion.
+
+Correction History:
+- Cycle 2: Corrected erroneous claim of session completion (UPHOLD).
+- Cycle 5: Corrected invalid deterministic interpretation of signal boundary (UPHOLD).
+- Cycle 6: Enforced requirement for concrete experimental design on undecidable claims (UPHOLD).
+- Cycle 7: Rejected improper challenge to C2 after DB_QUERY‑based requalification (REJECT).
+
+Climate Notes:
+The session maintained low friction (Signal 0) throughout, indicating clear alignment with the objective and coherent researcher output. Tensions arose around the interpretation of signal calibration and undecidability criteria, leading to several adjudications, but these were resolved constructively, preserving momentum toward finalizing the re‑curation review.
