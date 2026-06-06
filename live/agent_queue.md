@@ -59,3 +59,19 @@ Supersedes v4. BUILDER lane document. The day: 9 deploys (all museum-tested pre-
 
 ## DAY'S SCORE
 9 deploys, 1 product born (Notarian), 2 sessions assassinated → 2 autopsies → 7 structural fixes, 5 F.3 classes cured, 3 refusal paths guarded, 1 ritual killed (KEYS), 1 root-cause confession (unreceipted watch-patterns claim), 1 receipt that survived five murder attempts. The loop — failure → evidence → located defect → provable fix → verified deploy — ran continuously for twelve hours. Same ensemble of commodity models at 7:30am and 7:30pm; every capability gained came from structure. The next ratchet: the builder goes under the glass (items 1–2).
+
+## LAP 1 AMENDMENTS — June 6, 2026 (session 2026-06-06_15-44-37, receipt #8, stopped honest-incomplete)
+Lap 1 ran item 6 (friction calibration audit). Audit delivered in-session (judged criteria); close blocked by two environment defects. Findings folded back per protocol:
+
+**Item 6 partial close — audit findings on the record:**
+- Distribution (121 obs / 13 sessions): 0×97, 1×19, 2×2, 4×3, no 3s ever. Signal-1 rows carry 2× the upholds and 3.4× the challenge rate of signal-0 — the 0/1 boundary tracks evidence.
+- NEW exhibit: the only signal-2 scores ever recorded (session 13-42-16) cite "two UPHOLD rulings" in their rationale while the same rows count cumulative_uphold_count=0 — scorer narrative contradicts its own features.
+- Signal-4 rows: zero upholds, zero challenges — max-alarm with no corroborating adversarial activity (spurious-override confirmation, now in data).
+- Data-quality: at least one empty rationale string on a scored row.
+- Fix package (item 6b, NEW): feed loop-state counters (consecutive refused closes, no-progress) into Friction input; rationale must cite structured features only; reject empty rationales at write; gate signal-4 on ≥1 actual UPHOLD.
+
+**NEW item — PyGithub missing on VPS (urgent, found by lap 1):** `python push_to_github.py` fails ModuleNotFoundError on every attempt — dead since the Hetzner migration. Fix: pip install PyGithub on the workspace host (operator, 2 minutes).
+**NEW item — structural-waiver classifier too narrow:** deterministic environment failures (missing module, exit 1 reproducible) should qualify as waivable-structural alongside whitelist 403s.
+**NEW item — in-session corpus evidence channel:** the Parietal UPHELD a challenge against agent-retrieved corpus figures — correctly: labeled provenance is not verification. Add a whitelisted read-only corpus query command (or DB_QUERY tag) so audit sessions get injectable, F.3-checkable evidence.
+**NEW item — STOP must wake the mailbox wait:** operator stop during a pending external turn leaves the session zombie until the 15-min timeout (deploy 14: handle_stop fires the mailbox event).
+**Cosmetics (one line):** completion-panel view-state stale during agent-started sessions; artifact row accumulates across sessions.
