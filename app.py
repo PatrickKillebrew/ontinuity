@@ -1843,6 +1843,7 @@ def write_session_log():
         f"Session start: {active_session['start_time']}",
         f"Session end: {active_session['end_time']}",
         f"Knowtext version: {active_session['knowtext_version'] or 'none'}",
+        f"Started by: {active_session.get('started_by', 'dashboard')}",
         f"Model A: {get_runtime_model('model_a')}",
         f"Model B: {get_runtime_model('model_b')}",
         f"Model C: {get_runtime_model('model_c')}",
@@ -2619,6 +2620,55 @@ def _mailbox_auth_ok():
     given = (request.args.get("mailbox_key") or (request.get_json(silent=True) or {}).get("mailbox_key") or "").strip()
     return bool(key) and _hmac.compare_digest(key, given)
 
+def agent_start_blockers(objective):
+    """Deploy 12: everything that must be true before an agent-started session
+    can run. Returns a list of human-readable blockers; empty list = clear.
+    The keyring dependency is honest by design: configs live only in process
+    memory, armed by an operator's dashboard tab (BYO-keys doctrine). An
+    agent cannot start a session the operator has not armed."""
+    blockers = []
+    if not (objective or "").strip():
+        blockers.append("no objective provided")
+    if active_session.get("running"):
+        blockers.append("a session is already running")
+    if active_session.get("finalizing"):
+        blockers.append("a session is finalizing (writing records)")
+    for role in ("model_b", "model_c", "parietal", "projenius"):
+        cfg = get_effective_config(role)
+        if not (cfg.get("api_key") and cfg.get("url")):
+            blockers.append(f"configs not armed: {role}")
+    a_cfg = get_effective_config("model_a")
+    a_url = (a_cfg.get("url") or "").strip().lower()
+    if not a_url:
+        blockers.append("configs not armed: model_a")
+    elif not a_url.startswith("external") and not a_cfg.get("api_key"):
+        blockers.append("model_a has a URL but no key (and is not external)")
+    return blockers
+
+@app.route('/agent/start', methods=['POST'])
+def agent_start():
+    """Self-start for the external agent. Same key as the mailbox — initiating
+    work and doing work are the same trust grade. Judging work is not: operator
+    modals (waivers, amendments, deadlock STOPs) never route here. The agent
+    may start what it will be audited on; it may never certify itself."""
+    if not os.environ.get("MAILBOX_KEY", "").strip():
+        return jsonify({"error": "mailbox disabled — set MAILBOX_KEY in Railway variables"}), 503
+    if not _mailbox_auth_ok():
+        return jsonify({"error": "bad mailbox key"}), 403
+    body = request.get_json(silent=True) or {}
+    objective = (body.get("objective") or "").strip()
+    start_fresh = bool(body.get("start_fresh", False))
+    blockers = agent_start_blockers(objective)
+    if blockers:
+        return jsonify({"error": "cannot start", "blockers": blockers}), 409
+    active_session["started_by"] = "external-mailbox"
+    socketio.emit('routing_action', {'type': 'injection',
+        'message': f"Session start requested by external agent via /agent/start (start_fresh: {start_fresh})."})
+    t = threading.Thread(target=pre_session_then_start, args=(objective, start_fresh))
+    t.daemon = True
+    t.start()
+    return jsonify({"ok": True, "started_by": "external-mailbox", "start_fresh": start_fresh})
+
 @app.route('/mailbox/turn', methods=['GET'])
 def mailbox_turn():
     if not os.environ.get("MAILBOX_KEY", "").strip():
@@ -2675,6 +2725,9 @@ def diag_relay(endpoint):
         return jsonify({"running": bool(active_session.get("running")),
                         "cycle": active_session.get("cycle", 0),
                         "waiting_for_input": bool(active_session.get("waiting_for_input")),
+                        "input_type": active_session.get("input_type") if active_session.get("waiting_for_input") else None,
+                        "started_by": active_session.get("started_by", "dashboard"),
+                        "finalizing": bool(active_session.get("finalizing")),
                         "contract_criteria": len(active_session.get("contract", []))})
     if not WORKSPACE_URL:
         return jsonify({"error": "WORKSPACE_URL not configured"}), 503
@@ -2967,6 +3020,7 @@ def handle_start_session(data):
                 # Backward compat: plain key string
                 runtime_configs[role] = {'key': cfg.strip()}
     received_fresh = bool(data.get('start_fresh', False))
+    active_session["started_by"] = "dashboard"
     emit('routing_action', {'type': 'injection', 'message': f'start_fresh received from dashboard: {received_fresh}'})
     thread = threading.Thread(target=pre_session_then_start, args=(objective, received_fresh))
     thread.daemon = True
