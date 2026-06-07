@@ -2021,7 +2021,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         if not a_response:
             socketio.emit('routing_action', {'type': 'error', 'message': 'Researcher returned no response. Stopping.'})
             break
-        active_session["transcript"].append({"role": "model_a", "content": a_response})
+        active_session["transcript"].append({"role": "model_a", "content": a_response, "cycle": active_session["cycle"]})  # Phase-0: the missing join key behind 154 zero-metric rows
         conversation.append({"role": "assistant", "content": a_response})
         socketio.emit('model_response', {'role': 'model_a', 'label': 'Researcher', 'content': a_response, 'cycle': active_session["cycle"]})
 
@@ -2286,7 +2286,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         b_response = call_model("model_b", b_messages, system_override=b_system)
 
         if b_response:
-            active_session["transcript"].append({"role": "model_b", "content": b_response})
+            active_session["transcript"].append({"role": "model_b", "content": b_response, "cycle": active_session["cycle"]})  # Phase-0
             socketio.emit('model_response', {'role': 'model_b', 'label': 'Challenger', 'content': b_response, 'cycle': active_session["cycle"]})
             b_tag = extract_tag(b_response)
             active_session["tag_sequence"].append(f"Cycle {active_session['cycle']} B: {b_tag}")
