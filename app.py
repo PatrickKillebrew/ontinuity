@@ -810,6 +810,45 @@ def find_unmarked_causal_claims(text):
         flagged.append(s[:240])
     return flagged
 
+ABSENCE_CLAIM_PATTERN = re.compile(
+    r"\b(no\s+(?:such\s+)?[\w'-]+(?:[\w\s'-]{0,40})?\s+(?:exists?|was\s+found|were\s+found|is\s+present|are\s+present|is\s+recorded|are\s+recorded|can\s+be\s+(?:retrieved|found|located))"
+    r"|does\s+not\s+exist|do\s+not\s+exist"
+    r"|cannot\s+be\s+(?:retrieved|found|located)"
+    r"|none\s+(?:exists?|was\s+found|were\s+found))", re.IGNORECASE)
+
+ABSENCE_GENERALIZER = re.compile(
+    r"\b(in\s+the\s+(?:database|system|corpus|entire\s+\w+)|anywhere|at\s+all|whatsoever"
+    r"|in\s+any\s+(?:table|column|session|record)|across\s+(?:the\s+)?(?:all|every)\s*\w*)", re.IGNORECASE)
+
+def find_undisciplined_absence_claims(text):
+    """Deploy 31 (evidence-of-absence discipline, receipt-#50 lesson): a Researcher
+    searched one column, found zero rows, and certified database-wide absence. The
+    judge gates verified that evidence was cited, not that the search scope matched
+    the claim scope. Deterministic half of the two-layer fix: an absence claim in a
+    close must carry its scope line (the literal query, backticked) and may not
+    generalize beyond a single query's scope without an ASSUMED tag. The judged
+    half (scope-searched vs scope-claimed comparison) lives in the Challenger's
+    contract. Column-level zero supports column-level absence, nothing wider."""
+    flagged = []
+    import re as _re
+    for raw in _re.split(r"(?<=[.!?])\s+|\n", text or ""):
+        s = raw.strip()
+        if not s or len(s) > 600:
+            continue
+        if not ABSENCE_CLAIM_PATTERN.search(s):
+            continue
+        if "ASSUMED" in s.upper():
+            continue
+        has_scope = bool(_re.search(r"`[^`]{2,200}`", s))
+        if not has_scope:
+            flagged.append({"sentence": s[:240],
+                            "reason": "absence claim carries no scope line — quote the literal query searched in backticks, or mark the claim ASSUMED"})
+            continue
+        if ABSENCE_GENERALIZER.search(s):
+            flagged.append({"sentence": s[:240],
+                            "reason": "absence claim generalizes beyond the quoted query's scope — a single query supports absence only within the column/scope it searched; qualify the scope or mark the wider claim ASSUMED"})
+    return flagged
+
 def contract_close_check():
     """Deterministic close-gate walk of the contract. Returns list of unmet
     VERIFIABLE criteria as {id, text, reason}. Rules:
@@ -2424,6 +2463,9 @@ def run_session_loop(objective, start_fresh=False, contract=None):
             b_context_parts.append("[EXECUTION LOG — ground truth, FULL session]\n" + "\n".join(
                 f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:80]}" + (f" -> {e['result'][:300]}" if e.get('result') else "")
                 for e in full[-25:]))
+        absence_flags = find_undisciplined_absence_claims(a_response)
+        if absence_flags:
+            b_context_parts.append("[ABSENCE CLAIMS — deterministic scan]\nThe following sentences assert absence. Compare the scope searched against the scope claimed: column-level zero supports column-level absence, nothing wider. Challenge any claim whose searched scope is narrower than its asserted scope:\n" + "\n".join(f"- {f['sentence']} [{f['reason']}]" for f in absence_flags))
         causal_flags = find_unmarked_causal_claims(a_response)
         if causal_flags:
             b_context_parts.append("[UNMARKED CAUSAL CLAIMS — deterministic scan]\nThe following sentences assert causality with no ASSUMED marker and no in-session evidence citation. Verify against the log and contract; challenge any the session record cannot support:\n" + "\n".join(f"- {s}" for s in causal_flags))
@@ -2617,6 +2659,28 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
                         continue
                     conversation.append({"role": "user", "content": f"The session cannot close. F.3 deterministic audit of the deliverable against the execution log:\n{f3_summary(close_bad)}\n\nEither obtain the real result (emit CODE_TEST or SEARCH_REQUEST with the required COMMAND/QUERY line) or restate the deliverable without the unsupported claims, then request SESSION_END again.\n{ambient_line}"})
+                    continue
+                absence_bad = find_undisciplined_absence_claims(a_response)
+                if absence_bad:
+                    socketio.emit('routing_action', {'type': 'error', 'message': f"CLOSE REFUSED — absence discipline: {absence_bad[0]['reason']}"})
+                    active_session["challenge_events"].append(
+                        f"Cycle {active_session['cycle']}: CLOSE REFUSED — absence discipline: {absence_bad[0]['sentence'][:140]}"
+                    )
+                    active_session["close_refusal_count"] = active_session.get("close_refusal_count", 0) + 1
+                    absence_lines = "\n".join(f"- {f['sentence']}\n  FIX: {f['reason']}" for f in absence_bad)
+                    if active_session["close_refusal_count"] >= 3:
+                        guard_ctx = ("CLOSE DEADLOCK — " + str(active_session["close_refusal_count"]) +
+                                     " consecutive refused close attempts.\nLatest refusal (absence discipline):\n" + absence_lines +
+                                     "\n\nReply STOP to end the session now (the end sequence and write will run), "
+                                     "or reply with direction for the Researcher to continue.")
+                        decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
+                        active_session["close_refusal_count"] = 0
+                        if decision.strip().lower().startswith("stop"):
+                            socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
+                            break
+                        conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
+                        continue
+                    conversation.append({"role": "user", "content": f"The session cannot close. Evidence-of-absence discipline (deterministic):\n{absence_lines}\n\nAn absence claim must quote the literal query it rests on (backticked) and may not claim a wider scope than that query searched. Restate the deliverable with scoped absence claims (or ASSUMED tags for wider inferences), then request SESSION_END again.\n{ambient_line}"})
                     continue
                 unmet = contract_close_check()
                 if unmet and all(u.get("structural") for u in unmet):
