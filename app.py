@@ -742,6 +742,29 @@ def get_contract_injection():
         "\n--- END SESSION CONTRACT ---"
     )
 
+CAUSAL_VERB_PATTERN = re.compile(
+    r"\b(caused|causes|because|due to|led to|leads to|resulted in|results in"
+    r"|killed|blocked|prevented|triggered|produced by|explains why|the reason)\b", re.IGNORECASE)
+
+def find_unmarked_causal_claims(text):
+    """Deploy 20 (causal-claim discipline, erratum-#12 lesson): sentences asserting
+    causality without an ASSUMED marker and without citing in-session evidence.
+    Receipt #12 certified a false cause because no layer hunted narrative causality;
+    this is the deterministic assist that points the Challenger at it."""
+    flagged = []
+    for raw in re.split(r"(?<=[.!?])\s+", text or ""):
+        s = raw.strip()
+        if not s or len(s) > 600:
+            continue
+        if not CAUSAL_VERB_PATTERN.search(s):
+            continue
+        if "ASSUMED" in s.upper():
+            continue
+        if re.search(r"cycle\s+\d|injected result|execution log|PASSED|DB_QUERY RESULT|`[^`]+`", s, re.IGNORECASE):
+            continue  # causal claim anchored to in-session evidence — legitimate
+        flagged.append(s[:240])
+    return flagged
+
 def contract_close_check():
     """Deterministic close-gate walk of the contract. Returns list of unmet
     VERIFIABLE criteria as {id, text, reason}. Rules:
@@ -2309,6 +2332,9 @@ def run_session_loop(objective, start_fresh=False, contract=None):
             b_context_parts.append("[EXECUTION LOG — ground truth, FULL session]\n" + "\n".join(
                 f"cycle {e['cycle']}: {e['kind']} {e['status']}: {e['detail'][:80]}" + (f" -> {e['result'][:300]}" if e.get('result') else "")
                 for e in full[-25:]))
+        causal_flags = find_unmarked_causal_claims(a_response)
+        if causal_flags:
+            b_context_parts.append("[UNMARKED CAUSAL CLAIMS — deterministic scan]\nThe following sentences assert causality with no ASSUMED marker and no in-session evidence citation. Verify against the log and contract; challenge any the session record cannot support:\n" + "\n".join(f"- {s}" for s in causal_flags))
         b_context_parts.append(f"[CURRENT OUTPUT TO REVIEW]\n{a_response}\n\n{ambient_line}")
         b_content = "\n\n".join(b_context_parts)
         b_system = model_b_base
