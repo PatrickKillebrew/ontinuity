@@ -760,6 +760,17 @@ def contract_close_check():
         if cmds:
             for cmd in cmds:
                 entries = _f3_find_entries(cmd)
+                # Deploy 19: kind-aware matching. A bare evidence token naming an
+                # execution KIND (e.g. `DB_QUERY`) matches any logged execution of
+                # that kind — receipt #13's contract was unmatchable by detail text
+                # and needed a transparent marker query to close. Detail matching
+                # (full commands/SQL in backticks) is untouched.
+                if not entries:
+                    kind_token = cmd.strip().strip('"').lower().replace(" ", "_")
+                    kind_map = {"db_query": "db_query", "code_test": "code_test", "search": "search", "search_request": "search"}
+                    if kind_token in kind_map:
+                        entries = [e for e in active_session.get("execution_log", [])
+                                   if e.get("kind", "") == kind_map[kind_token]]
                 passed = [e for e in entries if e["status"].upper().startswith("PASSED")]
                 if not passed:
                     # Structural refusal: the command was genuinely attempted and the
