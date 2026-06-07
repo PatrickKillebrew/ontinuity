@@ -2076,6 +2076,9 @@ def write_session_log():
 # MAIN SESSION LOOP
 # -----------------------------------------
 def run_session_loop(objective, start_fresh=False, contract=None):
+    # Deploy 27: the agent-start path passes start_fresh as a parameter only;
+    # session state must carry it or the deploy-26 lineage seal never engages.
+    active_session["start_fresh"] = bool(start_fresh)
     active_session["running"] = True
     active_session["start_time"] = timestamp()
     active_session["transcript"] = []
