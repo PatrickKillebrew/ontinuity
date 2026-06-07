@@ -45,3 +45,7 @@ June 7: Phase-0 instrumentation (d17, acceptance PASSED: corpus measures behavio
 ## PROVENANCE AMENDMENT — June 7 (operator direction: "Let's close the provenance loop completely")
 **ESTABLISHED (no deploy, unwatched path): live/conversations/** — operator-layer dialogue records committed alongside receipts, mandatory-redaction convention, first record covers the morning proof cycles. Placement question resolved by standing rule (append between laps; certified head stands) — no lap spent.
 **NEW item: conversation provenance automation.** Ongoing capture ritual (per-conversation record at session-arc close), possible export integration, and a redaction check as a committed tool rather than an in-context discipline. Rank at next Dweller lap.
+
+
+## PROVENANCE EVIDENCE AMENDMENT — June 7 (operator direction)
+**NEW item: conversation records into the database as queryable evidence.** Schema: conversations + conversation_chunks (speaker, seq, content) with FTS5; ingest endpoint; reachable through the existing DB_QUERY channel. Why it matters beyond search: operator rulings become citable rows instead of unreceiptable testimony — the 14-02-37 deadlock class (judges correctly refusing relayed operator observation absent from any log) gains its missing evidence channel. Dependency: db.py schema is VPS-side (operator hands or the agent-hands item; natural pairing). Rank at next Dweller lap.
