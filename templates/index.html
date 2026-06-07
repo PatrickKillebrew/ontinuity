@@ -1493,8 +1493,24 @@ function downloadArtifact() {
 }
 
 // ── SOCKET EVENTS ──
+// Deploy 21 (view-state truthfulness): one function owns the new-session screen
+// transition. June 6: a stale completion panel concealed pre-session questions and
+// killed two agent-initiated starts; artifact rows accumulated across sessions
+// because only the manual button path ever cleared them. Every entry point — the
+// button, the socket event, the questions handler — now resets through here.
+function resetViewForNewSession() {
+  document.getElementById('completeScreen').style.display = 'none';
+  document.getElementById('transcript').innerHTML = '';
+  document.getElementById('artifactsPanel').classList.remove('visible');
+  document.getElementById('artifactsGrid').innerHTML = '';
+  document.getElementById('cycleNum').textContent = '—';
+  document.getElementById('tagList').innerHTML = '<div class="tag-item"><span class="tag-cycle" style="color:var(--text-muted)">—</span><span style="font-size:10px;color:var(--text-muted);font-family:\'JetBrains Mono\',monospace">no tags yet</span></div>';
+  tagFirstTime.cleared = false;
+}
+
 socket.on('session_started', (data) => {
   sessionRunning = true;
+  resetViewForNewSession();
   document.getElementById('beginBtn').textContent = 'Begin Session';
   document.getElementById('beginBtn').disabled = false;
   document.getElementById('startScreen').style.display = 'none';
@@ -1604,6 +1620,9 @@ socket.on('parietal_pre_session', (data) => {
   document.getElementById('beginBtn').textContent = 'Begin Session';
   document.getElementById('beginBtn').disabled = false;
   if (data.status === 'questions') {
+    // Deploy 21: questions take the screen — a hidden container must never hold a live prompt.
+    document.getElementById('completeScreen').style.display = 'none';
+    document.getElementById('startScreen').style.display = 'flex';
     document.getElementById('objectiveForm').style.display = 'none';
     document.getElementById('startSubtitle').textContent = 'The Parietal has a couple of questions to orient the session.';
     document.getElementById('preSessionQuestions').textContent = data.questions;
