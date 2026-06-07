@@ -3074,7 +3074,7 @@ def mailbox_respond():
 # workspace response verbatim. No write surface is exposed.
 DIAG_ALLOWED = {"status", "log", "manifest", "history",
                 "api/health", "api/ledger", "api/project_state",
-                "api/behavioral_corpus", "api/query", "engine", "console"}
+                "api/behavioral_corpus", "api/query", "engine", "console", "egress"}
 
 @app.route('/diag/<path:endpoint>')
 def diag_relay(endpoint):
@@ -3090,6 +3090,35 @@ def diag_relay(endpoint):
         # Local engine narration — never relayed. The remote diagnosis channel
         # the lap-3 silent failure proved necessary.
         return jsonify(list(_console_buffer))
+    if base == "egress":
+        # Deploy 29: diagnose the farm 403 differential. Reports this container's
+        # outbound IP and a direct provider ping, verbatim. Read-only, no secrets
+        # returned (key is used, never echoed).
+        out = {"instance": os.environ.get("INSTANCE_NAME", "main").strip() or "main"}
+        try:
+            ip = http_requests.get("https://api.ipify.org?format=json", timeout=10)
+            out["egress_ip"] = ip.json().get("ip")
+        except Exception as e:
+            out["egress_ip_error"] = str(e)[:120]
+        purl = os.environ.get("PROVIDER_URL", "").strip()
+        pkey = os.environ.get("PROVIDER_API_KEY", "").strip()
+        out["provider_url"] = purl
+        out["provider_model"] = os.environ.get("MODEL_A_MODEL", "").strip()
+        if purl and pkey:
+            try:
+                pr = http_requests.post(purl,
+                    headers={"Authorization": f"Bearer {pkey}", "Content-Type": "application/json",
+                             "User-Agent": "Ontinuity-Engine/1.0"},
+                    json={"model": os.environ.get("MODEL_A_MODEL","").strip() or "gpt-oss-120b",
+                          "messages": [{"role": "user", "content": "ok"}], "max_tokens": 3},
+                    timeout=20)
+                out["provider_status"] = pr.status_code
+                out["provider_body"] = pr.text[:300]
+                out["provider_resp_headers"] = {k: v for k, v in pr.headers.items()
+                                                if k.lower() in ("cf-ray","server","cf-mitigated","x-ratelimit-limit-requests-day")}
+            except Exception as e:
+                out["provider_error"] = str(e)[:200]
+        return jsonify(out)
     if base == "engine":
         # Local engine state — never relayed. Exists so the BUILDER agent can
         # check for a live session BEFORE instructing any commit (June 5: a
