@@ -12,18 +12,17 @@ ACTIVE ITEM ONLY; fold back on the record; append between Dweller laps, curate d
 - Causal assertions in sessions require an evidence channel or an ASSUMED marker (erratum #12 lesson).
 
 ## ACTIVE — certified order (receipt #14)
-1. **Causal-claim discipline.** ASSUMED-marker requirement + Challenger prompt hunts unmarked causality (closes the receipt-#12 laundering channel, operator-caught).
-2. **Frontend view-state truthfulness.** Concealed pre-session questions killed two starts June 6; artifact rows accumulate.
-3. **Fallback-model routing.** DEMOTED per certified rule: support is June-5-and-prior timeout history; current dominance ASSUMED (eight clean completions June 6 post-seam-fix).
-4. **Agent hands on VPS.** Operator direction set; value multiplier ASSUMED (no receipt measures it); requires design pass incl. credential custody.
-5. **Friction fix package (certified receipts #11).** Feeds on Phase-0 — fixing the scorer of unmeasured behavior waits for measurement.
-6. **Settings & credential hardening (incl. token custody).** Severe, rare, documented recovery paths.
-7. **Honest failure semantics (waiver broadening + exit codes).** Wasted laps, never stopped work.
-8. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
-9. **Duration capture.** Rides Phase-0's write-path deploy where practical (separate acceptance tests).
-10. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on Phase-0 + accumulated instrumented sessions (n≥200 randomized cycles).
-11. **Notarian + website (merged).** Operator-gated: license, positioning.
-12. **VPS odds-and-ends.** BRAVE_API_KEY (search dead, blocks no current contract), apt git, Caddy/TLS.
+1. **Frontend view-state truthfulness.** Concealed pre-session questions killed two starts June 6; artifact rows accumulate.
+2. **Fallback-model routing.** DEMOTED per certified rule: support is June-5-and-prior timeout history; current dominance ASSUMED (eight clean completions June 6 post-seam-fix).
+3. **Agent hands on VPS.** Operator direction set; value multiplier ASSUMED (no receipt measures it); requires design pass incl. credential custody.
+4. **Friction fix package (certified receipts #11).** Feeds on Phase-0 — fixing the scorer of unmeasured behavior waits for measurement.
+5. **Settings & credential hardening (incl. token custody).** Severe, rare, documented recovery paths.
+6. **Honest failure semantics (waiver broadening + exit codes).** Wasted laps, never stopped work.
+7. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
+8. **Duration capture.** Rides Phase-0's write-path deploy where practical (separate acceptance tests).
+9. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on Phase-0 + accumulated instrumented sessions (n≥200 randomized cycles).
+10. **Notarian + website (merged).** Operator-gated: license, positioning.
+11. **VPS odds-and-ends.** BRAVE_API_KEY (search dead, blocks no current contract), apt git, Caddy/TLS.
 
 ## LAYER-2 HORIZON
 Lifetime ground truth; calibrated judges; the break lane; hash-chained receipts. Layer-3: cross-institution trustless verification.
@@ -45,3 +44,9 @@ Mailbox seat (d10) · routing fixes (d11) · self-start (d12) · queue I/O (d13)
 ## SECOND PROOF AMENDMENTS — June 7 (session 13-31-24, receipt #16, CERTIFIED; deploy 19 agent-committed)
 **CLOSED: contract-gate kind-aware matching.** Bare evidence tokens naming an execution kind now match logged executions of that kind; detail matching untouched; unknown tokens and kind-without-executions still refuse (museum 6/6, receipt-13 specimen included). Acceptance: a DB_QUERY-evidenced session certified with ZERO workaround queries. One mid-session UPHOLD against the Researcher (reported a reference to the count instead of the count — receipt-#5 lesson class re-enforced, then corrected: 172 observations).
 **Marker for the corpus:** receipts #15-#16 are the first two fully-instrumented sessions; Phase-1's randomized-injection prerequisite data accumulates from here.
+
+
+## THIRD PROOF AMENDMENTS — June 7 (session 13-45-36, receipt #17, CERTIFIED; deploy 20 agent-committed, 3 files)
+**CLOSED: causal-claim discipline.** CAUSAL_VERB_PATTERN scan + [UNMARKED CAUSAL CLAIMS] advisory to the Challenger + both prompts taught the rule (museum 6/6 incl. the receipt-12 specimen verbatim). Acceptance LIVE-FIRED: a deliberately unmarked causal close was scanned, hunted, and UPHELD as "an unmarked causal claim presented as fact" — the operator-caught failure class of receipt #12 is now machine-caught, demonstrated against its own author.
+**NEW item: ledger-adjudication coherence.** The same sentence entered session established results in cycle 2 and was ruled against in cycle 3; a later ASSUMED-marked close was then refused as "misrepresentation of an established result." Ruled-against claims must be expunged from (or never prematurely enter) session established results. Discovered inside receipt #17.
+**SIDE EFFECT observed:** the HUNT section appears to raise Challenger aggression globally — receipt #17 took 4 upholds incl. consolidated-reporting demands. Watch whether this is calibration or noise; feeds the friction work.
