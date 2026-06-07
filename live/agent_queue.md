@@ -12,18 +12,17 @@ contract the HEAD ACTIVE ITEM ONLY; fold back on the record; append between laps
 - Objective phrasing is contract material: no demonstration theater, no purpose narration — state only what the session must establish (the 14-02-37 deadlock).
 
 ## ACTIVE — certified order (receipt #19)
-1. **Connect-time state resync.** Server emits engine-state snapshot to each connecting socket; client renders from it. Evidence: concealed the live session and the STOP control from the operator today.
-2. **Ledger-adjudication coherence.** Ruled-against claims expunged from session established results. Evidence: receipt #17's contradiction loop.
-3. **Fallback-model routing.** Demoted again under the standing rule (current risk ASSUMED; 13+ clean sessions June 6-7). Gains from item 1: a provider-dead session becomes stoppable instead of hung.
-4. **Honest failure semantics.** Now carries today's evidence: operator-killed session persisted as "complete"; kill and natural close must be distinguishable. Plus waiver broadening and exit codes.
-5. **Friction fix package (certified receipts #11).** Consumes Phase-0 data (3 instrumented sessions and counting).
-6. **Agent hands on VPS.** Value multiplier ASSUMED; awaits design pass incl. credential custody.
-7. **Settings & credential hardening.** Severe, rare, documented recoveries.
-8. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
-9. **Duration capture.** Research feedstock.
-10. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on instrumented accumulation (n≥200 randomized cycles).
-11. **Notarian + website.** Operator-gated: license, positioning.
-12. **VPS odds-and-ends.** BRAVE key, apt git, TLS.
+1. **Ledger-adjudication coherence.** Ruled-against claims expunged from session established results. Evidence: receipt #17's contradiction loop.
+2. **Fallback-model routing.** Demoted again under the standing rule (current risk ASSUMED; 13+ clean sessions June 6-7). Gains from item 1: a provider-dead session becomes stoppable instead of hung.
+3. **Honest failure semantics.** Now carries today's evidence: operator-killed session persisted as "complete"; kill and natural close must be distinguishable. Plus waiver broadening and exit codes.
+4. **Friction fix package (certified receipts #11).** Consumes Phase-0 data (3 instrumented sessions and counting).
+5. **Agent hands on VPS.** Value multiplier ASSUMED; awaits design pass incl. credential custody.
+6. **Settings & credential hardening.** Severe, rare, documented recoveries.
+7. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
+8. **Duration capture.** Research feedstock.
+9. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on instrumented accumulation (n≥200 randomized cycles).
+10. **Notarian + website.** Operator-gated: license, positioning.
+11. **VPS odds-and-ends.** BRAVE key, apt git, TLS.
 
 ## LAYER-2 HORIZON
 Lifetime ground truth; calibrated judges; the break lane; hash-chained receipts. Layer-3: cross-institution trustless verification.
@@ -49,3 +48,8 @@ June 7: Phase-0 instrumentation (d17, acceptance PASSED: corpus measures behavio
 
 ## PROVENANCE EVIDENCE AMENDMENT — June 7 (operator direction)
 **NEW item: conversation records into the database as queryable evidence.** Schema: conversations + conversation_chunks (speaker, seq, content) with FTS5; ingest endpoint; reachable through the existing DB_QUERY channel. Why it matters beyond search: operator rulings become citable rows instead of unreceiptable testimony — the 14-02-37 deadlock class (judges correctly refusing relayed operator observation absent from any log) gains its missing evidence channel. Dependency: db.py schema is VPS-side (operator hands or the agent-hands item; natural pairing). Rank at next Dweller lap.
+
+
+## SIXTH CYCLE AMENDMENTS — June 7 (deploy 24 agent-committed, 2 files; acceptance session 15-20-56, receipt #21)
+**CLOSED: connect-time state resync.** Every connecting socket receives a state snapshot (running/finalizing, cycle, lineage, modal type+context — now stashed for replay — and a 12-entry transcript tail); the client renders live state instead of assuming idle. Companion to deploy 21: clean view, now true view. Acceptance at PROTOCOL level with a real socket client: idle snapshot verified; a late joiner during a live agent-started session saw RUNNING, external-mailbox lineage, and live cycle — the June 7 concealment condition. Tail nuance, recorded honestly: the live test parked at cycle 1 where the transcript is truthfully empty, so the empty tail was the correct value; tail extraction is museum-proven (12-cap from a 20-entry fixture). Operator visual confirmation available on any future live refresh.
+**Hatch mileage:** /agent/stop exercised a second time (receipt #21's session), clean kill, honest UNMET spine.
