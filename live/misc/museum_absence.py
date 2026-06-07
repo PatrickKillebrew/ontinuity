@@ -36,6 +36,10 @@ specimens = [
     ("The metric could not be verified and is recorded as UNMEASURED.", 0, None),
     # 10. Cannot-be-found without scope. -> GATED
     ("The model identifier cannot be retrieved from the records.", 1, "no-scope"),
+    # 11. Session-52 verbatim: 'does not contain' shape, no scope line. -> GATED
+    ("The database does not contain a table named unicorn_registry.", 1, "no-scope"),
+    # 12. Same claim carrying its scope. -> PASS
+    ("The query `SELECT name FROM sqlite_master WHERE type='table' AND name='unicorn_registry'` returned 0 rows; the database contains no table by that name.", 0, None),
 ]
 
 fails = 0
