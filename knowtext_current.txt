@@ -1,9 +1,25 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Identity: NO CHANGE
-Active Frameworks: NO CHANGE
-Open Questions: NO CHANGE
-Valence Mapping: NO CHANGE
-Delta Log: NO CHANGE
-Correction History: NO CHANGE
-Climate Notes: Missing required session inputs (ledger, NAVIGATE outputs, ADJUDICATE rulings, friction sequence, Knowtext document); unable to record updates.
+Identity:
+NO CHANGE
+
+Active Frameworks:
+NO CHANGE
+
+Open Questions:
+Which columns should be included in the behavioral metric sum for counting distinct `session_id`s (e.g., exactly `model_a_word_count`, `model_a_hedging_count`, `model_a_certainty_count`, `model_b_word_count`, or are there additional columns to consider)?
+
+Valence Mapping:
+NO CHANGE
+
+Delta Log:
+- Identified that contract criterion C1 referenced a nonexistent column `metric_sum`, rendering the SQL command non‑executable.  
+- Two UPHOLD rulings (Cycles 2 and 6) confirmed the contract violation and rejected the fabricated claim of “5 sessions fully instrumented.”  
+- Recorded that the only executed queries so far count sessions where `model_a_word_count > 0`, which does not satisfy the intended metric‑sum condition.  
+- Established the need to rewrite C1 with a correct, executable SQL query that computes the sum of the relevant behavioral metric columns and counts distinct `session_id`s where that sum is greater than zero.
+
+Correction History:
+- Added entry: “C1 originally specified `SELECT COUNT(*) FROM behavioral_observations WHERE metric_sum <> 0;` – invalid because `metric_sum` does not exist. Upheld challenges (Cycles 2, 6) require correction to use explicit column sum.”  
+
+Climate Notes:
+The session experienced high friction (signal 5 and 7) due to repeated procedural fabrications and contract violations, indicating drift from the original objective and growing operator frustration. Clarification from the operator is needed to resolve the open question before progress can resume.
