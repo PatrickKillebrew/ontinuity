@@ -12,19 +12,18 @@ ACTIVE ITEM ONLY; fold back on the record; append between Dweller laps, curate d
 - Causal assertions in sessions require an evidence channel or an ASSUMED marker (erratum #12 lesson).
 
 ## ACTIVE — certified order (receipt #14)
-1. **Contract-gate kind-aware matching.** Bare `DB_QUERY` evidence tokens unmatchable; forced a workaround inside certified receipt #13. Matcher matches execution kind OR detail. NEXT CONTRACT.
-2. **Causal-claim discipline.** ASSUMED-marker requirement + Challenger prompt hunts unmarked causality (closes the receipt-#12 laundering channel, operator-caught).
-3. **Frontend view-state truthfulness.** Concealed pre-session questions killed two starts June 6; artifact rows accumulate.
-4. **Fallback-model routing.** DEMOTED per certified rule: support is June-5-and-prior timeout history; current dominance ASSUMED (eight clean completions June 6 post-seam-fix).
-5. **Agent hands on VPS.** Operator direction set; value multiplier ASSUMED (no receipt measures it); requires design pass incl. credential custody.
-6. **Friction fix package (certified receipts #11).** Feeds on Phase-0 — fixing the scorer of unmeasured behavior waits for measurement.
-7. **Settings & credential hardening (incl. token custody).** Severe, rare, documented recovery paths.
-8. **Honest failure semantics (waiver broadening + exit codes).** Wasted laps, never stopped work.
-9. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
-10. **Duration capture.** Rides Phase-0's write-path deploy where practical (separate acceptance tests).
-11. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on Phase-0 + accumulated instrumented sessions (n≥200 randomized cycles).
-12. **Notarian + website (merged).** Operator-gated: license, positioning.
-13. **VPS odds-and-ends.** BRAVE_API_KEY (search dead, blocks no current contract), apt git, Caddy/TLS.
+1. **Causal-claim discipline.** ASSUMED-marker requirement + Challenger prompt hunts unmarked causality (closes the receipt-#12 laundering channel, operator-caught).
+2. **Frontend view-state truthfulness.** Concealed pre-session questions killed two starts June 6; artifact rows accumulate.
+3. **Fallback-model routing.** DEMOTED per certified rule: support is June-5-and-prior timeout history; current dominance ASSUMED (eight clean completions June 6 post-seam-fix).
+4. **Agent hands on VPS.** Operator direction set; value multiplier ASSUMED (no receipt measures it); requires design pass incl. credential custody.
+5. **Friction fix package (certified receipts #11).** Feeds on Phase-0 — fixing the scorer of unmeasured behavior waits for measurement.
+6. **Settings & credential hardening (incl. token custody).** Severe, rare, documented recovery paths.
+7. **Honest failure semantics (waiver broadening + exit codes).** Wasted laps, never stopped work.
+8. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
+9. **Duration capture.** Rides Phase-0's write-path deploy where practical (separate acceptance tests).
+10. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on Phase-0 + accumulated instrumented sessions (n≥200 randomized cycles).
+11. **Notarian + website (merged).** Operator-gated: license, positioning.
+12. **VPS odds-and-ends.** BRAVE_API_KEY (search dead, blocks no current contract), apt git, Caddy/TLS.
 
 ## LAYER-2 HORIZON
 Lifetime ground truth; calibrated judges; the break lane; hash-chained receipts. Layer-3: cross-institution trustless verification.
@@ -41,3 +40,8 @@ Mailbox seat (d10) · routing fixes (d11) · self-start (d12) · queue I/O (d13)
 **NEW CAPABILITY: credential vault (deploy 18).** Railway env fallback beneath dashboard overrides; armed tabs win, restarts no longer orphan the loop; first agent session started with no dashboard in existence. Operator provisioned PROVIDER_API_KEY once; external seat vaulted (MODEL_A_URL/MODEL_A_MODEL).
 **OBSERVED: work-product authoring flows through the external seat** — the agent now writes the session's own document under the verbatim-spine rule.
 **NOTE:** duration capture (item 11) did NOT ride deploy 17 — scope kept minimal; it remains queued.
+
+
+## SECOND PROOF AMENDMENTS — June 7 (session 13-31-24, receipt #16, CERTIFIED; deploy 19 agent-committed)
+**CLOSED: contract-gate kind-aware matching.** Bare evidence tokens naming an execution kind now match logged executions of that kind; detail matching untouched; unknown tokens and kind-without-executions still refuse (museum 6/6, receipt-13 specimen included). Acceptance: a DB_QUERY-evidenced session certified with ZERO workaround queries. One mid-session UPHOLD against the Researcher (reported a reference to the count instead of the count — receipt-#5 lesson class re-enforced, then corrected: 172 observations).
+**Marker for the corpus:** receipts #15-#16 are the first two fully-instrumented sessions; Phase-1's randomized-injection prerequisite data accumulates from here.
