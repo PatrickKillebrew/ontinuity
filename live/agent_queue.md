@@ -10,6 +10,7 @@ ACTIVE ITEM ONLY; fold back on the record; append between Dweller laps, curate d
 - Lineage honest everywhere: HARNESS:MODEL in seats, Assisted-by in commits, started_by in sessions.
 - No credential-bearing file in any pushable path.
 - Causal assertions in sessions require an evidence channel or an ASSUMED marker (erratum #12 lesson).
+- Objective phrasing is contract material: the Parietal contracts it literally. No demonstration theater, no purpose narration in objectives — state only what the session must establish (receipt: the 14-02-37 deadlock).
 
 ## ACTIVE — certified order (receipt #14)
 1. **Frontend view-state truthfulness.** Concealed pre-session questions killed two starts June 6; artifact rows accumulate.
@@ -50,3 +51,11 @@ Mailbox seat (d10) · routing fixes (d11) · self-start (d12) · queue I/O (d13)
 **CLOSED: causal-claim discipline.** CAUSAL_VERB_PATTERN scan + [UNMARKED CAUSAL CLAIMS] advisory to the Challenger + both prompts taught the rule (museum 6/6 incl. the receipt-12 specimen verbatim). Acceptance LIVE-FIRED: a deliberately unmarked causal close was scanned, hunted, and UPHELD as "an unmarked causal claim presented as fact" — the operator-caught failure class of receipt #12 is now machine-caught, demonstrated against its own author.
 **NEW item: ledger-adjudication coherence.** The same sentence entered session established results in cycle 2 and was ruled against in cycle 3; a later ASSUMED-marked close was then refused as "misrepresentation of an established result." Ruled-against claims must be expunged from (or never prematurely enter) session established results. Discovered inside receipt #17.
 **SIDE EFFECT observed:** the HUNT section appears to raise Challenger aggression globally — receipt #17 took 4 upholds incl. consolidated-reporting demands. Watch whether this is calibration or noise; feeds the friction work.
+
+
+## FOURTH CYCLE AMENDMENTS — June 7 (deploy 21 agent-committed; session 2026-06-07_14-02-37 operator-STOPPED after 4 upholds on an unsatisfiable criterion)
+**PARTIALLY CLOSED: frontend view-state truthfulness.** Deploy 21 shipped both contracted fixes (one truth function owns the new-session transition; questions take the screen unconditionally; museum 6/6 structural). Operator-confirmed: refreshed tab rendered CLEAN — no stale completion panel, empty artifacts rail. Item re-scoped, not closed: the view is clean but not yet TRUE.
+**RE-SCOPED item: connect-time state resync.** A freshly connected tab shows idle while a session runs (no snapshot on connect) — it concealed the live session AND the STOP button from the operator during the deadlock. Server emits engine-state snapshot to each connecting socket; client renders from it.
+**NEW item (HIGH): operator deadlock-escape endpoint.** A keyed /agent/stop (mailbox or diag) with started_by lineage — the 14-02-37 session was unstoppable: unsatisfiable JUDGED criterion, four upholds, no bounce escalation to a human modal, no tab with a STOP. Operator authority needs a handle that exists independent of browser state. Related: repeated refused closes should escalate to the operator after N bounces.
+**EVIDENCE for honest-failure-semantics item:** the operator-killed session persisted with status "complete" (6 cycles) — kill and natural close must be distinguishable statuses.
+**ARCHITECTURE NOTE (positive):** the judges refused the seat's relayed operator testimony as unreceipted evidence — the system denied its own Researcher the unverifiable-testimony move, four times, under pressure to close. The spine held against its builder; the deadlock was the correct verdict on a bad contract, and the failure was the missing escape hatch, not the refusal.
