@@ -2805,7 +2805,6 @@ def agent_start_blockers(objective):
         blockers.append("model_a has a URL but no key (and is not external)")
     return blockers
 
-@app.route('/agent/start', methods=['POST'])
 def agent_stop_core(stopped_by):
     """Deploy 22: the operator deadlock-escape. Identical semantics to the
     dashboard STOP handler — running flag down, wake a pending human-input
@@ -2840,6 +2839,7 @@ def agent_stop():
         return jsonify({"ok": True, "stopped_by": "keyed-endpoint"})
     return jsonify({"ok": False, "error": "no session running"}), 409
 
+@app.route('/agent/start', methods=['POST'])
 def agent_start():
     """Self-start for the external agent. Same key as the mailbox — initiating
     work and doing work are the same trust grade. Judging work is not: operator
