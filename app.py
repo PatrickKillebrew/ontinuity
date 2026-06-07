@@ -426,6 +426,8 @@ def build_session_payload():
         "cycles_to_session_end": s.get("cycle", 0),
         "session_ledger": s.get("session_ledger", []),
         "expunged_ledger": s.get("expunged_ledger", []),
+        "instance": os.environ.get("INSTANCE_NAME", "main").strip() or "main",
+        "modal_timeouts": s.get("modal_timeouts", []),
         "challenge_events_raw": s.get("challenge_events", []),
         "transcript_turns": transcript_turns,
         "behavioral_observations": behavioral_obs,
@@ -536,7 +538,9 @@ def rotate_backups():
         save_file(CONFIG["backup1_path"], load_file(CONFIG["knowtext_path"]))
 
 def timestamp():
-    return datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    ts = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    inst = os.environ.get("INSTANCE_NAME", "").strip()
+    return f"{ts}_{inst}" if inst else ts
 
 def artifact_path(label):
     os.makedirs(CONFIG["artifacts_dir"], exist_ok=True)
@@ -1635,7 +1639,14 @@ def corroborated_challenge_should_close(end_requested, assessment):
     approval proceeds to the close gates (which all still run)."""
     return bool(end_requested) and (assessment or {}).get("deliverable") == "complete"
 
+MODAL_TIMEOUT_S = 3600
+
 def wait_for_human_input(input_type, context):
+    """Deploy 26 (certified spec, receipt #27): externally-started sessions route
+    operator modals to the mailbox as well as the dashboard — first responder
+    wins. An instance with no dashboard is no longer mute at judgment points.
+    Empty resumes are never silent: timeouts are recorded in the session payload
+    (the 15-31-18 defect)."""
     active_session["waiting_for_input"] = True
     active_session["input_type"] = input_type
     active_session["human_input_context"] = context  # Deploy 24: snapshots replay the modal
@@ -1646,10 +1657,40 @@ def wait_for_human_input(input_type, context):
         'context': context,
         'cycle': active_session["cycle"]
     })
-    active_session["human_input_event"].wait(timeout=3600)
+    via_mailbox = active_session.get("started_by") == "external-mailbox"
+    if via_mailbox:
+        external_mailbox["kind"] = "human_input_needed"
+        external_mailbox["turn_id"] += 1
+        external_mailbox["system"] = f"OPERATOR-LAYER MODAL ({input_type}). Answer with session guidance, or escalate to the human operator before responding if the judgment exceeds the seat."
+        external_mailbox["conversation"] = [{"role": "user", "content": context or ""}]
+        external_mailbox["cycle"] = active_session.get("cycle", 0)
+        external_mailbox["session_id"] = active_session.get("start_time", "")
+        external_mailbox["response"] = None
+        external_mailbox["event"].clear()
+        external_mailbox["waiting"] = True
+        socketio.emit('routing_action', {'type': 'cycle',
+            'message': f"Modal ({input_type}) posted to external mailbox as turn {external_mailbox['turn_id']} — dashboard and mailbox both armed."})
+        deadline = time.time() + MODAL_TIMEOUT_S
+        value = None
+        while time.time() < deadline:
+            if active_session["human_input_event"].wait(timeout=2):
+                value = active_session["human_input_value"]
+                break
+            if external_mailbox["response"] is not None:
+                value = external_mailbox["response"]
+                break
+        external_mailbox["waiting"] = False
+    else:
+        active_session["human_input_event"].wait(timeout=MODAL_TIMEOUT_S)
+        value = active_session["human_input_value"]
     active_session["waiting_for_input"] = False
     active_session["human_input_context"] = None
-    return active_session["human_input_value"] or ""
+    if not value:
+        active_session.setdefault("modal_timeouts", []).append(
+            {"type": input_type, "cycle": active_session.get("cycle"), "note": "resumed empty after timeout"})
+        socketio.emit('routing_action', {'type': 'error',
+            'message': f"Modal ({input_type}) resumed EMPTY after timeout — recorded in session payload."})
+    return value or ""
 
 # -----------------------------------------
 # FRICTION SCORING
@@ -2723,8 +2764,17 @@ def run_session_loop(objective, start_fresh=False, contract=None):
 
     # Try Parietal DISTILL first — entire distillation phase guarded so a
     # failure here can never skip the session log or the workspace write.
+    # Deploy 26 (lineage isolation, certified spec receipt #27): a session that
+    # did not read the lineage does not write to it — start_fresh seals both
+    # narrative layers (Knowtext AND the Established Results ledger). Data
+    # writes (corpus, transcripts, receipts) are untouched: data in, narrative out.
+    lineage_sealed = bool(active_session.get("start_fresh"))
+    if lineage_sealed:
+        socketio.emit('routing_action', {'type': 'distillation',
+            'message': 'Lineage isolation: start_fresh session — Knowtext and Established Results writes skipped by design.'})
+        active_session["distillation_method"] = "isolated"
     try:
-        parietal_distilled = run_distillation_with_timeout(lambda: run_parietal_distill(knowtext))
+        parietal_distilled = None if lineage_sealed else run_distillation_with_timeout(lambda: run_parietal_distill(knowtext))
         distilled = False
         if parietal_distilled:
             valid, missing = validate_knowtext_response(parietal_distilled)
@@ -2742,11 +2792,12 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                 if distilled:
                     active_session["distillation_method"] = "projenius"
         else:
-            socketio.emit('routing_action', {'type': 'distillation', 'message': 'Parietal distillation failed — trying Projenius...'})
-            distilled = run_distillation_with_timeout(run_distillation) or False
-            if distilled:
-                active_session["distillation_method"] = "projenius"
-        if not distilled:
+            if not lineage_sealed:
+                socketio.emit('routing_action', {'type': 'distillation', 'message': 'Parietal distillation failed — trying Projenius...'})
+                distilled = run_distillation_with_timeout(run_distillation) or False
+                if distilled:
+                    active_session["distillation_method"] = "projenius"
+        if not distilled and not lineage_sealed:
             socketio.emit('routing_action', {'type': 'distillation', 'message': 'Distillation skipped — session complete without Knowtext update.'})
             active_session["distillation_method"] = "failed"
         else:
