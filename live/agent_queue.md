@@ -12,17 +12,16 @@ contract the HEAD ACTIVE ITEM ONLY; fold back on the record; append between laps
 - Objective phrasing is contract material: no demonstration theater, no purpose narration — state only what the session must establish (the 14-02-37 deadlock).
 
 ## ACTIVE — certified order (receipt #19)
-1. **Ledger-adjudication coherence.** Ruled-against claims expunged from session established results. Evidence: receipt #17's contradiction loop.
-2. **Fallback-model routing.** Demoted again under the standing rule (current risk ASSUMED; 13+ clean sessions June 6-7). Gains from item 1: a provider-dead session becomes stoppable instead of hung.
-3. **Honest failure semantics.** Now carries today's evidence: operator-killed session persisted as "complete"; kill and natural close must be distinguishable. Plus waiver broadening and exit codes.
-4. **Friction fix package (certified receipts #11).** Consumes Phase-0 data (3 instrumented sessions and counting).
-5. **Agent hands on VPS.** Value multiplier ASSUMED; awaits design pass incl. credential custody.
-6. **Settings & credential hardening.** Severe, rare, documented recoveries.
-7. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
-8. **Duration capture.** Research feedstock.
-9. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on instrumented accumulation (n≥200 randomized cycles).
-10. **Notarian + website.** Operator-gated: license, positioning.
-11. **VPS odds-and-ends.** BRAVE key, apt git, TLS.
+1. **Fallback-model routing.** Demoted again under the standing rule (current risk ASSUMED; 13+ clean sessions June 6-7). Gains from item 1: a provider-dead session becomes stoppable instead of hung.
+2. **Honest failure semantics.** Now carries today's evidence: operator-killed session persisted as "complete"; kill and natural close must be distinguishable. Plus waiver broadening and exit codes.
+3. **Friction fix package (certified receipts #11).** Consumes Phase-0 data (3 instrumented sessions and counting).
+4. **Agent hands on VPS.** Value multiplier ASSUMED; awaits design pass incl. credential custody.
+5. **Settings & credential hardening.** Severe, rare, documented recoveries.
+6. **Museum merge & repo consolidation.** Latent single-point-of-loss on the test harness.
+7. **Duration capture.** Research feedstock.
+8. **Phase-1 causality experiment (certified protocol, receipt #13).** Hard-blocked on instrumented accumulation (n≥200 randomized cycles).
+9. **Notarian + website.** Operator-gated: license, positioning.
+10. **VPS odds-and-ends.** BRAVE key, apt git, TLS.
 
 ## LAYER-2 HORIZON
 Lifetime ground truth; calibrated judges; the break lane; hash-chained receipts. Layer-3: cross-institution trustless verification.
@@ -53,3 +52,12 @@ June 7: Phase-0 instrumentation (d17, acceptance PASSED: corpus measures behavio
 ## SIXTH CYCLE AMENDMENTS — June 7 (deploy 24 agent-committed, 2 files; acceptance session 15-20-56, receipt #21)
 **CLOSED: connect-time state resync.** Every connecting socket receives a state snapshot (running/finalizing, cycle, lineage, modal type+context — now stashed for replay — and a 12-entry transcript tail); the client renders live state instead of assuming idle. Companion to deploy 21: clean view, now true view. Acceptance at PROTOCOL level with a real socket client: idle snapshot verified; a late joiner during a live agent-started session saw RUNNING, external-mailbox lineage, and live cycle — the June 7 concealment condition. Tail nuance, recorded honestly: the live test parked at cycle 1 where the transcript is truthfully empty, so the empty tail was the correct value; tail extraction is museum-proven (12-cap from a 20-entry fixture). Operator visual confirmation available on any future live refresh.
 **Hatch mileage:** /agent/stop exercised a second time (receipt #21's session), clean kill, honest UNMET spine.
+
+
+## SEVENTH CYCLE AMENDMENTS — June 7 (deploy 25 agent-committed; acceptance session 15-31-18, receipt #22; operator ruling via signal-4 modal)
+**CLOSED: ledger-adjudication coherence.** UPHOLD rulings expunge same-cycle ledger entries and older entries restated in the overruled response (normalized containment / 0.8 token overlap); expungements are never silent — they move to rejected_claims and an expunged_ledger audit trail in the persisted record. Museum 6/6 incl. the receipt-#17 specimen verbatim. PROVEN LIVE: engine console 15:37:28, "2 established-result entries expunged by the uphold"; the #17 refusal class did not recur under provoking conditions.
+**OPERATOR CIRCUIT proven end-to-end:** signal-4 escalation → NAVIGATE → modal delivered to a connected tab WITHOUT refresh (deploy 24 live confirmation, operator-witnessed) → operator ruling (four-column metric definition) → session resumed and closed. Judgment stayed human; machinery delivered it.
+**NEW item: contract-authoring evidence discipline.** The Parietal embedded phantom SQL (nonexistent metric_sum column) as a frozen VERIFIABLE evidence string — unexecutable, unmatchable. Parietal prompt rule: evidence strings must be bare kind tokens or verbatim copies of commands that actually executed in pre-session or prior record. (Second gate-grammar costume after receipt #13's bare-token defect.)
+**NEW item (minor): query-guard literal handling.** Semicolons inside string literals false-positive as multiple statements.
+**NEW item (product, operator-initiated): interface evolution.** The dashboard is construction scaffolding; the use cases are (a) a thin operator governor console — state, modals, kill switch, receipts, queue, notification-driven, phone-first; (b) an async researcher flow — objective intake, questions by notification, certified work product + receipt as the deliverable; (c) the mailbox as the complete agent interface (proven). First queue item about the paying user; ranks at next lap alongside the operator-gated Notarian decision.
+**STANDING CRITERION recorded (operator question "when is it enough"):** ship-readiness = a 20-30 session burn-in with zero false certifications on audit, zero operator-unreachable states, all new defects in the efficiency class (not integrity/authority), and operator touches only at constitutional judgment points. Phase-1 accumulation doubles as the burn-in. Severity trend within June 7: cycles 1-4 surfaced integrity-class defects, 5-7 only efficiency-class — falling severity is the reliability curve to watch.
