@@ -1508,6 +1508,25 @@ function resetViewForNewSession() {
   tagFirstTime.cleared = false;
 }
 
+// Deploy 24: connect-time state resync — a joining tab renders the engine's
+// actual state instead of assuming idle. Companion to deploy 21: 21 made the
+// view clean, this makes it true.
+socket.on('state_snapshot', (s) => {
+  if (s.running || s.finalizing) {
+    sessionRunning = s.running;
+    resetViewForNewSession();
+    document.getElementById('startScreen').style.display = 'none';
+    document.getElementById('completeScreen').style.display = 'none';
+    document.getElementById('transcript').style.display = 'flex';
+    document.getElementById('statusDot').className = s.waiting_for_input ? 'status-dot waiting' : 'status-dot running';
+    document.getElementById('stopBtn').className = 'stop-btn visible';
+    document.getElementById('cycleNum').textContent = s.cycle;
+    (s.transcript_tail || []).forEach(e => addMessage(e.role, e.role === 'model_a' ? 'Researcher' : (e.role === 'model_b' ? 'Challenger' : e.role), e.content, e.cycle));
+    addConsoleEntry('injection', `Reconnected to live session — cycle ${s.cycle}, started by ${s.started_by}.`);
+    if (s.waiting_for_input && s.input_type) showModal(s.input_type, s.input_context || '');
+  }
+});
+
 socket.on('session_started', (data) => {
   sessionRunning = true;
   resetViewForNewSession();

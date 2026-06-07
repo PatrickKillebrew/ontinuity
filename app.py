@@ -1597,6 +1597,7 @@ def corroborated_challenge_should_close(end_requested, assessment):
 def wait_for_human_input(input_type, context):
     active_session["waiting_for_input"] = True
     active_session["input_type"] = input_type
+    active_session["human_input_context"] = context  # Deploy 24: snapshots replay the modal
     active_session["human_input_event"].clear()
     active_session["human_input_value"] = None
     socketio.emit('human_input_needed', {
@@ -1606,6 +1607,7 @@ def wait_for_human_input(input_type, context):
     })
     active_session["human_input_event"].wait(timeout=3600)
     active_session["waiting_for_input"] = False
+    active_session["human_input_context"] = None
     return active_session["human_input_value"] or ""
 
 # -----------------------------------------
@@ -3465,6 +3467,31 @@ def handle_stop_session(data):
     # Deploy 22: one stop path, two handles — the dashboard button and the
     # keyed endpoint run identical semantics (Deploy 14's mailbox wake included).
     agent_stop_core("dashboard")
+
+def build_state_snapshot():
+    """Deploy 24 (connect-time state resync): the dashboard is event-driven with
+    no memory — a tab joining mid-session rendered idle and hid the STOP control
+    (June 7: it concealed a live session and the operator's authority during the
+    14-02-37 deadlock). Every connecting socket now receives the engine's actual
+    state and recent transcript, so what the operator sees is what is true."""
+    s = active_session
+    snap = {"running": bool(s.get("running")), "cycle": s.get("cycle", 0),
+            "finalizing": bool(s.get("finalizing")),
+            "started_by": s.get("started_by", "dashboard"),
+            "waiting_for_input": bool(s.get("waiting_for_input")),
+            "input_type": s.get("input_type") if s.get("waiting_for_input") else None,
+            "input_context": s.get("human_input_context") if s.get("waiting_for_input") else None,
+            "objective": (s.get("objective") or "")[:500],
+            "transcript_tail": []}
+    if snap["running"] or snap["finalizing"]:
+        snap["transcript_tail"] = [
+            {"role": e.get("role"), "content": (e.get("content") or "")[:4000], "cycle": e.get("cycle", 0)}
+            for e in s.get("transcript", [])[-12:]]
+    return snap
+
+@socketio.on('connect')
+def handle_connect():
+    emit('state_snapshot', build_state_snapshot())
 
 @socketio.on('get_status')
 def handle_get_status(data):
