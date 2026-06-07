@@ -1,11 +1,9 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Missing inputs: session ledger, NAVIGATE outputs, ADJUDICATE rulings, friction signal sequence, current Knowtext document.
-
 Identity: NO CHANGE
 Active Frameworks: NO CHANGE
 Open Questions: NO CHANGE
 Valence Mapping: NO CHANGE
 Delta Log: NO CHANGE
 Correction History: NO CHANGE
-Climate Notes: NO CHANGE
+Climate Notes: Missing required session inputs (ledger, NAVIGATE outputs, ADJUDICATE rulings, friction sequence, Knowtext document); unable to record updates.
