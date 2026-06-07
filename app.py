@@ -1360,10 +1360,12 @@ def f3_summary(verdicts):
 # API CALLS - PROVIDER AGNOSTIC
 # -----------------------------------------
 def get_api_key(role):
-    """Get API key — runtime override from frontend takes precedence over environment."""
-    if role in runtime_configs and runtime_configs[role].get('key'):
-        return runtime_configs[role]['key'].strip()
-    return CONFIG[role]["api_key"].strip()
+    """Deploy 30: resolve through the effective config so the vault fallback
+    reaches the Authorization header. This function predated deploy 18 and read
+    only runtime/CONFIG — so tab-less instances sent 'Bearer ' (empty) and drew
+    403 from every provider while the blockers (vault-aware) passed. The entire
+    farm 403 differential was this one vault-blind line."""
+    return (get_effective_config(role).get("api_key") or "").strip()
 
 def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
     headers = {
