@@ -425,6 +425,7 @@ def build_session_payload():
         "cycles_to_first_challenge": first_challenge,
         "cycles_to_session_end": s.get("cycle", 0),
         "session_ledger": s.get("session_ledger", []),
+        "expunged_ledger": s.get("expunged_ledger", []),
         "challenge_events_raw": s.get("challenge_events", []),
         "transcript_turns": transcript_turns,
         "behavioral_observations": behavioral_obs,
@@ -696,6 +697,46 @@ def extract_rejected_claim(response, cycle):
             if summary not in active_session["rejected_claims"]:
                 active_session["rejected_claims"].append(summary)
             return
+
+def _norm_text(t):
+    return re.sub(r"[^a-z0-9 ]+", "", re.sub(r"\s+", " ", (t or "").lower())).strip()
+
+def expunge_overruled_ledger(challenged_response, ruling_cycle):
+    """Deploy 25 (ledger-adjudication coherence, receipt-#17 defect): when a ruling
+    upholds a challenge, the claims it overrules must leave the session's
+    established results. Receipt #17: a sentence entered the ledger in cycle 2,
+    was ruled against in cycle 3, and the stale ledger entry was then used to
+    refuse the marked correction as "misrepresentation of an established result"
+    — the adjudication and the ledger disagreed about one sentence. Expunged
+    entries are not silently deleted: they move to rejected_claims (already
+    injected to the Researcher every cycle) and to an expunged_ledger audit
+    trail in the session record."""
+    ledger = active_session.get("session_ledger", [])
+    if not ledger:
+        return 0
+    resp_norm = _norm_text(challenged_response)
+    resp_words = set(resp_norm.split())
+    kept, expunged = [], []
+    for entry in ledger:
+        overruled = entry.get("cycle") == ruling_cycle
+        if not overruled:
+            e_norm = _norm_text(entry.get("summary", ""))
+            if len(e_norm) >= 40 and e_norm in resp_norm:
+                overruled = True  # the restatement case: an older entry living inside the overruled response
+            else:
+                e_words = set(e_norm.split())
+                if len(e_words) >= 8 and resp_words and len(e_words & resp_words) / len(e_words) >= 0.8:
+                    overruled = True
+        (expunged if overruled else kept).append(entry)
+    if expunged:
+        active_session["session_ledger"] = kept
+        audit = active_session.setdefault("expunged_ledger", [])
+        for e in expunged:
+            audit.append({"cycle": e.get("cycle"), "summary": e.get("summary"), "expunged_by_ruling_cycle": ruling_cycle})
+            line = f"EXPUNGED from established results by cycle-{ruling_cycle} ruling: {e.get('summary','')[:200]}"
+            if line not in active_session["rejected_claims"]:
+                active_session["rejected_claims"].append(line)
+    return len(expunged)
 
 def get_datetime_injection():
     """F.4: inject the real current date/time from the system clock. The model has
@@ -2424,6 +2465,9 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                     # If ruling is UPHOLD, extract the rejected claim for Researcher memory
                     if "UPHOLD" in ruling.upper():
                         extract_rejected_claim(ruling, active_session["cycle"])
+                        n_exp = expunge_overruled_ledger(a_response, active_session["cycle"])
+                        if n_exp:
+                            socketio.emit('routing_action', {'type': 'info', 'message': f'Ledger coherence: {n_exp} established-result entr{"y" if n_exp == 1 else "ies"} expunged by the uphold.'})
                         socketio.emit('routing_action', {
                             'type': 'parietal',
                             'message': 'Claim ruled against — added to Researcher session memory.'
