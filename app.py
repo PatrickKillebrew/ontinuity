@@ -814,7 +814,8 @@ ABSENCE_CLAIM_PATTERN = re.compile(
     r"\b(no\s+(?:such\s+)?[\w'-]+(?:[\w\s'-]{0,40})?\s+(?:exists?|was\s+found|were\s+found|is\s+present|are\s+present|is\s+recorded|are\s+recorded|can\s+be\s+(?:retrieved|found|located))"
     r"|does\s+not\s+exist|do\s+not\s+exist"
     r"|cannot\s+be\s+(?:retrieved|found|located)"
-    r"|none\s+(?:exists?|was\s+found|were\s+found))", re.IGNORECASE)
+    r"|none\s+(?:exists?|was\s+found|were\s+found)"
+    r"|does\s+not\s+contain|do\s+not\s+contain|contains?\s+no\s)", re.IGNORECASE)
 
 ABSENCE_GENERALIZER = re.compile(
     r"\b(in\s+the\s+(?:database|system|corpus|entire\s+\w+)|anywhere|at\s+all|whatsoever"
