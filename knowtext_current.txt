@@ -1,19 +1,9 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
-Identity: NO CHANGE  
-Active Frameworks: NO CHANGE  
-Open Questions: NO CHANGE  
-Valence Mapping: NO CHANGE  
-Delta Log:  
-- Established that earlier sessions have zero metrics because transcript entries lacked cycle numbers, which blocked the per‑cycle metric builder; the repair is recorded as commit `deploy 17` in the project record.  
-- Recorded the verifiable query result: `SELECT COUNT(DISTINCT session_id) AS instrumented FROM behavioral_observations WHERE model_a_word_count > 0` returned `instrumented = 2`.  
-- Added adjudication rulings:  
-  • Cycle 2 – [RULING: UPHOLD] – upheld the challenge that the causal explanation for zero metrics was unsupported by session evidence.  
-  • Cycle 4 – [RULING: UPHOLD] – upheld the challenge that Model A’s claim that both deliverables were complete was unsupported; the query result exists but was not presented as required.  
-
-Correction History:  
-- Cycle 2 UPHOLD: corrected the unsupported causal claim linking missing cycle numbers to zero metrics.  
-- Cycle 4 UPHOLD: corrected the unsupported assertion that both deliverables were complete without presenting the required count.  
-
-Climate Notes:  
-The session experienced moderate friction, with signal 1 spikes in cycles 3 and 5 indicating moments of uncertainty around causal explanations and deliverable completeness. Overall, the team maintained clear procedural focus, successfully grounding the metric count and clarifying prior assumptions.
+Identity: NO CHANGE
+Active Frameworks: NO CHANGE
+Open Questions: NO CHANGE
+Valence Mapping: NO CHANGE
+Delta Log: Established that the operator deadlock-escape endpoint outranks fallback-model routing (Cycle 1 ruling). Established lap‑2 standing rule applied symmetrically: rank by current receipt evidence, mark the rest ASSUMED (Cycle 2 ruling).
+Correction History: NO CHANGE
+Climate Notes: Moderate friction observed when an UPHOLD ruling conflicted with a prior ledger entry, but the session objective stayed traceable and progress continued without major disruption.
