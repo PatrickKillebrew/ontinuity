@@ -77,3 +77,10 @@ June 7: Phase-0 instrumentation (d17, acceptance PASSED: corpus measures behavio
 **STANDING RULES (parallel-instance doctrine):** the main line ALONE touches the queue (read-modify-write races); farm sessions run start_fresh ALWAYS (Knowtext isolation); farm pushes nothing to the repo (no GitHub token in its vault).
 **NEW item: session-ID instance suffix.** IDs are timestamps; two instances starting in the same second collide. Low odds, real, cheap fix.
 **NEW item: farm shepherding.** Lightweight start-next-when-idle driver (objective list, /agent/start on idle, honest stop on deadlock) — currently the seat shepherds manually between other work.
+
+
+## OPERATING-MODEL AMENDMENT — June 7 afternoon (operator delegation, recorded)
+**DELEGATION (operator-granted): the seat manages both mailboxes.** The agent shepherds farm-lane sessions end to end — starts, pre-session answers, modal triage — at sequenced leisure between operator-facing work, escalating to the operator only for judgments exceeding the seat: main-line waivers/amendments, ambiguity, irreversibility. Operator is summoned, never stationed.
+**RULING (operator): one database, shared.** Farm sessions are rows in the same corpus — Phase-1 and the burn-in count them; Projenius orients across both lanes by design. Isolation remains Knowtext (start_fresh) and queue custody (main line only).
+**FARM PROVIDER DECISION:** farm moves to Cerebras (operator key pending) — provider diversification achieved by detour; the Novita-farm 403 differential becomes a queued curiosity with the /diag/provider-probe instrument attached (15-line deploy, both instances inherit, converts the mystery to evidence when wanted).
+**GOVERNOR UI feature (operator-requested):** display the meta-loop counter — head -> contract -> build -> acceptance -> fold cycles completed — as a first-class metric; doubles as the throughput curve for the duration-capture research thread.
