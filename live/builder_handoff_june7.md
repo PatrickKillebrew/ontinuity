@@ -36,3 +36,17 @@ DIAG_KEY (both instances, /diag/*), MAIN MAILBOX_KEY, FARM MAILBOX_KEY (agent-ge
 
 ## STANDING LEDGERS
 live/agent_queue.md (certified moves; main line only), live/horizons.md (imagination, fenced), live/conversations/ (provenance, mandatory redaction), this file. The queue's amendments sections are the day-by-day truth.
+
+## MIGRATION PROTOCOL (added same evening — the flawless-handoff pass)
+**Precedence rule:** this dated document and the repo's queue OUTRANK conversation memory wherever they conflict; memory lags. This document SUPERSEDES all prior handoff documents in project knowledge (May 13, June 1, June 4 et al.).
+**Truth-source rule:** never trust cached numbers in a handoff. Battery position = derive from write_receipts (farm-suffixed sessions after receipt #35 map to battery order). Engine state = /diag/engine on both instances. Queue head = read live/agent_queue.md fresh.
+**Master key:** every farm/main secret except the GitHub token is recoverable from the Railway project token:
+  curl -s https://backboard.railway.app/graphql/v2 -H "Project-Access-Token: <TOKEN>" -H "Content-Type: application/json" -d '{"query":"query { variables(projectId: \"a8dea5f4-b34e-466e-b22c-0d5b59fc63b5\", environmentId: \"6ff341f9-675e-4514-9b0c-5defe9d3d2a9\", serviceId: \"<SVC>\") }"}'
+  (FARM svc ae72de62-c1ac-43c1-9d78-ec5e3c0557e5 holds MAILBOX_KEY/farm, DIAG_KEY, both provider keys; MAIN svc 72b20f74-d24d-4502-ba35-97e2d09f809a holds MAILBOX_KEY/main.) The project token is therefore the crown jewel.
+**Quiesce before migrating (operator side):** check /diag/engine on both instances; let live sessions finish or /agent/stop them; note nothing — the receipts are the record.
+**Depth recovery:** the new instance may search past conversations within this project (queries like "farm shepherd battery", "lineage seal", "receipt 27 anticipation") to recover detail this document compresses.
+**RESUMPTION PROTOCOL (the acceptance test — do this before ANY work):**
+1. Read this file, then live/agent_queue.md (amendments sections bottom-up), then live/horizons.md.
+2. Recover keys via the master-key query; verify by calling /diag/engine on BOTH instances.
+3. Read the latest 3 write_receipts and the queue head.
+4. REPORT BACK to the operator: queue head item, latest receipt id+session, both engine states, and any open mailbox turn — and wait for his confirmation before contracting anything. Resumption is certified by his "go", same as everything else.
