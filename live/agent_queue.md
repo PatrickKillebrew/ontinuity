@@ -108,3 +108,8 @@ June 7: Phase-0 instrumentation (d17, acceptance PASSED: corpus measures behavio
 **MINOR new item:** one 404 mid-session on a farm model call — audit the farm's role model strings (one string likely wrong for Cerebras); the session completed regardless.
 **Receipts #29-#32:** main seal acceptance + the farm's honest failure records along the way.
 **NEXT:** objective battery design (15-20 varied templates) + shepherded burn-in grind on the farm; EXPERIMENT_MODE deploy before the counted 200.
+
+
+## MIGRATION-READINESS AMENDMENT — June 7 (operator: "flawless handoff for users")
+**Succession secured:** live/builder_handoff_latest.md (stable pointer, supersedes all prior handoffs) + battery.json + shepherd.py committed. Resumption protocol defined with an acceptance test (new instance reports queue head + latest receipt + both engine states, waits for operator "go"). Keyring reduced to two values: Railway project token (master key — recovers every vaulted secret) + GitHub token.
+**NEW item (product, the user generalization): /agent/handoff endpoint.** Migration today is a document ritual; for users it should be one keyed API call returning live resumption state — engine states, queue head, latest receipts, battery/lap position, open mailbox turns. The handoff DOC carries slow-changing method; the ENDPOINT carries fast-changing state. This is the seat-layer sibling of Knowtext (the working layer that survives any single context window) and a direct expression of Ontinuity's core value: context continuity across time.
