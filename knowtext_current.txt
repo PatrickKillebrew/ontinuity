@@ -1,9 +1,11 @@
 KNOWTEXT SCHEMA VERSION: 1.1
 
+Missing inputs: session ledger, NAVIGATE outputs, ADJUDICATE rulings, friction signal sequence, current Knowtext document.
+
 Identity: NO CHANGE
 Active Frameworks: NO CHANGE
 Open Questions: NO CHANGE
 Valence Mapping: NO CHANGE
-Delta Log: Established that the operator deadlock-escape endpoint outranks fallback-model routing (Cycle 1 ruling). Established lap‑2 standing rule applied symmetrically: rank by current receipt evidence, mark the rest ASSUMED (Cycle 2 ruling).
+Delta Log: NO CHANGE
 Correction History: NO CHANGE
-Climate Notes: Moderate friction observed when an UPHOLD ruling conflicted with a prior ledger entry, but the session objective stayed traceable and progress continued without major disruption.
+Climate Notes: NO CHANGE
