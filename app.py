@@ -159,15 +159,34 @@ runtime_configs = {}
 # Structure: { 'token': '...', 'repo': 'user/repo' }
 runtime_github = {}
 
+# Deploy 18: Railway is the vault, the tab is the override. Configs armed from a
+# dashboard always win; when a deploy restart wipes process memory and no tab has
+# re-armed, roles fall back to operator-provisioned env vars so agent-started
+# sessions survive restarts. Keys remain operator-provisioned, never in the repo.
+# Vault envs: <ROLE>_API_KEY / <ROLE>_URL / <ROLE>_MODEL (e.g. MODEL_B_API_KEY),
+# with PROVIDER_API_KEY / PROVIDER_URL as the shared default beneath those.
+def _vault_fallback(role, config):
+    prefix = role.upper()
+    shared_key = os.environ.get("PROVIDER_API_KEY", "").strip()
+    shared_url = os.environ.get("PROVIDER_URL", "").strip()
+    if not config.get("api_key"):
+        config["api_key"] = os.environ.get(f"{prefix}_API_KEY", "").strip() or shared_key
+    if not config.get("url"):
+        config["url"] = os.environ.get(f"{prefix}_URL", "").strip() or shared_url
+    env_model = os.environ.get(f"{prefix}_MODEL", "").strip()
+    if env_model and not (role in runtime_configs and runtime_configs[role].get("model")):
+        config["model"] = env_model
+    return config
+
 def get_effective_config(role):
-    """Merge base CONFIG with any runtime overrides from the frontend settings modal."""
+    """Merge base CONFIG with runtime overrides (dashboard), then vault env fallback."""
     config = dict(CONFIG[role])
     if role in runtime_configs:
         rc = runtime_configs[role]
         if rc.get('key'): config['api_key'] = rc['key'].strip()
         if rc.get('url'): config['url'] = rc['url'].strip()
         if rc.get('model'): config['model'] = rc['model'].strip()
-    return config
+    return _vault_fallback(role, config)
 
 def get_best_available_model():
     """Return the best configured model role for extraction tasks.
