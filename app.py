@@ -2598,7 +2598,16 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                             break
                         conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
                         continue
-                    conversation.append({"role": "user", "content": f"The session cannot close yet: review indicates the deliverable is not complete. Continue the work.\n\n[CHALLENGER REVIEW]: {b_response}\n{ambient_line}"})
+                    active_session["close_refusals"] = active_session.get("close_refusals", 0) + 1
+                    escalation = ""
+                    if active_session["close_refusals"] >= 3:
+                        # Deploy 22: repeated refused closes are the deadlock signature
+                        # (14-02-37 took four with no surfacing). Escalate visibly to the
+                        # operator console and name the escape hatch to the seat — without
+                        # blocking, which would recreate the unstoppable class.
+                        escalation = f"\n\n[DEADLOCK ESCALATION]: {active_session['close_refusals']} consecutive refused closes. If a criterion is unsatisfiable, this session requires operator action (waiver, amendment, or stop via the keyed /agent/stop endpoint). State the impasse plainly rather than fabricating satisfaction."
+                        socketio.emit('routing_action', {'type': 'error', 'message': f"DEADLOCK ESCALATION: {active_session['close_refusals']} consecutive refused closes — operator attention requested."})
+                    conversation.append({"role": "user", "content": f"The session cannot close yet: review indicates the deliverable is not complete. Continue the work.\n\n[CHALLENGER REVIEW]: {b_response}{escalation}\n{ambient_line}"})
                     continue
 
             # Track 1 — no-progress ceiling: N consecutive cycles with no progress.
@@ -2797,6 +2806,40 @@ def agent_start_blockers(objective):
     return blockers
 
 @app.route('/agent/start', methods=['POST'])
+def agent_stop_core(stopped_by):
+    """Deploy 22: the operator deadlock-escape. Identical semantics to the
+    dashboard STOP handler — running flag down, wake a pending human-input
+    wait, wake a pending mailbox wait so the loop exits through the
+    no-response stop path and the end sequence writes immediately. June 7:
+    session 14-02-37 was unstoppable (unsatisfiable judged criterion, four
+    upholds, no tab with a control); operator authority needs a handle that
+    exists independent of browser state."""
+    if not active_session.get("running"):
+        return False
+    active_session["running"] = False
+    active_session["stopped_by"] = stopped_by
+    if active_session["waiting_for_input"]:
+        active_session["human_input_value"] = "[SESSION STOPPED BY OPERATOR]"
+        active_session["human_input_event"].set()
+    if external_mailbox.get("waiting"):
+        external_mailbox["response"] = None
+        external_mailbox["event"].set()
+    socketio.emit('routing_action', {'type': 'error', 'message': f'Session stopped by operator ({stopped_by}).'})
+    return True
+
+@app.route('/agent/stop', methods=['POST'])
+def agent_stop():
+    """Keyed stop. Same key as the mailbox: the operator holds it, and the
+    constitution's judgment-stays-human line is preserved because the key is
+    operator-provisioned — possession of the handle IS the authorization."""
+    if not os.environ.get("MAILBOX_KEY", "").strip():
+        return jsonify({"error": "mailbox disabled — set MAILBOX_KEY in Railway variables"}), 503
+    if not _mailbox_auth_ok():
+        return jsonify({"error": "bad mailbox key"}), 403
+    if agent_stop_core("keyed-endpoint"):
+        return jsonify({"ok": True, "stopped_by": "keyed-endpoint"})
+    return jsonify({"ok": False, "error": "no session running"}), 409
+
 def agent_start():
     """Self-start for the external agent. Same key as the mailbox — initiating
     work and doing work are the same trust grade. Judging work is not: operator
@@ -2813,6 +2856,8 @@ def agent_start():
     if blockers:
         return jsonify({"error": "cannot start", "blockers": blockers}), 409
     active_session["started_by"] = "external-mailbox"
+    active_session["close_refusals"] = 0
+    active_session["stopped_by"] = None
     socketio.emit('routing_action', {'type': 'injection',
         'message': f"Session start requested by external agent via /agent/start (start_fresh: {start_fresh})."})
     t = threading.Thread(target=pre_session_then_start, args=(objective, start_fresh))
@@ -2952,6 +2997,7 @@ def diag_relay(endpoint):
                         "waiting_for_input": bool(active_session.get("waiting_for_input")),
                         "input_type": active_session.get("input_type") if active_session.get("waiting_for_input") else None,
                         "started_by": active_session.get("started_by", "dashboard"),
+                        "stopped_by": active_session.get("stopped_by"),
                         "finalizing": bool(active_session.get("finalizing")),
                         "contract_criteria": len(active_session.get("contract", []))})
     if not WORKSPACE_URL:
@@ -3246,6 +3292,8 @@ def handle_start_session(data):
                 runtime_configs[role] = {'key': cfg.strip()}
     received_fresh = bool(data.get('start_fresh', False))
     active_session["started_by"] = "dashboard"
+    active_session["close_refusals"] = 0
+    active_session["stopped_by"] = None
     emit('routing_action', {'type': 'injection', 'message': f'start_fresh received from dashboard: {received_fresh}'})
     thread = threading.Thread(target=pre_session_then_start, args=(objective, received_fresh))
     thread.daemon = True
@@ -3414,18 +3462,9 @@ def handle_human_input(data):
 
 @socketio.on('stop_session')
 def handle_stop_session(data):
-    active_session["running"] = False
-    if active_session["waiting_for_input"]:
-        active_session["human_input_value"] = "[SESSION STOPPED BY OPERATOR]"
-        active_session["human_input_event"].set()
-    if external_mailbox.get("waiting"):
-        # Deploy 14: a stop during a pending external turn must wake the wait —
-        # response stays None, so the loop exits through the no-response stop
-        # path and the end sequence writes immediately (June 6 zombie specimen:
-        # stopped sessions slept up to 15 minutes before writing).
-        external_mailbox["response"] = None
-        external_mailbox["event"].set()
-    socketio.emit('routing_action', {'type': 'error', 'message': 'Session stopped by operator.'})
+    # Deploy 22: one stop path, two handles — the dashboard button and the
+    # keyed endpoint run identical semantics (Deploy 14's mailbox wake included).
+    agent_stop_core("dashboard")
 
 @socketio.on('get_status')
 def handle_get_status(data):
