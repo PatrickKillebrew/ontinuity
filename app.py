@@ -1368,7 +1368,10 @@ def get_api_key(role):
 def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
     headers = {
         "Authorization": f"Bearer {get_api_key(role)}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        # Deploy 28: a named User-Agent — provider edges (Cloudflare error 1010)
+        # firewall anonymous/default Python agents; the engine identifies itself.
+        "User-Agent": "Ontinuity-Engine/1.0"
     }
     body = {
         "model": endpoint_config["model"],
