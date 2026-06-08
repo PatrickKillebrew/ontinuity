@@ -1272,6 +1272,27 @@ F3_NEGATION = re.compile(
 )
 
 F3_CMDREF = re.compile(r"`([^`\n]{2,120})`")  # backticks ONLY — quoted strings are outputs, not commands (June 5 lesson)
+F3_COMMAND_VERB = re.compile(r"^(python|pip|dir|ls|cat|git|node|npm|select|insert|update|delete|pragma|create|drop|alter|with|explain)\b", re.IGNORECASE)
+
+def _f3_is_command(token):
+    """Kind-aware command filter (receipt #51 lesson). A bare backticked identifier
+    like `name` is a column/value reference, not an executable command. F3_CMDREF
+    grabs any backticked token, so without this a short identifier substring-matched
+    an unrelated logged query (`name` vs SQL detail containing 'name=') and produced
+    a false MISREPORTED that deadlocked a close mid-flight. Treat a token as a command
+    only if it has command structure: whitespace (args), a known command/SQL verb, or
+    a path/extension. The actual command set (python --version, SELECT ... FROM ...,
+    dir sessions, pip list, python -m py_compile app.py) all pass; bare identifiers do not."""
+    t = (token or "").strip().strip("`").strip()
+    if not t:
+        return False
+    if " " in t or "\t" in t:
+        return True
+    if F3_COMMAND_VERB.search(t):
+        return True
+    if "." in t or "/" in t or "\\" in t:
+        return True
+    return False
 F3_VALUE = re.compile(r"\b\d+\.\d+(?:\.\d+)?\b")  # version-like values: 3.11.9, 3.10
 
 def _f3_chunks(text):
@@ -1295,7 +1316,7 @@ def extract_execution_claims(text):
         if F3_NEGATION.search(chunk):
             continue  # honest non-claims are exempt by construction
         commands = list(F3_CMDREF.findall(chunk))
-        commands = [c.strip() for c in commands if c and not c.strip().startswith("[")]
+        commands = [c.strip() for c in commands if c and not c.strip().startswith("[") and _f3_is_command(c)]
         is_claim = bool(CLAIM_PATTERN.search(chunk)) or (bool(commands) and bool(F3_RESULT_VERB.search(chunk)))
         if not is_claim:
             continue
@@ -1334,7 +1355,7 @@ def check_denied_successes(text):
     verdicts = []
     for chunk in _f3_chunks(text):
         commands = list(F3_CMDREF.findall(chunk))
-        commands = [c.strip() for c in commands if c and not c.strip().startswith("[")]
+        commands = [c.strip() for c in commands if c and not c.strip().startswith("[") and _f3_is_command(c)]
         if not commands or not F3_FAILURE_ASSERTION.search(chunk):
             continue
         for cmd in commands:
