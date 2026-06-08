@@ -1,0 +1,67 @@
+{"event": "started", "n": 1, "obj_idx": 0, "t": "02:32:32"}
+{"event": "session_done", "n": 1, "receipt": 55, "modals": 0, "stopped": false, "exp_cycles": 16, "randomized": 9, "sessions": 2, "t": "02:32:56"}
+{"event": "started", "n": 2, "obj_idx": 1, "t": "02:33:08"}
+{"event": "session_done", "n": 2, "receipt": 56, "modals": 0, "stopped": false, "exp_cycles": 18, "randomized": 10, "sessions": 3, "t": "02:33:32"}
+{"event": "started", "n": 3, "obj_idx": 2, "t": "02:33:44"}
+{"event": "session_done", "n": 3, "receipt": 57, "modals": 0, "stopped": false, "exp_cycles": 20, "randomized": 11, "sessions": 4, "t": "02:34:07"}
+{"event": "started", "n": 4, "obj_idx": 3, "t": "02:34:20"}
+{"event": "session_done", "n": 4, "receipt": 58, "modals": 0, "stopped": false, "exp_cycles": 23, "randomized": 12, "sessions": 5, "t": "02:34:51"}
+{"event": "started", "n": 5, "obj_idx": 4, "t": "02:35:04"}
+{"event": "modal_proceed", "n": 5, "t": "02:35:11"}
+{"event": "session_done", "n": 5, "receipt": 59, "modals": 1, "stopped": false, "exp_cycles": 24, "randomized": 12, "sessions": 6, "t": "02:35:42"}
+{"event": "started", "n": 6, "obj_idx": 5, "t": "02:35:54"}
+{"event": "started", "n": 1, "obj_idx": 0, "t": "02:36:43"}
+{"event": "session_done", "n": 1, "receipt": 61, "modals": 0, "stopped": false, "exp_cycles": 28, "randomized": 14, "sessions": 8, "t": "02:37:15"}
+{"event": "started", "n": 2, "obj_idx": 1, "t": "02:37:27"}
+{"event": "session_done", "n": 2, "receipt": 62, "modals": 0, "stopped": false, "exp_cycles": 31, "randomized": 16, "sessions": 9, "t": "02:37:59"}
+{"event": "started", "n": 3, "obj_idx": 2, "t": "02:38:11"}
+{"event": "modal_proceed", "n": 3, "t": "02:38:26"}
+{"event": "session_done", "n": 3, "receipt": 63, "modals": 1, "stopped": false, "exp_cycles": 34, "randomized": 18, "sessions": 10, "t": "02:38:49"}
+{"event": "started", "n": 4, "obj_idx": 3, "t": "02:39:02"}
+{"event": "session_done", "n": 4, "receipt": 64, "modals": 0, "stopped": false, "exp_cycles": 36, "randomized": 19, "sessions": 11, "t": "02:39:25"}
+{"event": "started", "n": 5, "obj_idx": 4, "t": "02:39:37"}
+{"event": "session_done", "n": 5, "receipt": 65, "modals": 0, "stopped": false, "exp_cycles": 38, "randomized": 20, "sessions": 12, "t": "02:40:01"}
+{"event": "started", "n": 6, "obj_idx": 5, "t": "02:40:14"}
+{"event": "session_done", "n": 6, "receipt": 66, "modals": 0, "stopped": false, "exp_cycles": 40, "randomized": 21, "sessions": 13, "t": "02:40:37"}
+{"event": "started", "n": 7, "obj_idx": 6, "t": "02:40:49"}
+{"event": "session_done", "n": 7, "receipt": 67, "modals": 0, "stopped": false, "exp_cycles": 44, "randomized": 24, "sessions": 14, "t": "02:41:28"}
+{"event": "started", "n": 8, "obj_idx": 7, "t": "02:41:40"}
+{"event": "session_done", "n": 8, "receipt": 68, "modals": 0, "stopped": false, "exp_cycles": 46, "randomized": 24, "sessions": 15, "t": "02:42:03"}
+{"event": "started", "n": 9, "obj_idx": 8, "t": "02:42:16"}
+{"event": "session_done", "n": 9, "receipt": 69, "modals": 0, "stopped": false, "exp_cycles": 48, "randomized": 24, "sessions": 16, "t": "02:42:46"}
+{"event": "started", "n": 10, "obj_idx": 9, "t": "02:42:59"}
+{"event": "session_done", "n": 10, "receipt": 70, "modals": 0, "stopped": false, "exp_cycles": 50, "randomized": 25, "sessions": 17, "t": "02:43:52"}
+{"event": "started", "n": 11, "obj_idx": 0, "t": "02:44:05"}
+{"event": "session_done", "n": 11, "receipt": 71, "modals": 0, "stopped": false, "exp_cycles": 53, "randomized": 27, "sessions": 18, "t": "02:44:35"}
+{"event": "started", "n": 12, "obj_idx": 1, "t": "02:44:47"}
+{"event": "modal_proceed", "n": 12, "t": "02:44:54"}
+{"event": "session_done", "n": 12, "receipt": 72, "modals": 1, "stopped": false, "exp_cycles": 56, "randomized": 29, "sessions": 19, "t": "02:45:17"}
+{"event": "started", "n": 13, "obj_idx": 2, "t": "02:45:30"}
+{"event": "session_done", "n": 13, "receipt": 73, "modals": 0, "stopped": false, "exp_cycles": 58, "randomized": 30, "sessions": 20, "t": "02:46:00"}
+{"event": "started", "n": 14, "obj_idx": 3, "t": "02:46:14"}
+{"event": "session_done", "n": 14, "receipt": 74, "modals": 0, "stopped": false, "exp_cycles": 60, "randomized": 30, "sessions": 21, "t": "02:47:06"}
+{"event": "started", "n": 15, "obj_idx": 4, "t": "02:47:18"}
+{"event": "session_done", "n": 15, "receipt": 75, "modals": 0, "stopped": false, "exp_cycles": 62, "randomized": 30, "sessions": 22, "t": "02:47:48"}
+{"event": "started", "n": 16, "obj_idx": 5, "t": "02:48:01"}
+{"event": "session_done", "n": 16, "receipt": 76, "modals": 0, "stopped": false, "exp_cycles": 64, "randomized": 31, "sessions": 23, "t": "02:48:32"}
+{"event": "started", "n": 17, "obj_idx": 6, "t": "02:48:44"}
+{"event": "session_done", "n": 17, "receipt": 77, "modals": 0, "stopped": false, "exp_cycles": 70, "randomized": 34, "sessions": 24, "t": "02:49:37"}
+{"event": "started", "n": 18, "obj_idx": 7, "t": "02:49:49"}
+{"event": "session_done", "n": 18, "receipt": 78, "modals": 0, "stopped": false, "exp_cycles": 72, "randomized": 35, "sessions": 25, "t": "02:50:20"}
+{"event": "started", "n": 19, "obj_idx": 8, "t": "02:50:32"}
+{"event": "session_done", "n": 19, "receipt": 79, "modals": 0, "stopped": false, "exp_cycles": 74, "randomized": 37, "sessions": 26, "t": "02:51:03"}
+{"event": "started", "n": 20, "obj_idx": 9, "t": "02:51:16"}
+{"event": "session_done", "n": 20, "receipt": 80, "modals": 0, "stopped": false, "exp_cycles": 76, "randomized": 38, "sessions": 27, "t": "02:51:39"}
+{"event": "started", "n": 21, "obj_idx": 0, "t": "02:51:52"}
+{"event": "session_done", "n": 21, "receipt": 81, "modals": 0, "stopped": false, "exp_cycles": 78, "randomized": 40, "sessions": 28, "t": "02:52:22"}
+{"event": "started", "n": 22, "obj_idx": 1, "t": "02:52:35"}
+{"event": "session_done", "n": 22, "receipt": 82, "modals": 0, "stopped": false, "exp_cycles": 80, "randomized": 40, "sessions": 29, "t": "02:52:58"}
+{"event": "started", "n": 23, "obj_idx": 2, "t": "02:53:10"}
+{"event": "session_done", "n": 23, "receipt": 83, "modals": 0, "stopped": false, "exp_cycles": 82, "randomized": 40, "sessions": 30, "t": "02:53:33"}
+{"event": "started", "n": 24, "obj_idx": 3, "t": "02:53:46"}
+{"event": "session_done", "n": 24, "receipt": 84, "modals": 0, "stopped": false, "exp_cycles": 84, "randomized": 40, "sessions": 31, "t": "02:54:16"}
+{"event": "started", "n": 25, "obj_idx": 4, "t": "02:54:29"}
+{"event": "session_done", "n": 25, "receipt": 85, "modals": 0, "stopped": false, "exp_cycles": 85, "randomized": 41, "sessions": 32, "t": "02:54:52"}
+{"event": "started", "n": 26, "obj_idx": 5, "t": "02:55:04"}
+{"event": "session_done", "n": 26, "receipt": 86, "modals": 0, "stopped": false, "exp_cycles": 87, "randomized": 42, "sessions": 33, "t": "02:55:42"}
+{"event": "started", "n": 27, "obj_idx": 6, "t": "02:55:54"}
