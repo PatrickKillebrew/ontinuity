@@ -1,0 +1,25 @@
+{
+ "experiment": "EXPERIMENT_MODE counted run, block 1",
+ "randomized_cycles_accrued": 42,
+ "touched_sessions": [
+  {
+   "log_index": 9,
+   "modal_t": "02:35:11",
+   "receipt_id": 59,
+   "session_id": "2026-06-08_02-35-05_farm"
+  },
+  {
+   "log_index": 17,
+   "modal_t": "02:38:26",
+   "receipt_id": 63,
+   "session_id": "2026-06-08_02-38-19_farm"
+  },
+  {
+   "log_index": 36,
+   "modal_t": "02:44:54",
+   "receipt_id": 72,
+   "session_id": "2026-06-08_02-44-48_farm"
+  }
+ ],
+ "caveat": "Block-1 driver logged modal_proceed without inline session_id/cycle; the same log was appended across two driver runs so the driver counter n is ambiguous. Touched sessions recovered by pairing each modal_proceed with the next session_done in file order, then receipt->session_id. Exclusion is at SESSION granularity (conservative). Future driver must log session_id+cycle_number on every modal event."
+}
