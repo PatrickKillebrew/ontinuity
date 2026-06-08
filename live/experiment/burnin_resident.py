@@ -131,7 +131,15 @@ def main():
             log({"event": "STOPPING_RULE_MET", "randomized": rc, "sessions": sc}); break
         if not engine_idle():
             time.sleep(10); continue
+        rec_before = latest_receipt()
         status = run_one(random.choice(PROBES))
+        # Re-check the corpus: a session may have completed just after run_one's
+        # short window closed (esp. 90s-timeout sessions). If the receipt actually
+        # advanced, it was a SUCCESS the window missed — not a failure.
+        if status != "OK" and status != "MODAL_STOP":
+            time.sleep(6)
+            if latest_receipt() > rec_before:
+                status = "OK"
         if status == "OK":
             fails = 0
             log({"event": "session_done", "randomized": randomized_count(), "sessions": session_count()})
@@ -140,8 +148,14 @@ def main():
         else:
             fails += 1
             log({"event": "session_problem", "status": status, "consecutive_fails": fails})
-            if fails >= 4:
-                log({"event": "HALT_REPEATED_FAILURE"}); break
+            # Repeated failure is a PAUSE, never an exit. A transient slow patch
+            # (provider lag, brief workspace hiccup) must not kill an unattended run.
+            # Back off progressively and keep trying; the run resumes from the live
+            # DB count, so nothing is lost across the pause.
+            if fails >= 6:
+                backoff = min(300, 30 * (fails - 5))
+                log({"event": "REPEATED_FAILURE_PAUSE", "consecutive_fails": fails, "backoff_s": backoff})
+                time.sleep(backoff)
         time.sleep(PACE_S)
     log({"event": "resident_driver_exit", "randomized": randomized_count(), "sessions": session_count()})
 
