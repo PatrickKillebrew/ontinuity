@@ -293,9 +293,11 @@ def experiment_draw(computed_signal, rng=None):
 
 def build_behavioral_observations(session_id, transcript,
                                    signal_sequence, tag_sequence,
-                                   challenge_events, experiment_sequence=None):
+                                   challenge_events, experiment_sequence=None,
+                                   modal_touched_cycles=None):
     observations = []
     exp_by_cycle = {e["cycle"]: e for e in (experiment_sequence or [])}
+    touched = set(modal_touched_cycles or [])
     profile, reasons = parse_signal_sequence(signal_sequence)
     by_cycle = {}
     for entry in transcript:
@@ -349,6 +351,8 @@ def build_behavioral_observations(session_id, transcript,
             "computed_signal": exp_by_cycle.get(cycle_num, {}).get("computed"),
             "injected_signal": exp_by_cycle.get(cycle_num, {}).get("injected"),
             "randomized_flag": exp_by_cycle.get(cycle_num, {}).get("randomized"),
+            "modal_touched": (1 if (cycle_num in touched or (cycle_num - 1) in touched) else 0)
+                              if cycle_num in exp_by_cycle else None,
             "cumulative_uphold_count": cumulative_upholds,
             "cumulative_challenge_count": cumulative_challenges,
             "session_cycle_ratio": round(cycle_num / max(len(profile), 1), 3),
@@ -382,7 +386,8 @@ def build_session_payload():
         signal_sequence=s.get("signal_sequence", []),
         tag_sequence=s.get("tag_sequence", []),
         challenge_events=s.get("challenge_events", []),
-        experiment_sequence=s.get("experiment_sequence", [])
+        experiment_sequence=s.get("experiment_sequence", []),
+        modal_touched_cycles=s.get("modal_touched_cycles", [])
     )
     turn_number = 0
     transcript_turns = []
@@ -1710,6 +1715,12 @@ def wait_for_human_input(input_type, context):
     active_session["waiting_for_input"] = True
     active_session["input_type"] = input_type
     active_session["human_input_context"] = context  # Deploy 24: snapshots replay the modal
+    # Deploy 33: record the firing cycle so the operator-text contamination is durably
+    # marked at write time. The builder marks both N (firing) and N+1 (the pre-registered
+    # outcome cycle where the operator text lands); a last-cycle modal marks only N since
+    # no N+1 row exists. cycle>=1 excludes pre-session (cycle 0).
+    if active_session.get("cycle", 0) >= 1:
+        active_session.setdefault("modal_touched_cycles", []).append(active_session["cycle"])
     active_session["human_input_event"].clear()
     active_session["human_input_value"] = None
     socketio.emit('human_input_needed', {
@@ -2154,6 +2165,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["contract"] = contract or []  # frozen criteria from PRE_SESSION; empty = no contract
     active_session["close_refusal_count"] = 0     # consecutive refused closes — the 59-cycle guard
     active_session["experiment_sequence"] = []    # Deploy 32: per-cycle {cycle, computed, injected, randomized}
+    active_session["modal_touched_cycles"] = []   # Deploy 33: cycles where an in-loop operator modal fired
     if active_session["contract"]:
         contract_display = "\n".join(
             f"{c['id']} [{c['kind']}] {c['text']}" + (f" — evidence: {c['evidence']}" if c['evidence'] else "")
