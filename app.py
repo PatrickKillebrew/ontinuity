@@ -420,7 +420,7 @@ def build_session_payload():
         "start_time": s.get("start_time"),
         "end_time": s.get("end_time"),
         "total_cycles": s.get("cycle", 0),
-        "status": "complete",
+        "status": s.get("end_status", "complete"),
         "project_name": WORKSPACE_PROJECT,
         "branch_name": WORKSPACE_BRANCH,
         "models": {
@@ -2151,6 +2151,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     # session state must carry it or the deploy-26 lineage seal never engages.
     active_session["start_fresh"] = bool(start_fresh)
     active_session["running"] = True
+    active_session["end_status"] = "complete"   # Deploy 34 (#51 fold): overwritten by abnormal exits
     active_session["start_time"] = timestamp()
     active_session["transcript"] = []
     active_session["tag_sequence"] = []
@@ -2232,7 +2233,8 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         # Model A
         a_response = call_model("model_a", conversation, system_override=cycle_model_a_system)
         if not a_response:
-            socketio.emit('routing_action', {'type': 'error', 'message': 'Researcher returned no response. Stopping.'})
+            active_session["end_status"] = "incomplete_model_dead"   # Deploy 34: provider death is not a clean completion (#51)
+            socketio.emit('routing_action', {'type': 'error', 'message': 'STATUS=incomplete_model_dead: Researcher provider death recorded (deploy 34 instrumentation; first natural death is the green light).'})
             break
         active_session["transcript"].append({"role": "model_a", "content": a_response, "cycle": active_session["cycle"]})  # Phase-0: the missing join key behind 154 zero-metric rows
         conversation.append({"role": "assistant", "content": a_response})
@@ -2581,6 +2583,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                                 decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
                                 active_session["close_refusal_count"] = 0
                                 if decision.strip().lower().startswith("stop"):
+                                    active_session["end_status"] = "stopped"   # Deploy 34: operator deadlock-stop bucket
                                     socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
                                     break
                                 conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
@@ -2697,6 +2700,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
                         active_session["close_refusal_count"] = 0
                         if decision.strip().lower().startswith("stop"):
+                            active_session["end_status"] = "stopped"   # Deploy 34: operator deadlock-stop bucket
                             socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
                             break
                         conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
@@ -2719,6 +2723,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
                         active_session["close_refusal_count"] = 0
                         if decision.strip().lower().startswith("stop"):
+                            active_session["end_status"] = "stopped"   # Deploy 34: operator deadlock-stop bucket
                             socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
                             break
                         conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
@@ -2772,6 +2777,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
                         active_session["close_refusal_count"] = 0
                         if decision.strip().lower().startswith("stop"):
+                            active_session["end_status"] = "stopped"   # Deploy 34: operator deadlock-stop bucket
                             socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
                             break
                         conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
@@ -2796,6 +2802,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                         decision = wait_for_human_input("CLOSE_DEADLOCK", guard_ctx)
                         active_session["close_refusal_count"] = 0
                         if decision.strip().lower().startswith("stop"):
+                            active_session["end_status"] = "stopped"   # Deploy 34: operator deadlock-stop bucket
                             socketio.emit('routing_action', {'type': 'session_end', 'message': 'Operator ended the session at close deadlock — running end sequence.'})
                             break
                         conversation.append({"role": "user", "content": f"Operator direction at close deadlock:\n{decision}\n{ambient_line}"})
@@ -3029,6 +3036,8 @@ def agent_stop_core(stopped_by):
         return False
     active_session["running"] = False
     active_session["stopped_by"] = stopped_by
+    if active_session.get("end_status", "complete") == "complete":
+        active_session["end_status"] = "stopped"   # Deploy 34: operator stop is its own outcome bucket
     if active_session["waiting_for_input"]:
         active_session["human_input_value"] = "[SESSION STOPPED BY OPERATOR]"
         active_session["human_input_event"].set()
