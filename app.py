@@ -129,6 +129,7 @@ active_session = {
     "tag_sequence": [],
     "signal_sequence": [],
     "challenge_events": [],
+    "unreviewed_cycles": [],
     "errors": [],
     "cycle": 0,
     "start_time": None,
@@ -422,7 +423,12 @@ def build_session_payload():
     # Death/stopped/terminated statuses (end_status already non-'complete') pass through.
     _end_status = s.get("end_status", "complete")
     _has_close = any(t.get("tag") == "SESSION_END" for t in transcript_turns)
-    _final_status = _end_status if _end_status != "complete" else ("complete" if _has_close else "incomplete_no_close")
+    _unreviewed = bool(s.get("unreviewed_cycles"))
+    _final_status = (
+        _end_status if _end_status != "complete"
+        else "incomplete_challenger_dead" if _unreviewed
+        else "complete" if _has_close
+        else "incomplete_no_close")
     return {
         "session_id": session_id,
         "objective": sanitize_content(s.get("objective", "")),
@@ -2172,6 +2178,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["tag_sequence"] = []
     active_session["signal_sequence"] = []
     active_session["challenge_events"] = []
+    active_session["unreviewed_cycles"] = []
     active_session["errors"] = []
     active_session["cycle"] = 0
     active_session["artifacts"] = []
@@ -2534,6 +2541,21 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         b_system = model_b_base
         b_messages = [{"role": "user", "content": b_content}]
         b_response = call_model("model_b", b_messages, system_override=b_system)
+
+        if not b_response:
+            # Fix #4 (INTEGRITY): a Challenger death (None after retries) would
+            # otherwise silently skip the entire review block and fall through to
+            # the next cycle, leaving the Researcher's claim unreviewed. Record it
+            # durably so the close gate can refuse to certify a session that
+            # contained an unreviewed cycle. Gate-and-continue: don't kill the
+            # session (Challenger may answer next cycle), but it can never certify clean.
+            _cyc = active_session["cycle"]
+            active_session.setdefault("unreviewed_cycles", []).append(_cyc)
+            active_session["tag_sequence"].append(f"Cycle {_cyc} B: NO_REVIEW")
+            active_session["challenge_events"].append(
+                f"Cycle {_cyc}: CHALLENGER_DEAD — cycle unreviewed (Challenger provider death)")
+            socketio.emit('routing_action', {'type': 'error',
+                'message': f'STATUS: Challenger death at cycle {_cyc} — Researcher claim unreviewed; session cannot certify complete.'})
 
         if b_response:
             active_session["transcript"].append({"role": "model_b", "content": b_response, "cycle": active_session["cycle"]})  # Phase-0
@@ -3655,6 +3677,7 @@ def handle_new_session(data):
     active_session["tag_sequence"] = []
     active_session["signal_sequence"] = []
     active_session["challenge_events"] = []
+    active_session["unreviewed_cycles"] = []
     active_session["errors"] = []
     active_session["cycle"] = 0
     active_session["artifacts"] = []
