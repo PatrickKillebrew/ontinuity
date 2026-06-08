@@ -281,10 +281,21 @@ def parse_challenge_counts(challenge_events, tag_sequence):
             counts["escalate"] += 1; counts["challenge"] += 1
     return counts
 
+def experiment_draw(computed_signal, rng=None):
+    """Deploy 32 (EXPERIMENT_MODE, receipt #13): one Bernoulli(0.5) draw per cycle.
+    Heads: injected signal is uniform{0,1,2,3,4}, exogenous to session content.
+    Tails: the computed signal passes through. Returns (injected, randomized_flag)."""
+    import random as _r
+    rng = rng or _r
+    if rng.random() < 0.5:
+        return rng.randint(0, 4), 1
+    return computed_signal, 0
+
 def build_behavioral_observations(session_id, transcript,
                                    signal_sequence, tag_sequence,
-                                   challenge_events):
+                                   challenge_events, experiment_sequence=None):
     observations = []
+    exp_by_cycle = {e["cycle"]: e for e in (experiment_sequence or [])}
     profile, reasons = parse_signal_sequence(signal_sequence)
     by_cycle = {}
     for entry in transcript:
@@ -334,7 +345,10 @@ def build_behavioral_observations(session_id, transcript,
             "model_b_word_count": b_words,
             "model_b_token_est": int(b_words * 1.3),
             "model_b_challenge_issued": b_challenged,
-            "ambient_signal": sig,
+            "ambient_signal": exp_by_cycle.get(cycle_num, {}).get("injected", sig),
+            "computed_signal": exp_by_cycle.get(cycle_num, {}).get("computed"),
+            "injected_signal": exp_by_cycle.get(cycle_num, {}).get("injected"),
+            "randomized_flag": exp_by_cycle.get(cycle_num, {}).get("randomized"),
             "cumulative_uphold_count": cumulative_upholds,
             "cumulative_challenge_count": cumulative_challenges,
             "session_cycle_ratio": round(cycle_num / max(len(profile), 1), 3),
@@ -367,7 +381,8 @@ def build_session_payload():
         transcript=s.get("transcript", []),
         signal_sequence=s.get("signal_sequence", []),
         tag_sequence=s.get("tag_sequence", []),
-        challenge_events=s.get("challenge_events", [])
+        challenge_events=s.get("challenge_events", []),
+        experiment_sequence=s.get("experiment_sequence", [])
     )
     turn_number = 0
     transcript_turns = []
@@ -2138,6 +2153,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["results_board"] = []   # F.9: every PASSED result + value, banked at injection time
     active_session["contract"] = contract or []  # frozen criteria from PRE_SESSION; empty = no contract
     active_session["close_refusal_count"] = 0     # consecutive refused closes — the 59-cycle guard
+    active_session["experiment_sequence"] = []    # Deploy 32: per-cycle {cycle, computed, injected, randomized}
     if active_session["contract"]:
         contract_display = "\n".join(
             f"{c['id']} [{c['kind']}] {c['text']}" + (f" — evidence: {c['evidence']}" if c['evidence'] else "")
@@ -2215,6 +2231,20 @@ def run_session_loop(objective, start_fresh=False, contract=None):
 
         # Friction signal
         signal = get_friction_signal()
+        # Deploy 32 (EXPERIMENT_MODE, certified protocol receipt #13): randomized
+        # exogenous injection. The ambient line is the engine's single injection
+        # point; the signal-4 machinery below keys off computed_signal so the
+        # treatment reaches the models and nothing else. Flag off => identical path.
+        computed_signal = signal
+        randomized_flag = 0
+        if os.environ.get("EXPERIMENT_MODE", "").strip() == "1":
+            signal, randomized_flag = experiment_draw(computed_signal)
+        active_session["experiment_sequence"].append(
+            {"cycle": active_session["cycle"], "computed": computed_signal,
+             "injected": signal, "randomized": randomized_flag})
+        if randomized_flag:
+            socketio.emit('routing_action', {'type': 'info',
+                'message': f"EXPERIMENT: cycle {active_session['cycle']} computed={computed_signal} injected={signal} (randomized)"})
         ambient_line = get_ambient_signal_line(signal)
 
         # Tag
@@ -2273,9 +2303,9 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         # A false-positive Signal 4 that blocks a CODE_TEST/SEARCH_REQUEST starves
         # the session of the ground truth that would resolve the drift (the June 4
         # doom loop: correct `python --version` emitted twice, preempted twice).
-        if signal == 4 and tag in ("CODE_TEST", "SEARCH_REQUEST"):
+        if computed_signal == 4 and tag in ("CODE_TEST", "SEARCH_REQUEST"):
             socketio.emit('routing_action', {'type': 'error', 'message': 'Signal 4 raised but response carries an action tag — executing first; override deferred one cycle.'})
-        elif signal == 4:
+        elif computed_signal == 4:
             socketio.emit('routing_action', {'type': 'error', 'message': 'Signal 4 — critical drift. Running NAVIGATE for context...'})
             nav = run_parietal_navigate(knowtext, active_session["signal_sequence"])
             if nav:
