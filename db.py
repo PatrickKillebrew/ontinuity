@@ -395,6 +395,9 @@ CREATE TABLE IF NOT EXISTS behavioral_observations (
 
     -- Session state
     ambient_signal        INTEGER,
+    computed_signal       INTEGER,
+    injected_signal       INTEGER,
+    randomized_flag       INTEGER,
     cumulative_uphold_count INTEGER,
     cumulative_challenge_count INTEGER,
     session_cycle_ratio   REAL,
@@ -912,12 +915,13 @@ class OntinuityDB:
                 model_a_hedging_count, model_a_certainty_count,
                 model_b_tag, model_b_word_count, model_b_token_est,
                 model_b_challenge_issued,
-                ambient_signal, cumulative_uphold_count,
+                ambient_signal, computed_signal, injected_signal,
+                randomized_flag, cumulative_uphold_count,
                 cumulative_challenge_count, session_cycle_ratio,
                 ruling_if_challenged, created_at
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?
             )""",
             (
                 observation_id,
@@ -936,6 +940,9 @@ class OntinuityDB:
                 obs.get("model_b_token_est"),
                 int(obs.get("model_b_challenge_issued", False)),
                 obs.get("ambient_signal"),
+                obs.get("computed_signal"),
+                obs.get("injected_signal"),
+                obs.get("randomized_flag"),
                 obs.get("cumulative_uphold_count", 0),
                 obs.get("cumulative_challenge_count", 0),
                 obs.get("session_cycle_ratio"),
