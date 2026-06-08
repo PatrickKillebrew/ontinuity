@@ -414,13 +414,22 @@ def build_session_payload():
             "tag": tag,
             "friction_signal": int(sig_m.group(1)) if sig_m else None,
         })
+    # Fix #1 (certified-close gate): a session may write 'complete' only if a
+    # SESSION_END tag actually appears in the transcript (Researcher or Challenger
+    # certified the close). Otherwise it lands the honest 'incomplete_no_close'
+    # bucket. Gates the OUTCOME on evidence of certification, catching uncertified
+    # exits (ALIGNMENT_NEEDED / lone DB_QUERY / untagged) regardless of upstream path.
+    # Death/stopped/terminated statuses (end_status already non-'complete') pass through.
+    _end_status = s.get("end_status", "complete")
+    _has_close = any(t.get("tag") == "SESSION_END" for t in transcript_turns)
+    _final_status = _end_status if _end_status != "complete" else ("complete" if _has_close else "incomplete_no_close")
     return {
         "session_id": session_id,
         "objective": sanitize_content(s.get("objective", "")),
         "start_time": s.get("start_time"),
         "end_time": s.get("end_time"),
         "total_cycles": s.get("cycle", 0),
-        "status": s.get("end_status", "complete"),
+        "status": _final_status,
         "project_name": WORKSPACE_PROJECT,
         "branch_name": WORKSPACE_BRANCH,
         "models": {
