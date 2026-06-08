@@ -7,21 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --bg:#0b0e0d; --panel:#11१6१4; --panel:#111614; --edge:#1e २६२३; --edge:#1e2623;
-    --ink:#e6efe9; --dim:#7f8c86; --mut:#56615b;
-    --ok:#5bd6a0; --warn:#e8b13d; --alarm:#ec5a5a; --cool:#6fb8d6;
-    --grain:rgba(255,255,255,.015);
-  }
+  :root{--bg:#0b0e0d;--panel:#111614;--edge:#1e2623;--ink:#e6efe9;--dim:#7f8c86;--mut:#56615b;--ok:#5bd6a0;--warn:#e8b13d;--alarm:#ec5a5a;--cool:#6fb8d6;--grain:rgba(255,255,255,.015);}
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{background:var(--bg);color:var(--ink);font-family:'Spline Sans Mono',monospace;-webkit-font-smoothing:antialiased}
-  body{
-    min-height:100vh;padding:28px 30px 60px;
-    background-image:radial-gradient(1200px 600px at 80% -10%, rgba(111,184,214,.05), transparent 60%),
-      radial-gradient(900px 500px at -10% 110%, rgba(91,214,160,.04), transparent 55%);
-  }
+  body{min-height:100vh;padding:28px 30px 60px;background-image:radial-gradient(1200px 600px at 80% -10%, rgba(111,184,214,.05), transparent 60%),radial-gradient(900px 500px at -10% 110%, rgba(91,214,160,.04), transparent 55%);}
   header{display:flex;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--edge);padding-bottom:16px;margin-bottom:26px}
-  .mark{font-family:'Fraunces',serif;font-size:26px;font-weight:600;letter-spacing:.01em}
+  .mark{font-family:'Fraunces',serif;font-size:26px;font-weight:600}
   .mark em{font-style:italic;color:var(--cool);font-weight:400}
   .sub{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--mut)}
   .clock{font-size:11px;color:var(--dim);letter-spacing:.08em}
@@ -33,33 +24,23 @@
   .panel::after{content:"";position:absolute;inset:0;background-image:radial-gradient(var(--grain) 1px,transparent 1px);background-size:3px 3px;pointer-events:none;opacity:.6}
   .ptitle{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);margin-bottom:18px;display:flex;justify-content:space-between;align-items:center}
   .ptitle .tick{font-size:9px;color:var(--mut)}
-
-  /* instance health */
   .inst{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--edge)}
   .inst:last-child{border-bottom:none}
-  .led{width:13px;height:13px;border-radius:50%;flex:none;box-shadow:0 0 0 0 currentColor;transition:.4s}
-  .led.ok{background:var(--ok);color:var(--ok)}
-  .led.work{background:var(--cool);color:var(--cool);animation:pulse 1.4s infinite}
-  .led.wait{background:var(--warn);color:var(--warn)}
-  .led.alarm{background:var(--alarm);color:var(--alarm);box-shadow:0 0 14px 2px var(--alarm);animation:pulse .9s infinite}
-  .led.dead{background:var(--mut);color:var(--mut)}
+  .led{width:13px;height:13px;border-radius:50%;flex:none;transition:.4s}
+  .led.ok{background:var(--ok)} .led.work{background:var(--cool);animation:pulse 1.4s infinite}
+  .led.wait{background:var(--warn)} .led.alarm{background:var(--alarm);box-shadow:0 0 14px 2px var(--alarm);animation:pulse .9s infinite}
+  .led.dead{background:var(--mut)}
   .inst-name{font-weight:600;font-size:14px;flex:none;width:62px}
   .inst-state{font-size:12px;color:var(--dim);flex:1}
-  .inst-since{font-size:11px;color:var(--mut);font-variant-numeric:tabular-nums}
   .alarm-line{margin-top:16px;font-size:11.5px;color:var(--alarm);line-height:1.5;display:none}
   .alarm-line.show{display:block}
-
-  /* run progress */
-  .bignum{font-family:'Fraunces',serif;font-size:54px;font-weight:600;line-height:1;letter-spacing:-.01em}
+  .bignum{font-family:'Fraunces',serif;font-size:54px;font-weight:600;line-height:1}
   .bignum .of{font-family:'Spline Sans Mono';font-size:18px;color:var(--mut);font-weight:400}
   .barwrap{margin-top:18px;height:8px;background:#0c100e;border-radius:6px;overflow:hidden;border:1px solid var(--edge)}
   .bar{height:100%;background:linear-gradient(90deg,var(--cool),var(--ok));border-radius:6px;width:0;transition:width .8s cubic-bezier(.2,.8,.2,1)}
   .runmeta{display:flex;justify-content:space-between;margin-top:16px;font-size:11px;color:var(--dim)}
   .runmeta b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
-  .floor{margin-top:10px;font-size:10.5px;color:var(--mut)}
-  .floor .met{color:var(--ok)}
-
-  /* buckets */
+  .floor{margin-top:10px;font-size:10.5px;color:var(--mut)} .floor .met{color:var(--ok)}
   .bucket{display:flex;align-items:center;gap:12px;margin:13px 0;font-size:13px}
   .bk-bar{height:9px;border-radius:5px;flex:1;background:#0c100e;overflow:hidden;border:1px solid var(--edge)}
   .bk-fill{height:100%;border-radius:5px;width:0;transition:width .7s}
@@ -70,138 +51,75 @@
   .bk.stopped .bk-fill{background:var(--warn)} .bk.stopped .bk-n{color:var(--warn)}
   .note{margin-top:18px;font-size:10.5px;color:var(--mut);line-height:1.6;border-top:1px solid var(--edge);padding-top:14px}
   .err{color:var(--alarm);font-size:11px}
+  #gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:50}
+  #gate .box{background:var(--panel);border:1px solid var(--edge);border-radius:14px;padding:34px 36px;width:min(420px,90vw)}
+  #gate h2{font-family:'Fraunces',serif;font-weight:600;font-size:22px;margin-bottom:6px}
+  #gate p{font-size:11.5px;color:var(--dim);margin-bottom:20px;line-height:1.6}
+  #gate input{width:100%;background:#0c100e;border:1px solid var(--edge);border-radius:8px;padding:12px 14px;color:var(--ink);font-family:'Spline Sans Mono';font-size:13px;outline:none}
+  #gate input:focus{border-color:var(--cool)}
+  #gate button{margin-top:14px;width:100%;background:var(--cool);color:#06251f;border:none;border-radius:8px;padding:12px;font-family:'Spline Sans Mono';font-weight:600;font-size:13px;cursor:pointer}
+  #gateErr{color:var(--alarm);font-size:11px;margin-top:10px;min-height:14px}
 </style>
 </head>
 <body>
+<div id="gate"><div class="box">
+  <h2>Governor</h2>
+  <p>Enter the workspace API key to unlock the console. It stays in this browser session only — never on disk, never in a URL.</p>
+  <input id="keyin" type="password" placeholder="X-API-Key" autocomplete="off">
+  <button onclick="unlock()">Unlock</button>
+  <div id="gateErr"></div>
+</div></div>
 <header>
-  <div>
-    <div class="mark">Ontinuity <em>Governor</em></div>
-    <div class="sub">operator observatory · read-only</div>
-  </div>
-  <div class="clock"><span class="dot" id="livedot"></span><span id="clock">connecting…</span></div>
+  <div><div class="mark">Ontinuity <em>Governor</em></div><div class="sub">operator observatory · read-only</div></div>
+  <div class="clock"><span class="dot"></span><span id="clock">—</span></div>
 </header>
-
 <div class="grid">
-  <!-- PANEL 1: instance health + staleness alarm -->
-  <section class="panel">
-    <div class="ptitle"><span>Instance Health</span><span class="tick" id="htick">—</span></div>
-    <div id="instances"></div>
-    <div class="alarm-line" id="staleAlarm"></div>
-  </section>
-
-  <!-- PANEL 2: run progress -->
-  <section class="panel">
-    <div class="ptitle"><span>Burn-in · Randomized Cycles</span><span class="tick" id="rtick">—</span></div>
-    <div><span class="bignum" id="randNum">—</span> <span class="bignum of">/ <span id="randTarget">200</span></span></div>
-    <div class="barwrap"><div class="bar" id="randBar"></div></div>
-    <div class="runmeta">
-      <span>latest receipt <b id="receipt">—</b></span>
-      <span>sessions <b id="sessNum">—</b></span>
-    </div>
-    <div class="floor" id="floorLine">session floor —</div>
-    <div class="note" id="moveNote">watching for movement…</div>
-  </section>
-
-  <!-- PANEL 3: outcome buckets -->
-  <section class="panel">
-    <div class="ptitle"><span>Outcome Ledger</span><span class="tick" id="otick">—</span></div>
-    <div id="buckets"></div>
-    <div class="note">Honest outcomes since the clean boundary. <span style="color:var(--alarm)">Model-dead</span> rising is a provider-reliability signal, not a clean-completion.</div>
-  </section>
+  <section class="panel"><div class="ptitle"><span>Instance Health</span><span class="tick" id="htick">—</span></div><div id="instances"></div><div class="alarm-line" id="staleAlarm"></div></section>
+  <section class="panel"><div class="ptitle"><span>Burn-in · Randomized Cycles</span><span class="tick" id="rtick">—</span></div><div><span class="bignum" id="randNum">—</span> <span class="bignum of">/ <span id="randTarget">200</span></span></div><div class="barwrap"><div class="bar" id="randBar"></div></div><div class="runmeta"><span>latest receipt <b id="receipt">—</b></span><span>sessions <b id="sessNum">—</b></span></div><div class="floor" id="floorLine">session floor —</div><div class="note" id="moveNote">watching for movement…</div></section>
+  <section class="panel"><div class="ptitle"><span>Outcome Ledger</span><span class="tick" id="otick">—</span></div><div id="buckets"></div><div class="note">Honest outcomes since the clean boundary. <span style="color:var(--alarm)">Model-dead</span> rising is a provider-reliability signal, not a clean-completion.</div></section>
 </div>
-
 <script>
-const BOUNDARY = "2026-06-08_0";        // clean counted set
-const POLL_MS = 6000;
-const STALE_MS = 90000;                  // engine 'waiting' longer than this -> alarm
-let waitSince = {main:null, farm:null};  // client-side staleness tracking
-let lastReceipt = null, lastReceiptAt = null;
-
-const $ = id => document.getElementById(id);
-async function j(path){ const r = await fetch(path); return r.json(); }
-function q(sql){ return j("/api/query?sql=" + encodeURIComponent(sql)); }
-function fmtAge(ms){ const s=Math.floor(ms/1000); if(s<60)return s+"s"; const m=Math.floor(s/60); if(m<60)return m+"m "+(s%60)+"s"; return Math.floor(m/60)+"h "+(m%60)+"m"; }
-
-async function pollInstances(){
-  for(const inst of ["main","farm"]){
-    try{
-      const e = await j("/api/engine?instance="+inst);
-      const running = e.running, waiting = e.waiting_for_input, fin = e.finalizing;
-      const row = $("inst-"+inst);
-      let cls, label;
-      if(running||fin){ cls="work"; label="running a session"; waitSince[inst]=null; }
-      else if(waiting){
-        cls="wait"; label="waiting for input";
-        if(!waitSince[inst]) waitSince[inst]=Date.now();
-        const age=Date.now()-waitSince[inst];
-        if(age>STALE_MS){ cls="alarm"; label="STUCK · waiting "+fmtAge(age); }
-        else label="waiting "+fmtAge(age);
-      } else { cls="ok"; label="idle"; waitSince[inst]=null; }
-      row.querySelector(".led").className="led "+cls;
-      row.querySelector(".inst-state").textContent=label;
-      row.querySelector(".inst-since").textContent = e.error? "unreachable" : "";
-    }catch(err){
-      const row=$("inst-"+inst);
-      row.querySelector(".led").className="led dead";
-      row.querySelector(".inst-state").innerHTML="<span class='err'>unreachable</span>";
-    }
-  }
-  // staleness alarm banner
+const POLL_MS=6000, STALE_MS=90000;
+let KEY=null, waitSince={main:null,farm:null}, lastReceipt=null, lastReceiptAt=null;
+const $=id=>document.getElementById(id);
+function fmtAge(ms){const s=Math.floor(ms/1000);if(s<60)return s+"s";const m=Math.floor(s/60);if(m<60)return m+"m "+(s%60)+"s";return Math.floor(m/60)+"h "+(m%60)+"m";}
+function unlock(){
+  const k=$("keyin").value.trim(); if(!k){$("gateErr").textContent="enter a key";return;}
+  KEY=k;
+  fetch("/governor/data",{headers:{"X-API-Key":KEY}}).then(r=>{
+    if(r.status===401){$("gateErr").textContent="key rejected";KEY=null;return;}
+    sessionStorage.setItem("gov_key",KEY); $("gate").style.display="none";
+    buildInstances(); loop(); setInterval(loop,POLL_MS);
+    $("clock").textContent="live · polling "+(POLL_MS/1000)+"s";
+  }).catch(e=>{$("gateErr").textContent="server unreachable";});
+}
+function buildInstances(){$("instances").innerHTML=["main","farm"].map(i=>`<div class="inst" id="inst-${i}"><span class="led dead"></span><span class="inst-name">${i.toUpperCase()}</span><span class="inst-state">…</span></div>`).join("");}
+async function loop(){
+  let d; try{const r=await fetch("/governor/data",{headers:{"X-API-Key":KEY}});d=await r.json();}catch(e){return;}
   let alarms=[];
   for(const inst of ["main","farm"]){
-    if(waitSince[inst] && Date.now()-waitSince[inst]>STALE_MS)
-      alarms.push(inst.toUpperCase()+" has been waiting "+fmtAge(Date.now()-waitSince[inst])+" — likely an orphaned modal. Clear it.");
+    const e=d[inst]||{}; const row=$("inst-"+inst); if(!row)continue; let cls,label;
+    if(e.error){cls="dead";label="unreachable";waitSince[inst]=null;}
+    else if(e.running||e.finalizing){cls="work";label="running a session";waitSince[inst]=null;}
+    else if(e.waiting_for_input){if(!waitSince[inst])waitSince[inst]=Date.now();const age=Date.now()-waitSince[inst];if(age>STALE_MS){cls="alarm";label="STUCK · waiting "+fmtAge(age);alarms.push(inst.toUpperCase()+" waiting "+fmtAge(age)+" — likely an orphaned modal. Clear it.");}else{cls="wait";label="waiting "+fmtAge(age);}}
+    else{cls="ok";label="idle";waitSince[inst]=null;}
+    row.querySelector(".led").className="led "+cls;
+    row.querySelector(".inst-state").innerHTML=cls==="dead"?"<span class='err'>unreachable</span>":label;
   }
-  const al=$("staleAlarm");
-  if(alarms.length){ al.className="alarm-line show"; al.innerHTML="⚠ "+alarms.join("<br>⚠ "); }
-  else al.className="alarm-line";
+  const al=$("staleAlarm"); if(alarms.length){al.className="alarm-line show";al.innerHTML="⚠ "+alarms.join("<br>⚠ ");}else al.className="alarm-line";
   $("htick").textContent=new Date().toLocaleTimeString();
+  const target=parseInt($("randTarget").textContent,10);
+  if(d.randomized!=null){$("randNum").textContent=d.randomized;$("randBar").style.width=Math.min(100,100*d.randomized/target)+"%";}
+  if(d.sessions!=null){$("sessNum").textContent=d.sessions;$("floorLine").innerHTML=d.sessions>=20?"session floor <span class='met'>met ✓</span> (20)":"session floor "+d.sessions+" / 20";}
+  if(d.receipt!=null){$("receipt").textContent="#"+d.receipt;if(d.receipt!==lastReceipt){lastReceipt=d.receipt;lastReceiptAt=Date.now();$("moveNote").style.color="var(--mut)";$("moveNote").textContent="last advanced just now (#"+d.receipt+")";}else if(lastReceiptAt){const age=Date.now()-lastReceiptAt;$("moveNote").textContent="no new receipt for "+fmtAge(age);$("moveNote").style.color=age>STALE_MS?"var(--alarm)":"var(--mut)";}}
+  $("rtick").textContent=new Date().toLocaleTimeString();
+  const m=d.buckets||{};const total=(m.complete||0)+(m.incomplete_model_dead||0)+(m.stopped||0);
+  const order=[["complete","complete","certified close"],["incomplete_model_dead","dead","model died"],["stopped","stopped","operator stop"]];
+  $("buckets").innerHTML=order.map(([k,cls,lab])=>{const n=m[k]||0,pct=total?100*n/total:0;return `<div class="bucket bk ${cls}"><span class="bk-lab">${lab}</span><span class="bk-bar"><span class="bk-fill" style="width:${pct}%"></span></span><span class="bk-n">${n}</span></div>`;}).join("");
+  $("otick").textContent=new Date().toLocaleTimeString();
 }
-
-async function pollProgress(){
-  try{
-    const rand = (await q(`SELECT COUNT(*) FROM behavioral_observations WHERE randomized_flag=1 AND session_id >= '${BOUNDARY}'`)).rows[0][0];
-    const sess = (await q(`SELECT COUNT(DISTINCT session_id) FROM behavioral_observations WHERE computed_signal IS NOT NULL AND session_id >= '${BOUNDARY}'`)).rows[0][0];
-    const rec  = (await q(`SELECT MAX(receipt_id) FROM write_receipts`)).rows[0][0];
-    const target=parseInt($("randTarget").textContent,10);
-    $("randNum").textContent=rand;
-    $("sessNum").textContent=sess;
-    $("receipt").textContent="#"+rec;
-    $("randBar").style.width=Math.min(100,100*rand/target)+"%";
-    $("floorLine").innerHTML = sess>=20 ? "session floor <span class='met'>met ✓</span> (20)" : "session floor "+sess+" / 20";
-    // movement
-    if(rec!==lastReceipt){ lastReceipt=rec; lastReceiptAt=Date.now(); $("moveNote").style.color="var(--mut)"; $("moveNote").textContent="last advanced just now (#"+rec+")"; }
-    else if(lastReceiptAt){ const age=Date.now()-lastReceiptAt;
-      $("moveNote").textContent="no new receipt for "+fmtAge(age);
-      $("moveNote").style.color = age>STALE_MS ? "var(--alarm)" : "var(--mut)";
-    }
-    $("rtick").textContent=new Date().toLocaleTimeString();
-  }catch(err){ $("moveNote").innerHTML="<span class='err'>progress read failed</span>"; }
-}
-
-async function pollBuckets(){
-  try{
-    const rows = (await q(`SELECT status, COUNT(*) FROM sessions WHERE session_id >= '${BOUNDARY}' GROUP BY status`)).rows;
-    const map={complete:0,incomplete_model_dead:0,stopped:0};
-    let total=0; rows.forEach(r=>{map[r[0]]=(map[r[0]]||0)+r[1]; total+=r[1];});
-    const order=[["complete","complete","certified close"],["incomplete_model_dead","dead","model died"],["stopped","stopped","operator stop"]];
-    $("buckets").innerHTML = order.map(([k,cls,lab])=>{
-      const n=map[k]||0, pct=total?100*n/total:0;
-      return `<div class="bucket bk ${cls}"><span class="bk-lab">${lab}</span><span class="bk-bar"><span class="bk-fill" style="width:${pct}%"></span></span><span class="bk-n">${n}</span></div>`;
-    }).join("");
-    $("otick").textContent=new Date().toLocaleTimeString();
-  }catch(err){ $("buckets").innerHTML="<span class='err'>ledger read failed</span>"; }
-}
-
-function tickClock(){ $("clock").textContent="live · polling "+(POLL_MS/1000)+"s"; }
-
-// build instance rows
-$("instances").innerHTML = ["main","farm"].map(i=>
-  `<div class="inst" id="inst-${i}"><span class="led dead"></span><span class="inst-name">${i.toUpperCase()}</span><span class="inst-state">connecting…</span><span class="inst-since"></span></div>`
-).join("");
-
-async function loop(){ await Promise.all([pollInstances(),pollProgress(),pollBuckets()]); }
-tickClock(); loop(); setInterval(loop, POLL_MS);
+const saved=sessionStorage.getItem("gov_key"); if(saved){$("keyin").value=saved;unlock();}
+$("keyin").addEventListener("keydown",e=>{if(e.key==="Enter")unlock();});
 </script>
 </body>
 </html>
