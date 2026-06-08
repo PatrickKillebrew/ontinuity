@@ -15,7 +15,9 @@ def _gov_diag(base, path, params):
     p = dict(params); p["diag_key"] = dk
     url = f"{base}{path}?{_ug_parse.urlencode(p)}"
     try:
-        return json.loads(_ug_req.urlopen(url, timeout=25).read().decode())
+        # short timeout: this server is single-threaded and the Governor polls
+        # every 6s; a slow upstream must fail fast or polls stack and saturate it.
+        return json.loads(_ug_req.urlopen(url, timeout=4).read().decode())
     except Exception as e:
         return {"error": str(e)}
 
