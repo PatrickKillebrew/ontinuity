@@ -312,6 +312,16 @@ def build_behavioral_observations(session_id, transcript,
     for i, sig in enumerate(profile):
         cycle_num = i + 1
         cycle_data = by_cycle.get(cycle_num, {})
+        # Trailing-None obs-row fix: the signal_sequence carries one entry beyond
+        # the last real cycle (friction signal recorded for a cycle that never
+        # produced a transcript pair), so the builder emitted a phantom trailing
+        # row with empty content and NULL experiment columns in 88% of sessions.
+        # It is excluded everywhere by `computed_signal IS NOT NULL`, but it
+        # inflates raw COUNT(*). Every real cycle (incl. DB_QUERY/ALIGNMENT/
+        # SESSION_END) has at least a Researcher turn, so an empty cycle_data is
+        # the phantom — skip it.
+        if not cycle_data:
+            continue
         a_content = cycle_data.get("model_a", "")
         b_content = cycle_data.get("model_b", "")
         a_words = len(a_content.split()) if a_content else 0
