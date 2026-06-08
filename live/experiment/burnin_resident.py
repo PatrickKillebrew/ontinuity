@@ -85,9 +85,29 @@ def run_one(objective):
             elif kind == "human_input_needed":
                 proceeds += 1
                 if proceeds >= 2:
-                    log({"event": "SECOND_MODAL_STOP", "detail": "session hard-stopped to bound contamination"})
+                    log({"event": "SECOND_MODAL_STOP", "detail": "bounding contamination; clearing wait by answering the turn"})
+                    # ANSWER the orphaned turn to release the engine's wait-state.
+                    # /agent/stop fails with 'no session running' when the turn holds
+                    # the session open, leaving an orphaned wait that deadlocks the
+                    # next session. Answering clears it; this is the auto-clear fix.
+                    try: http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": tid, "response": "Stop."})
+                    except Exception: pass
                     try: http(f"{FARM}/agent/stop", {"mailbox_key": MBKEY})
                     except Exception: pass
+                    # verify the wait actually cleared before moving on
+                    for _ in range(6):
+                        time.sleep(4)
+                        try:
+                            e = http(f"{FARM}/diag/engine?diag_key={DIAG}")
+                            if not e.get("waiting_for_input") and not e.get("running"):
+                                break
+                            # still waiting on a (possibly new) turn — answer it too
+                            mb2 = http(f"{FARM}/mailbox/turn?mailbox_key={MBKEY}")
+                            if mb2.get("waiting"):
+                                http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": mb2.get("turn_id"), "response": "Stop."})
+                        except Exception:
+                            pass
+                    log({"event": "MODAL_STOP_CLEARED", "detail": "orphaned wait released; ready for next session"})
                     return "MODAL_STOP"
                 http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": tid, "response": "Proceed."})
         try:
