@@ -5,7 +5,7 @@ Known limit: stubbed tests cannot see state-WIRING gaps; live acceptance covers
 the loop wiring and the env flag."""
 import random, sys
 
-src = open("/home/claude/app_d32.py").read()
+src = open("/home/claude/app_d33.py").read()
 ns = {}
 pre = src[:src.index("def experiment_draw")]
 deps = ""
@@ -87,6 +87,29 @@ obs_legacy = build("S2", transcript, signals, tags, [])
 check("legacy rows carry None experiment columns",
       all(o["computed_signal"] is None and o["injected_signal"] is None and o["randomized_flag"] is None for o in obs_legacy))
 check("legacy ambient = friction signal", all(o["ambient_signal"] == o["friction_signal"] for o in obs_legacy))
+
+# 4. modal_touched: firing cycle N and N+1 both marked; non-touched experiment rows 0
+exp2 = [{"cycle": 1, "computed": 0, "injected": 4, "randomized": 1},
+        {"cycle": 2, "computed": 1, "injected": 1, "randomized": 0},
+        {"cycle": 3, "computed": 2, "injected": 3, "randomized": 1}]
+obs_mt = build("S3", transcript, signals, tags, [], experiment_sequence=exp2, modal_touched_cycles=[1])
+check("modal at N=1 marks cycle 1 (firing)", obs_mt[0]["modal_touched"] == 1)
+check("modal at N=1 marks cycle 2 (N+1 outcome)", obs_mt[1]["modal_touched"] == 1)
+check("cycle 3 untouched stays 0", obs_mt[2]["modal_touched"] == 0)
+
+# 5. last-cycle modal marks only N (no N+1 row exists)
+obs_last = build("S4", transcript, signals, tags, [], experiment_sequence=exp2, modal_touched_cycles=[3])
+check("last-cycle modal marks cycle 3", obs_last[2]["modal_touched"] == 1)
+check("last-cycle modal leaves cycle 2 at 0", obs_last[1]["modal_touched"] == 0)
+check("no spurious N+1 beyond last cycle", len(obs_last) == 3)
+
+# 6. legacy (non-experiment) rows carry None modal_touched
+obs_leg = build("S5", transcript, signals, tags, [])
+check("legacy rows None modal_touched", all(o["modal_touched"] is None for o in obs_leg))
+
+# 7. no modals -> all experiment rows 0
+obs_clean = build("S6", transcript, signals, tags, [], experiment_sequence=exp2, modal_touched_cycles=[])
+check("clean experiment rows all 0", all(o["modal_touched"] == 0 for o in obs_clean))
 
 print(f"\n{'ALL PASS' if fails == 0 else str(fails) + ' FAILURES'}")
 sys.exit(1 if fails else 0)
