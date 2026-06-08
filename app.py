@@ -1704,7 +1704,13 @@ def corroborated_challenge_should_close(end_requested, assessment):
     approval proceeds to the close gates (which all still run)."""
     return bool(end_requested) and (assessment or {}).get("deliverable") == "complete"
 
-MODAL_TIMEOUT_S = 3600
+MODAL_TIMEOUT_S = 3600            # operator-attended (dashboard): a human is present, wait long
+MODAL_TIMEOUT_AUTONOMOUS_S = 90  # agent-started (mailbox/farm): no operator present, so a modal
+                                  # must resolve fast or it blocks the driver for the full hour.
+                                  # This is OPERATOR-WAIT only — model inference has its own timeout —
+                                  # so shortening it never truncates a slow model response. 90s matches
+                                  # the Governor staleness threshold: if an operator IS watching, the
+                                  # alarm fires while the window is still open and they can still answer.
 
 def wait_for_human_input(input_type, context):
     """Deploy 26 (certified spec, receipt #27): externally-started sessions route
@@ -1741,7 +1747,7 @@ def wait_for_human_input(input_type, context):
         external_mailbox["waiting"] = True
         socketio.emit('routing_action', {'type': 'cycle',
             'message': f"Modal ({input_type}) posted to external mailbox as turn {external_mailbox['turn_id']} — dashboard and mailbox both armed."})
-        deadline = time.time() + MODAL_TIMEOUT_S
+        deadline = time.time() + MODAL_TIMEOUT_AUTONOMOUS_S
         value = None
         while time.time() < deadline:
             if active_session["human_input_event"].wait(timeout=2):
