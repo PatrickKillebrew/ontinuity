@@ -476,6 +476,7 @@ def build_session_payload():
         "challenge_events_raw": s.get("challenge_events", []),
         "transcript_turns": transcript_turns,
         "behavioral_observations": behavioral_obs,
+        "executions": [dict(e, session_id=session_id) for e in s.get("execution_log", [])],
         "artifacts": [
             {"label": a.get("label"),
              "content": sanitize_content(a.get("content", "")),
