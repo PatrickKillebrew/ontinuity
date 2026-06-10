@@ -70,3 +70,7 @@ The bookend to the close ritual. Before proposing or acting on a task — ESPECI
 2. Read the relevant conversation records (live/conversations/) for the reasoning behind those decisions.
 3. Follow the item's cited refs (sha / receipt) to the actual record.
 Recall is NOT a substitute for retrieval. A long session degrades context; the corpus does not. Failing to load before acting is the silent-failure class — it produces confident proposals anchored to stale state (e.g. proposing to automate a mechanism the record shows was already retired). The fold/retrieval machinery is reliable; the only gap is failing to reach for it. Orient first, then reason.
+
+
+## MANUAL-CURRENCY DISCIPLINE (mandatory)
+When operation changes, THIS MANUAL changes in the SAME commit as the change. Triggers: a new endpoint, a new session mode, a fix that alters the write path, a firewall/egress change, a new scoped operation, a change to the driver, or any change to how the system is operated. Rationale: a manual that lags the system decoheres the same way an operator's memory does, just slower — and then the next seat reads stale instructions and repeats a retired failure. The manual is only load-bearing if it is current. Do not fold an operation change to the queue and leave the manual untouched; the queue is the archive, the manual is the live operating instruction. If you change how the system works and do not update the manual in the same breath, you have introduced the silent-decoherence defect into the one document meant to prevent it.
