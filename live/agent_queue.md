@@ -375,3 +375,15 @@ Operation #1 (operator Q1=both) live in file_server.py, both following the prove
 - POST /op/restart_workspace (SAFE, reversible mutation): restarts the workspace service; detached + 1s-delayed so the HTTP response returns before the process bounces. Logs 'ok'='restart dispatched' (a process can't log its own death; service-return confirmed via /status).
 PROVEN: read_journal returned 5 real lines; wrong-key=401; restart dispatched 200, /status came back 401 (up+gated) after 4s; ledger shows op_id 1/2/3 (register_egress, read_journal, restart_workspace) all ok. Both halves of the pattern (read + mutate) exercised and audited.
 NEXT (next session): operation #2 = gunicorn/key-auth firewall fix (REVIEW/RISK, with rollback) — retires the IP-whitelist time-bomb, built on the now-validated scoped-ops foundation. Then the capability unblocks delegating box work to the worker.
+
+
+## FOLD — scoped operation #2 DONE: IP-firewall retired, workspace on gunicorn + key-auth (June 10 early)
+The real firewall fix from the verdict (queue line 288), done by hand with a saved revert (operator confirmed reversible = not drastic):
+- file_server.py confirmed gunicorn-ready: plain Flask app (app=Flask at 52, app.run at 1516), no socketio/threading tricks; app importable as file_server:app. init_db() only ran in __main__ but is harmless (just get_db() + a print; connection is lazy/per-request) so gunicorn skipping it breaks nothing. No code change needed.
+- Installed gunicorn 26.0.0; tested serving on spare port 5009 first (live 5001 untouched) — /status 401, /governor/punchlist 200, authed data route 200, clean worker boot/exit, no errors.
+- Swapped systemd ExecStart to: gunicorn --bind 0.0.0.0:5001 --workers 2 --timeout 120 file_server:app. REVERT SAVED: /etc/systemd/system/ontinuity-workspace.service.bak_pregunicorn + /tmp/ufw_5001_pregunicorn.txt.
+- Opened 5001 to all (ufw allow 5001/tcp) and DELETED all 9 obsolete per-IP/range rules. Firewall now: single 5001/tcp ALLOW Anywhere (v4+v6). IP-whitelist model RETIRED.
+- PROVEN: MAIN relay -> workspace works through the open port (session_executions=116), with ZERO IP whitelisting — so it survives every future redeploy/egress-rotation. The time-bomb is defused. (Box->own-public-IP:5001 = 401 confirms public reachability + gating. The assistant's sandbox can't reach it directly, but that's the sandbox's outbound egress restriction, not a system issue — real clients like Railway reach it fine.)
+- SECURITY MODEL NOW: gunicorn (connection handling, solves the original bot-starvation properly) + open port + key-auth (diag-key/api-key the routes already require). NO Hetzner cloud firewall exists (operator confirmed — none attached; Hetzner only filters if one is attached). 
+- FOLLOW-UP (note, not tonight): with 5001 now public, security rests on EVERY route being properly auth-gated. Worth an audit that no unauthenticated mutating route is exposed. The scoped /op/* and /register_egress are diag-key gated; /governor/* data routes are X-API-Key gated; page routes are open (read-only HTML). 
+- The OPERATING_MANUAL firewall section is now partly obsolete (IP-whitelist retired) — updated.
