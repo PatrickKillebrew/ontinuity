@@ -291,3 +291,17 @@ THE ARC (good operator/assistant tension — operator pushed autonomy + user's-e
 
 ## FOLD — VERIFICATION: operator dialogue is NOT written to the DB (June 9)
 Operator asked to verify our dialogue is persisted. CHECKED: no conversation/dialogue/operator table exists (0 rows). This dialogue lives ONLY in the queue folds (decisions in the assistant's words) and this conversation window. The literal exchange is NOT durable. Same theme as the whole session: a discipline (conversation-provenance convention, live/conversations/) was designed, ran ONCE (hand-written), and silently lapsed — known only by checking, not faith. Fix = the queued worker conversation-backfill (can capture today from the window while fresh) + convergence (dialogue->decision->commit as one auditable chain). Worth doing the today-backfill SOON before this window closes and the firewall-arc dialogue is lost.
+
+
+## FOLD — worker block landed + operator rulings (June 9 night)
+Worker delivered three committed artifacts (organizational/design/backfill only, no deploys):
+- PUNCH_LIST.md (28ea2be1) — the 240-line append-queue distilled into a resolved DONE/IN-PROGRESS/OPEN view, every item reconciled + deduplicated, closed items citing their commit/receipt, multi-tenancy+auth flagged as THE product blocker. The queue stays as archive ledger; this is the resolved working view. (Directly answers the operator's "I can't see the punch list, I rely on faith.")
+- Governor punch-list panel spec (7d44ecf5, design only) — renders PUNCH_LIST.md as Present/Future/Past columns via a /governor/punchlist route.
+- Conversation backfill (f3eb697a + 55fb36a2) — June 8 + June 9 records per convention, rulings verbatim, redaction verified. NOTE: the worker's June 9 record stopped mid-arc (reconstructed from commits pulled before the firewall thread finished); the control seat COMPLETED it (74e3422a) with the evening arc only the window held — firewall verdict, operating manual, always-on driver, Fix #2 proven, autonomous-operator turn.
+- Convergence design (worker): the three records (PUNCH_LIST=state, ledger=signoff/provenance, conversation=dialogue) become ONE chain keyed on shared shas/receipts, two-way linked, re-distilled in one ritual so none lapses silently.
+
+OPERATOR RULINGS (this session):
+- Redact firewall-whitelist IPs in public records: CONFIRMED. Doubly right — those IPs are being deprecated (IP-whitelisting proven wrong for pooled cloud egress).
+- Governor panel parser-vs-sidecar: PARSER — parse PUNCH_LIST.md live server-side; a sidecar is a second source that drifts from the markdown (the dual-source decoherence we keep fighting). Markdown stays single source of truth.
+- Re-distillation: FOLD PUNCH_LIST.md + provenance ledger + conversation records into ONE close ritual, keyed on shas/receipts — the structural cure for the silent-lapse disease (the session's recurring theme). The control seat holding the seat at session close runs the ritual. ADD re-distillation to OPERATING_MANUAL.md as a control-seat duty (operating knowledge that must persist, not be recalled).
+- Convergence (worker design) ADOPTED as the target: extend the provenance ledger to carry the full lifecycle (conversation -> decision -> proposal -> review-findings -> signoff -> deploy -> receipt); review-findings currently evaporate (wrong-place bugs caught in Part A/#4/F.3 live nowhere durable) — the ledger should carry them.
