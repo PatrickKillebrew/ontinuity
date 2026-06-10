@@ -305,3 +305,34 @@ OPERATOR RULINGS (this session):
 - Governor panel parser-vs-sidecar: PARSER — parse PUNCH_LIST.md live server-side; a sidecar is a second source that drifts from the markdown (the dual-source decoherence we keep fighting). Markdown stays single source of truth.
 - Re-distillation: FOLD PUNCH_LIST.md + provenance ledger + conversation records into ONE close ritual, keyed on shas/receipts — the structural cure for the silent-lapse disease (the session's recurring theme). The control seat holding the seat at session close runs the ritual. ADD re-distillation to OPERATING_MANUAL.md as a control-seat duty (operating knowledge that must persist, not be recalled).
 - Convergence (worker design) ADOPTED as the target: extend the provenance ledger to carry the full lifecycle (conversation -> decision -> proposal -> review-findings -> signoff -> deploy -> receipt); review-findings currently evaporate (wrong-place bugs caught in Part A/#4/F.3 live nowhere durable) — the ledger should carry them.
+
+
+## FOLD — coordination architecture: the fractal peer-verification foundation (June 9 night, operator-derived)
+The operator reasoned out the full primitive across this session. Consolidated design direction (NOT built — foundation thinking; needs a real spec, connects to live/specs/coordinator_worker_multiseat.md):
+
+THE NODE PRIMITIVE (one loop, all nodes identical):
+- finish current task -> pull next item from this node's mailbox -> dispatch by ITEM TYPE: a "task" item -> produce a solution-proposal; a "proposal" item -> run the gates against it and emit a verdict -> repeat.
+- ROLES ARE EMERGENT, NOT ASSIGNED: a node has no fixed master/sub role; the queue item decides what it does. This is why it scales to A,B,C,D... with no special node type and no bottleneck.
+- Everyone always has work because mixed task/proposal items keep every mailbox fed (no idle verifier, no idle worker).
+
+SIGN-OFF IS GATES, NOT MODELS (the keystone safety property):
+- No model's job is to "approve." The model in the verify SEAT runs the deterministic harness against the work and reports the harness's pass/fail + evidence. The CODE decides; the model is the hands that run it. A model's opinion is raw material the gates TEST, never a verdict the gates TRUST.
+- This is the SAME principle as the inner loop (deterministic loop owns all termination decisions; models emit signals, fixed rules resolve them) applied BETWEEN nodes instead of within a cycle. Self-similar: inner loop and outer tree use identical "code decides, models supply signals."
+- No-self-sign-off rule: the only routing constraint is "verify anyone's work but your own." Enforced by never routing a node's own proposal back to it. Scales to any N.
+
+FRONTIER vs SMALL-MODEL distinction (operator's critical catch):
+- "Opus reviews Opus" works NOW in this project (the control seat signs off the worker's commits, catching wrong-place bugs it missed, and vice versa) BECAUSE frontier models review by reliable JUDGMENT.
+- The fractal worker army runs cheaper open-source models to keep cost sane; small-model "sign-off by judgment" is the unreliable fabrication-prone assertion we can't trust. So small models sign off by GATE-EXECUTION (run the harness, report verdict), not judgment. Trust lives in the harness, not the model. This is what lets expensive judgment be swapped for cheap mechanical gate-execution without losing trust.
+
+SYMMETRIC PEER PAIRS/TEAMS (operator refinement, better than fixed master/sub):
+- Two peers alternate: A works while B signs off A's last proposal, then B works while A signs off B's. Each always signs off the OTHER's work. Better utilization (neither idle) + shared-context cognitive coherence.
+- Generalizes to N peers: a pool where any peer verifies any other peer's work (not its own), round-robin / whoever's-free. More resilient than rigid pairs.
+
+DELEGATION LEDGER = AUDIT SPINE: every edge (delegation + verdict + evidence + tier) recorded, so the whole tree is walkable from master down. Per-node punch lists; the controller holds the master list + a delegation ledger (task -> assigned-to -> status).
+
+KEYSTONE OPEN QUESTION (the thing that makes or breaks the whole fractal): what is the CHEAPEST deterministic harness a verify-seat model can run that is still a TRUSTWORTHY sign-off? If verification is as expensive as the work, the tree doesn't pay off. This is the same question as "usable inner-system sign-off." Get cheap+trustworthy and the fractal scales cheaply and safely at any depth/capability.
+
+HORIZON VISION (operator, far but noted): massively parallel agent swarms (this fractal, at scale) as a computational FABRIC whose primitive operation is a VERIFIED REASONING STEP rather than a bit-flip. Not a literal transistor replacement (orders of magnitude off on speed/cost) but a genuinely different computational substrate. Hold as vision, not plan.
+
+## PUNCH-LIST ITEM — investigate post-fix cycle data (June 9)
+The unintended always-on grind pushed burn-in to 333 total cycles. 203 certified-close are YESTERDAY's original set; the ~130 delta beyond are NEW cycles run on tonight's post-Fix-#2/#3 code. Value already banked: at-scale validation of tonight's fixes (session_executions populated across hundreds of cycles, adversarial_catch_count exercised, write-path durable under load) + a clean provider death-rate (~10%: 24 dead / 242 sessions) confirming death-instrumentation fires at scale. FUTURE WORK (not tonight): investigate the delta cycles' data for what Fix #2/#3 surfaced. NOT the certifiable set (abnormal-exit write-loss gap still open).
