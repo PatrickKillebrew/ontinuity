@@ -124,6 +124,14 @@ You are a control/operator seat booting cold. You are NOT empty of capability �
 NOTE — this is the COLD-BOOT path (a genuinely fresh seat). A seat already mid-stream that is DRIFTING does not run this; it runs the open ritual to RE-GROUND on its current task (it is not empty, just stale). Do not tell a context-rich recohering seat "you are fresh with zero context." Fresh-state vs operating-state are distinct.
 
 
+## ROLE PROVIDERS — set per role via Railway env vars (any role, not just the Challenger)
+Each in-cycle role's provider/model/key is set on the engine's Railway service via env vars, NOT in app.py (CONFIG defaults are empty; the engine reads env). For role <ROLE> in {MODEL_A, MODEL_B, MODEL_C, PARIETAL, PROJENIUS}:
+- MODEL_<ROLE>_URL   — provider chat-completions endpoint
+- MODEL_<ROLE>_MODEL — provider model string
+- MODEL_<ROLE>_API_KEY — provider key
+Beneath those, PROVIDER_URL / PROVIDER_API_KEY are the SHARED fallback any role with no role-specific var inherits. (This is why MAIN's Challenger, having no MODEL_B_* vars, inherited the shared Novita PROVIDER and died on a Novita 404 — fixed June 10 by setting MODEL_B_* to Cerebras GLM-4.7.) MODEL_A_URL=external means that role is staffed by the mailbox seat (a Claude answering /mailbox), not a provider model.
+Set them via the Railway GraphQL API (backboard.railway.app/graphql/v2, Project-Access-Token = the project token) with the variableUpsert mutation {projectId, environmentId, serviceId, name, value}. Read current values with the variables(projectId,environmentId,serviceId) query first (read-then-write). A variable change triggers a ~30s service redeploy to take effect; it is a config change, not a code commit or a serviceInstanceDeploy. DESIGN RULE: keep adversarial roles on different training lineages — e.g. Challenger and Parietal should not share a provider/lineage, so their error geometries differ (the whole point of the adversarial layer).
+
 ## TWO AXES THAT ARE EASILY CONFUSED — START MODE vs SEAT STAFFING (read this; fresh seats keep conflating them)
 These are DIFFERENT questions. A fresh seat collapsed them and wrongly concluded "I can never be the Researcher." Keep them separate:
 
