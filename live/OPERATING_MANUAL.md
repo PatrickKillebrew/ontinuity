@@ -62,3 +62,11 @@ Re-distill the three records together so none lapses silently (the silent-lapse 
 2. Conversation record (live/conversations/) — capture this session's dialogue per CONVENTION.md (rulings verbatim, redact keys/IPs, cross-ref shas/receipts). The control seat does this — a worker backfilling from commits cannot see the conversation window.
 3. Sign-off / provenance ledger — ensure rulings + deploys this session are recorded.
 All three key on the SAME shas/receipts (the join), so a stranger walks conversation -> decision -> commit -> receipt in either direction. Running all three in one ritual is what stops any one of them lapsing (conversation logging lapsed after one entry on June 7 precisely because it was not part of a ritual).
+
+
+## CONTROL-SEAT OPEN RITUAL (run before reasoning about a task)
+The bookend to the close ritual. Before proposing or acting on a task — ESPECIALLY after focusing on something else for a while — ORIENT FROM THE CORPUS, do not reason from memory:
+1. Search the queue folds (live/agent_queue.md) for the topic — past decisions, verdicts, and reversals on it.
+2. Read the relevant conversation records (live/conversations/) for the reasoning behind those decisions.
+3. Follow the item's cited refs (sha / receipt) to the actual record.
+Recall is NOT a substitute for retrieval. A long session degrades context; the corpus does not. Failing to load before acting is the silent-failure class — it produces confident proposals anchored to stale state (e.g. proposing to automate a mechanism the record shows was already retired). The fold/retrieval machinery is reliable; the only gap is failing to reach for it. Orient first, then reason.
