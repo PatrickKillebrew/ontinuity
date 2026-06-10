@@ -451,3 +451,17 @@ META-LESSON (operator, the spine of this whole session — why the harness matte
 ## FOLD — empirical recoherence bound + migration-trigger signal (June 10, observed)
 The prior control-seat conversation was deliberately run past its limit (operator stress-test, 4+ days / 5+ compactions). OBSERVED BOUND: past roughly that depth the seat stopped reliably recohering FROM THE CORPUS — it gave synthesized partial reads (grep slices) instead of whole-corpus reads, declared walls the record disproved ("can't reach the box," "harness-verdict needed as a blocker," "scoped ops useless"), and re-drifted even after correction, requiring the operator as the repeated corrective. A FRESH seat booting cold from the same corpus immediately outperformed it: caught the stale /mnt/project snapshot trap, built against live repo source, labeled inferences vs facts, designed fail-safe — i.e. the corpus was sufficient; the degraded WINDOW was the failure, not the record.
 MIGRATION-TRIGGER SIGNAL (operating principle): migrate a seat to a fresh conversation on the BEHAVIORAL signal that it can no longer recohere cleanly — synthesized/partial orientation instead of full reads, asserting impossibility without exhausting the corpus, repeated re-drift after correction — NOT on a fixed timer. The corpus persists; the conversation window degrades. A fresh seat + a good current-state touch point recoheres better than patching a spent window. This is itself an argument for the operator-seat harness: a gate that forces whole-corpus exhaustion before any "can't be done" would have prevented the wall-declaring the degraded seat fell into.
+
+
+## FOLD — password-unlocked vault access for a fresh seat (design, June 10)
+GOAL: a fresh control seat bootstraps credentials by the operator entering a PASSWORD, not by handling/pasting an API key. Better UX (remember a password, not a key), logged, no plaintext anywhere.
+
+DESIGN:
+- The master key (Railway project token) is stored ENCRYPTED at rest (ciphertext is safe even in a public path; the no-credentials rule forbids PLAINTEXT, not ciphertext). Store the encrypted blob in the auth-gated box DB (preferred) or repo.
+- Operator enters a strong password. A KDF (argon2/scrypt) derives the decryption key from it; decrypts the master key IN-MEMORY; the seat uses it to pull the vault (GitHub token, DIAG_KEY, mailbox keys); discards the decrypted key after. Password is never stored (only used to decrypt; optionally a verify-hash).
+- The password entry IS the logged grant: entering it writes a key-access ledger row (requesting seat/lineage, timestamp, which secrets pulled, operator-session). Sibling of operations_ledger. So every credential bootstrap is attributed and auditable — the "everyone feels safe" requirement.
+- Cold-start floor acknowledged: one secret (the password) always enters from the operator; the chain can't bootstrap from nothing. The password replaces the API-key handover — that's the win.
+
+WHY IT MATTERS: this is access-control-for-credentials = a real down payment on the multi-tenancy + auth HIGH blocker (which seat may unlock which secrets, logged, operator-granted). Tiering optional later (a seat may be granted GitHub-token-only vs all-secrets).
+
+BUILD when picked up: KDF + encrypted master-key blob + decrypt-in-memory pull path + key-access ledger row on unlock. NOT blocking the staged courier commit; this is its own item. The courier still commits via the current vault path (operator hands the master key this session).
