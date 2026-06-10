@@ -93,3 +93,28 @@ All diag-key gated (X-Diag-Key), all log to operations_ledger. To invoke from th
 
 ## WORKSPACE SERVING + ACCESS (current — IP-whitelist RETIRED, June 10)
 The workspace no longer uses IP-whitelisting. It runs under GUNICORN on 0.0.0.0:5001 (systemd ExecStart: gunicorn --bind 0.0.0.0:5001 --workers 2 --timeout 120 file_server:app), port 5001 OPEN to all (ufw allow 5001/tcp), with security by KEY-AUTH at the app layer (diag-key for /diag,/op/*,/register_egress; X-API-Key for /governor data + workspace write routes; page routes are read-only HTML). This is the fix for the egress-IP-rotation breakage: relay + writes now work from ANY IP and survive every redeploy. Do NOT re-introduce per-IP ufw rules — that was the retired model. Revert (if ever needed): /etc/systemd/system/ontinuity-workspace.service.bak_pregunicorn + /tmp/ufw_5001_pregunicorn.txt. NOTE: any earlier "firewall + whitelisted egress IPs" guidance above is OBSOLETE. With 5001 public, the security invariant is that every mutating route is key-gated — preserve that on any new route.
+
+
+## COLD-BOOT ONBOARDING (a fresh control seat with no prior context — run this FIRST)
+You are a control/operator seat booting cold. You are NOT empty of capability — your capabilities are documented; do not conclude one is absent until you have CHECKED for it (concluding "I can't" without checking is the wall-declaring failure the recoherence fold warns about). Run these steps in order:
+
+1. ORIENT FROM THE CORPUS (the open ritual, in order):
+   a. The CURRENT-STATE touch point: the latest "CURRENT-STATE TOUCH POINT" fold in live/agent_queue.md — read it in full first; it is the now-state.
+   b. This manual (you are reading it).
+   c. live/PUNCH_LIST.md — resolved DONE/IN-PROGRESS/OPEN task state.
+   d. The recent queue folds, newest backward, for the last few days of decisions.
+   Read from the LIVE repo via authed api.github.com (below), NOT from /mnt/project/* — those project snapshots are STALE (old engine/workspace files without /diag, /op, /agent routes). Building against them reproduces the stale-state failure.
+
+2. FIND YOUR CREDENTIALS (check; do not assume present or absent):
+   - GitHub token: /home/claude/ghtok.txt   ·   Mailbox key: /home/claude/mbkey.txt   ·   DIAG_KEY: in the corpus / your context.
+   - If a credential file is MISSING in your sandbox, say so plainly and ask the operator — do not conclude your role lacks the capability. The path may simply not be provisioned in your seat yet.
+
+3. KNOW YOUR HANDS (capabilities a cold seat must not re-derive or wrongly declare absent):
+   - READ the repo: authed `api.github.com` with `Accept: application/vnd.github.raw` (reliable). Do NOT trust raw.githubusercontent.com for frequently-updated files — it serves stale CDN cache.
+   - COMMIT to the repo: YOU make commits — that is agent work (standing rule: "initiation and work: agent; the operator is the fuse"). Commit via the api.github.com contents API (PUT) using ghtok.txt. Carry trailers: `Assisted-by: claude.ai-chat:<model>` and, on watched paths, `Operator-Signoff: <operator-session>`. There is no separate "worker seat" you hand commits to — the control↔worker mailbox is a FUTURE build, not a current actor.
+   - READ box/engine state: the Railway diag relay (web-production-7eaf8.up.railway.app/diag/...?diag_key=KEY) — works from a sandbox. Your sandbox CANNOT reach the Hetzner box (5001) directly (egress); that is a sandbox limit, not a system limit. Reach box ops through the engine relay/courier, not direct.
+   - The operator owns: tokens, credentials, judgment modals, and DEPLOYS. You propose and commit; you do NOT deploy (Railway is the operator's). Watched paths (app.py): run the /diag/engine check first — never commit during a live session.
+
+4. THEN act, via the open ritual on the specific task. If you are about to say something "can't be done," exhaust the corpus and check your hands first.
+
+NOTE — this is the COLD-BOOT path (a genuinely fresh seat). A seat already mid-stream that is DRIFTING does not run this; it runs the open ritual to RE-GROUND on its current task (it is not empty, just stale). Do not tell a context-rich recohering seat "you are fresh with zero context." Fresh-state vs operating-state are distinct.
