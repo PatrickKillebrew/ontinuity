@@ -1,5 +1,5 @@
 # ONTINUITY OPERATING MANUAL — how the system works and how to drive it
-*Load-bearing durable artifact. Any AI sitting in the operator/control seat reads THIS to be immediately competent, regardless of conversation length or model lineage. Operating knowledge must PERSIST, not live in a degrading context window. Grounded against app.py (verified, not recalled). When code changes, update this.*
+*Load-bearing durable artifact. SCOPE: the OPERATOR/CONTROL seat ONLY (drives sessions/driver/writes) — NOT the in-cycle role seats (Challenger/Friction/Parietal/Projenius). Any AI sitting in the operator/control seat reads THIS to be immediately competent, regardless of conversation length or model lineage. Operating knowledge must PERSIST, not live in a degrading context window. Grounded against app.py (verified, not recalled). When code changes, update this.*
 
 ## THE TWO SESSION START MODES (the thing most easily forgotten)
 A farm/engine session can be started two ways, and they behave fundamentally differently:
@@ -20,7 +20,8 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 - systemd service `ontinuity-burnin` on the VPS (/opt/ontinuity/burnin_resident.py).
 - It is the thing that ANSWERS the external mailbox for /agent/start sessions and drives them cycle-by-cycle to a normal close.
 - It self-stops when the burn-in stopping rule is met (>=200 randomized AND >=20 sessions). When stopped, no mailbox sessions can complete.
-- Start: `systemctl start ontinuity-burnin && sleep 4 && systemctl is-active ontinuity-burnin`
+- ALWAYS-ON: the driver now runs continuously (systemd unit: TARGET_RANDOMIZED=0 = never self-stop, Restart=always, enabled on boot). It drives any requested session to close, idles when nothing's queued, revives if it dies, comes back on reboot. You should NOT need to hand-start it. If it's somehow stopped: `systemctl start ontinuity-burnin`. Set TARGET_RANDOMIZED to a nonzero value only for a finite burn-in (self-stops at target).
+- Start (only if stopped): `systemctl start ontinuity-burnin && sleep 4 && systemctl is-active ontinuity-burnin`
 - Stop: `systemctl stop ontinuity-burnin`
 - Status/logs: `systemctl is-active ontinuity-burnin` ; `journalctl -u ontinuity-burnin --no-pager -n 20`
 - RULE: exactly ONE driver owns the farm. A second poller (e.g. a chat-sandbox driver) collides — kill zombies. Separate instances need separate mailboxes (the burn-in/main isolation pattern).
