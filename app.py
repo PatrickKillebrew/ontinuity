@@ -3850,4 +3850,20 @@ def _graceful_shutdown(signum, frame):
 _signal.signal(_signal.SIGTERM, _graceful_shutdown)
 
 if __name__ == '__main__':
+    # Self-register this engine's egress IP with the workspace firewall (Option A).
+    # On every deploy the Railway egress IP can change; this announces the new IP
+    # to the workspace's /register_egress (diag-key gated), which whitelists it for
+    # port 5001 so workspace writes survive redeploys without manual firewall edits.
+    # Fail-soft: a failure here never blocks startup.
+    def _register_egress():
+        dk = os.environ.get("DIAG_KEY", "").strip()
+        if not WORKSPACE_URL or not dk:
+            return
+        try:
+            r = http_requests.post(f"{WORKSPACE_URL}/register_egress",
+                                   headers={"X-Diag-Key": dk}, timeout=15)
+            print(f"[EGRESS REGISTER] {r.status_code} {r.text[:120]}", flush=True)
+        except Exception as e:
+            print(f"[EGRESS REGISTER] failed (non-fatal): {str(e)[:120]}", flush=True)
+    _register_egress()
     socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False, allow_unsafe_werkzeug=True)
