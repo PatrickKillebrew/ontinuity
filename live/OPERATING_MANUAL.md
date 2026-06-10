@@ -54,3 +54,11 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 3. Trigger a session; wait for a NORMAL close (>=2 cycles; ~2-4 min; watch /diag/engine for running:False with a session that didn't die).
 4. Re-query the table; confirm rows. If 0, check /diag/console for a write FAILURE (ConnectTimeout = firewall; other = look closer).
 5. Do not burn credit re-spawning blind — read the engine log to see WHY before retrying.
+
+
+## CONTROL-SEAT CLOSE RITUAL (run at session close)
+Re-distill the three records together so none lapses silently (the silent-lapse disease):
+1. PUNCH_LIST.md — reconcile DONE/IN-PROGRESS/OPEN against what actually shipped this session (cite closing commit/receipt for newly-done items).
+2. Conversation record (live/conversations/) — capture this session's dialogue per CONVENTION.md (rulings verbatim, redact keys/IPs, cross-ref shas/receipts). The control seat does this — a worker backfilling from commits cannot see the conversation window.
+3. Sign-off / provenance ledger — ensure rulings + deploys this session are recorded.
+All three key on the SAME shas/receipts (the join), so a stranger walks conversation -> decision -> commit -> receipt in either direction. Running all three in one ritual is what stops any one of them lapsing (conversation logging lapsed after one entry on June 7 precisely because it was not part of a ritual).
