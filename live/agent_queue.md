@@ -1,3 +1,7 @@
+# ⚡ OPERATOR SEAT: READ live/OPERATING_MANUAL.md FIRST
+# Before driving any session/driver/write, read the operating manual. Operating
+# competence comes from that document, not recall — your context degrades, it does not.
+
 # AGENT QUEUE — curated by Dweller Lap 3 (session 2026-06-07_14-33-57, receipt #19, CERTIFIED)
 Rule applied: rank by current receipt evidence; mark the rest ASSUMED. Protocol unchanged:
 contract the HEAD ACTIVE ITEM ONLY; fold back on the record; append between laps, curate during them.
