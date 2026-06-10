@@ -82,3 +82,10 @@ The operator seat performs privileged box actions through NAMED, BOUNDED operati
 - AUDIT SPINE — operations_ledger table (op_id, operation, tier, caller, source_ip, args, result, status started|ok|fail, started_at, finished_at). Helpers _ops_begin (log intent, returns op_id) + _ops_finish (log result) in file_server.py. DUAL-END: every op logs intent on invocation, result on completion. A crashed op leaves status=started + null finished_at = visible incomplete record. NO operation may run without logging to the ledger.
 - TIERING (reuse sign-off tiers): SAFE = read-only or trivially reversible, diag-key only, auto-runs. REVIEW = reversible state change (restart, reconfigure), diag-key + operator sign-off token (interim: tight-guard + rollback). RISK = irreversible/wide-blast, strictest gate + must-refuse museum + explicit sign-off. Classifier proposes tier; operator may escalate, never silently de-escalate. Never self-locking (an op must never brick the ability to run the fix for the op).
 - Spec: live/specs/scoped_operations_spec.md. Build sequence: ledger [DONE] -> safe op#1 (journal read + workspace restart) -> gunicorn/key-auth firewall fix as op#2 (retires the IP-whitelist; note the firewall section below becomes obsolete once op#2 ships).
+
+
+### Live scoped operations (the named allowlist so far)
+- POST /op/read_journal {lines:1..200} — SAFE, read-only. Recent ontinuity-workspace journal lines. Use to check VPS history (e.g. blocked-connection IPs) without operator hands.
+- POST /op/restart_workspace — SAFE, reversible. Restarts the workspace service (detached, returns first, back in a few seconds; confirm via /status:401).
+- POST /register_egress {cidr? optional} — SAFE. ufw-allow caller's own egress IP (or allowlisted CIDR) on 5001. (Becomes obsolete when the gunicorn/key-auth fix lands.)
+All diag-key gated (X-Diag-Key), all log to operations_ledger. To invoke from the operator seat: POST with the DIAG_KEY. Pending op#2: gunicorn/key-auth firewall fix.
