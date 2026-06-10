@@ -460,6 +460,7 @@ def build_session_payload():
         "friction_profile": profile,
         "friction_reasons": reasons,
         "challenge_count": counts["challenge"],
+        "adversarial_catch_count": len(s.get("challenge_events", [])),
         "uphold_count": counts["uphold"],
         "reject_count": counts["reject"],
         "pursue_both_count": counts["pursue_both"],
