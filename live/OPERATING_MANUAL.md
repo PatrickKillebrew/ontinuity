@@ -89,3 +89,7 @@ The operator seat performs privileged box actions through NAMED, BOUNDED operati
 - POST /op/restart_workspace — SAFE, reversible. Restarts the workspace service (detached, returns first, back in a few seconds; confirm via /status:401).
 - POST /register_egress {cidr? optional} — SAFE. ufw-allow caller's own egress IP (or allowlisted CIDR) on 5001. (Becomes obsolete when the gunicorn/key-auth fix lands.)
 All diag-key gated (X-Diag-Key), all log to operations_ledger. To invoke from the operator seat: POST with the DIAG_KEY. Pending op#2: gunicorn/key-auth firewall fix.
+
+
+## WORKSPACE SERVING + ACCESS (current — IP-whitelist RETIRED, June 10)
+The workspace no longer uses IP-whitelisting. It runs under GUNICORN on 0.0.0.0:5001 (systemd ExecStart: gunicorn --bind 0.0.0.0:5001 --workers 2 --timeout 120 file_server:app), port 5001 OPEN to all (ufw allow 5001/tcp), with security by KEY-AUTH at the app layer (diag-key for /diag,/op/*,/register_egress; X-API-Key for /governor data + workspace write routes; page routes are read-only HTML). This is the fix for the egress-IP-rotation breakage: relay + writes now work from ANY IP and survive every redeploy. Do NOT re-introduce per-IP ufw rules — that was the retired model. Revert (if ever needed): /etc/systemd/system/ontinuity-workspace.service.bak_pregunicorn + /tmp/ufw_5001_pregunicorn.txt. NOTE: any earlier "firewall + whitelisted egress IPs" guidance above is OBSOLETE. With 5001 public, the security invariant is that every mutating route is key-gated — preserve that on any new route.
