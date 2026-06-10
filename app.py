@@ -3374,7 +3374,7 @@ def diag_relay(endpoint):
 # /op/* allowlist (corpus: scoped-op folds, June 10). Adding a box op = add
 # its name here too. This is a name-gate, NOT a contract relaxation: the box
 # remains the authority on args/tier/ledger.
-OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress"}
+OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim"}
 
 @app.route('/diag/op/<name>', methods=['POST'])
 def diag_op_courier(name):
