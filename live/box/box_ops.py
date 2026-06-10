@@ -162,3 +162,94 @@ def op_commit_self():
     except Exception as e:
         _ledger_finish(op_id, "fail", str(e)[:200])
         return jsonify({"error": str(e)[:200], "committed": committed}), 500
+
+
+@box_ops_bp.route("/op/read_file", methods=["POST"])
+def op_read_file():
+    """Bounded read: return the content of a file INSIDE the box project dir.
+    Mirror of write_file. Closes the retrieval gap — an artifact a sandbox seat
+    wrote to the box (via write_file) can now be read back through the courier.
+    SAFE (read-only)."""
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    name = (b.get("path") or "").strip()
+    if not name:
+        return jsonify({"error": "path required"}), 400
+    full = _safe_box_path(name)
+    if not full:
+        return jsonify({"error": "path traversal rejected"}), 403
+    op_id = _ledger_begin("read_file", {"path": name})
+    try:
+        if not os.path.exists(full):
+            _ledger_finish(op_id, "fail", "not found")
+            return jsonify({"error": "not found", "path": name}), 404
+        with open(full, "r", encoding="utf-8", errors="replace") as f:
+            content = f.read()
+        _ledger_finish(op_id, "ok", f"read {len(content)} bytes from {name}")
+        return jsonify({"ok": True, "path": name, "bytes": len(content), "content": content})
+    except Exception as e:
+        _ledger_finish(op_id, "fail", str(e)[:200])
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+@box_ops_bp.route("/op/commit_file", methods=["POST"])
+def op_commit_file():
+    """Commit an ARBITRARY file from the box project dir to the repo via the
+    GitHub contents API. Generalizes commit_self (which is limited to the box's
+    own source allowlist) so a worker's artifact staged on the box (e.g. a new
+    live/specs/*.md) can be pushed to version control. Token passed as a bounded
+    CALLER arg, never stored on the box. The repo path defaults to the same
+    relative path as on the box, so a file written to the box at
+    live/specs/x.md commits to live/specs/x.md in the repo. REVIEW tier."""
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    token = (b.get("github_token") or "").strip()
+    if not token:
+        return jsonify({"error": "github_token required (passed by caller; not stored on box)"}), 400
+    name = (b.get("path") or "").strip()
+    if not name:
+        return jsonify({"error": "path required"}), 400
+    full = _safe_box_path(name)
+    if not full:
+        return jsonify({"error": "path traversal rejected"}), 403
+    if not os.path.exists(full):
+        return jsonify({"error": "not found on box", "path": name}), 404
+    repo = (b.get("repo") or GITHUB_REPO_DEFAULT).strip()
+    branch = (b.get("branch") or GITHUB_BRANCH_DEFAULT).strip()
+    # repo path defaults to the same relative path the file has on the box
+    path_in_repo = (b.get("repo_path") or name).strip().lstrip("/")
+    message = (b.get("message") or f"commit_file: {path_in_repo}").strip()
+    op_id = _ledger_begin("commit_file", {"path": name, "repo_path": path_in_repo, "repo": repo})
+    try:
+        with open(full, "r", encoding="utf-8") as f:
+            content = f.read()
+        url = f"https://api.github.com/repos/{repo}/contents/{path_in_repo}"
+        sha = None
+        try:
+            gr = urllib.request.Request(url + f"?ref={branch}", headers={
+                "Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
+            with urllib.request.urlopen(gr, timeout=20) as r:
+                sha = json.loads(r.read()).get("sha")
+        except Exception:
+            pass
+        body = {"message": message,
+                "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+                "branch": branch}
+        if sha:
+            body["sha"] = sha
+        pr = urllib.request.Request(url, data=json.dumps(body).encode(), method="PUT",
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
+                     "Content-Type": "application/json"})
+        with urllib.request.urlopen(pr, timeout=30) as r:
+            res = json.loads(r.read())
+            commit_sha = res.get("commit", {}).get("sha", "")
+        _ledger_finish(op_id, "ok", f"committed {path_in_repo} {commit_sha[:12]}")
+        return jsonify({"ok": True, "repo_path": path_in_repo, "commit_sha": commit_sha})
+    except urllib.error.HTTPError as e:
+        _ledger_finish(op_id, "fail", f"github {e.code}")
+        return jsonify({"error": f"github {e.code}: {e.read().decode()[:200]}"}), 502
+    except Exception as e:
+        _ledger_finish(op_id, "fail", str(e)[:200])
+        return jsonify({"error": str(e)[:200]}), 500
