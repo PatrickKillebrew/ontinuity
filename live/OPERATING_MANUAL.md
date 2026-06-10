@@ -42,7 +42,7 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 - Health: /diag/api/health?diag_key=KEY
 - Farm engine base: https://ontinuity-farm-production.up.railway.app  (same /diag/* routes)
 - Mailbox (answer an orphaned turn): POST /mailbox/respond {mailbox_key, turn_id, response}; check /mailbox/turn?mailbox_key=...
-- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist: read_journal, restart_workspace, register_egress. (The arm that lets a sandbox seat reach the box through the engine.)
+- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist (live, 10 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file, commit_self. (The arm that lets a sandbox seat reach the box through the engine.)
 
 ## FIREWALL (VPS workspace, port 5001) — June 9
 - Workspace 5001 is firewalled to whitelisted sources ONLY (default-drop). Whitelisted: operator laptop 47.37.119.177, operator parents' net 66.132.172.101, Railway relay 162.220.232.0/24, Railway FARM egress 52.52.202.228.
@@ -57,12 +57,19 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 5. Do not burn credit re-spawning blind — read the engine log to see WHY before retrying.
 
 
-## CONTROL-SEAT CLOSE RITUAL (run at session close)
-Re-distill the three records together so none lapses silently (the silent-lapse disease):
-1. PUNCH_LIST.md — reconcile DONE/IN-PROGRESS/OPEN against what actually shipped this session (cite closing commit/receipt for newly-done items).
+## CONTROL-SEAT CLOSE RITUAL (run at session close — WORK THE CHECKLIST, do not freestyle)
+A literal checklist so nothing lapses silently (the silent-lapse disease). Run every item; if an item does not apply, say so explicitly rather than skipping it. The first three are the record re-distillation; the rest catch the things a seat forgets after a long, focused build.
+
+1. PUNCH_LIST.md — reconcile DONE/IN-PROGRESS/OPEN against what actually shipped this session (cite closing commit/receipt for each newly-done item). Move finished items OUT of IN-PROGRESS, not just into DONE.
 2. Conversation record (live/conversations/) — capture this session's dialogue per CONVENTION.md (rulings verbatim, redact keys/IPs, cross-ref shas/receipts). The control seat does this — a worker backfilling from commits cannot see the conversation window.
-3. Sign-off / provenance ledger — ensure rulings + deploys this session are recorded.
-All three key on the SAME shas/receipts (the join), so a stranger walks conversation -> decision -> commit -> receipt in either direction. Running all three in one ritual is what stops any one of them lapsing (conversation logging lapsed after one entry on June 7 precisely because it was not part of a ritual).
+3. agent_queue.md fold — write the session's narrative fold (what was built, what was learned, what reversed), keyed on the same shas/receipts.
+4. MANUAL CURRENCY — did any operation change this session (new endpoint, new scoped op, new courier allowlist entry, new standing fix, a corrected operating belief)? If yes, THIS MANUAL must already reflect it (currency discipline says same-commit; the close ritual is the backstop that catches a miss). Edit it now if it lagged.
+5. PROVENANCE — are this session's deploys, rulings, and any new box source committed and in version control? If box source changed, run commit_self so the repo matches the box (do not leave the box ahead of the repo).
+6. SECRETS SWEEP — grep every file committed this session for tokens/keys/IPs (csk-, github_pat_, ghp_, the diag key, operator IPs). A token passed as a transient arg must never have landed in a committed file.
+7. STATE LEFT CLEAN — engine idle (/diag/engine running:False), no half-finished deploy (last deployment SUCCESS not FAILED/DEPLOYING), no orphaned mailbox claim holding a block. If a deploy failed, either fix it or fold it as OPEN with the build-log reason — never leave a silent FAILED.
+8. NEXT-SEAT HANDOFF — the top of the queue / a handoff note states the single next action, so the next seat (or a fresh you) runs the open ritual onto a clear target instead of re-deriving where things stood.
+
+All records key on the SAME shas/receipts (the join), so a stranger walks conversation -> decision -> commit -> receipt in either direction. Running them as one ritual is what stops any one lapsing (conversation logging lapsed after one entry on June 7 precisely because it was not part of a ritual; the deploy-autonomy belief went stale on June 10 because it was not written down).
 
 
 ## CONTROL-SEAT OPEN RITUAL (run before reasoning about a task)
@@ -88,7 +95,10 @@ The operator seat performs privileged box actions through NAMED, BOUNDED operati
 ### Live scoped operations (the named allowlist so far)
 - POST /op/read_journal {lines:1..200} — SAFE, read-only. Recent ontinuity-workspace journal lines. Use to check VPS history (e.g. blocked-connection IPs) without operator hands.
 - POST /op/restart_workspace — SAFE, reversible. Restarts the workspace service (detached, returns first, back in a few seconds; confirm via /status:401).
-- POST /register_egress {cidr? optional} — SAFE. ufw-allow caller's own egress IP (or allowlisted CIDR) on 5001. (Becomes obsolete when the gunicorn/key-auth fix lands.)
+- POST /register_egress {cidr? optional} — SAFE. ufw-allow caller's own egress IP (or allowlisted CIDR) on 5001. (Obsolete since the gunicorn/key-auth fix; retained.)
+- POST /op/mailbox_send|fetch|ack|peek|reclaim — seat-to-seat mailbox (seat_mailbox.py). send/ack are state changes, fetch is an ATOMIC claim (BEGIN IMMEDIATE), peek is read-only, reclaim returns expired claims to queue. Carries coordination + corpus pointers (ref), never the canonical result. This is how parallel seats coordinate without the operator routing messages.
+- POST /op/write_file {path, content, description?} — REVIEW. Bounded write to a file INSIDE the box project dir only (path traversal rejected). The general write hand a sandbox seat reaches through the courier (the box's plain /write is not a /op/ route, so the courier can't reach it; this is).
+- POST /op/commit_self {github_token, files?, repo_dir?} — REVIEW. The box reads its OWN allowlisted source files and pushes them to the repo via the GitHub contents API. Token passed as a bounded CALLER arg, never stored on the box. This is how the repo stays in sync with the box (closed the file_server.py provenance hole June 10) — run it in the close ritual whenever box source changed. Self-source allowlist: file_server.py, seat_mailbox.py, box_ops.py, workspace_db_endpoint.py, db.py, governor.html, governor_punchlist.html.
 All diag-key gated (X-Diag-Key), all log to operations_ledger.
 INVOCATION — two paths, same ops:
 - From the operator/Railway network (can reach the box directly): POST the box directly, e.g. POST {WORKSPACE_URL}/op/read_journal with X-Diag-Key.
@@ -117,7 +127,7 @@ You are a control/operator seat booting cold. You are NOT empty of capability �
    - READ the repo: authed `api.github.com` with `Accept: application/vnd.github.raw` (reliable). Do NOT trust raw.githubusercontent.com for frequently-updated files — it serves stale CDN cache.
    - COMMIT to the repo: YOU make commits — that is agent work (standing rule: "initiation and work: agent; the operator is the fuse"). Commit via the api.github.com contents API (PUT) using ghtok.txt. Carry trailers: `Assisted-by: claude.ai-chat:<model>` and, on watched paths, `Operator-Signoff: <operator-session>`. There is no separate "worker seat" you hand commits to — the control↔worker mailbox is a FUTURE build, not a current actor.
    - READ box/engine state: the Railway diag relay (web-production-7eaf8.up.railway.app/diag/...?diag_key=KEY) — works from a sandbox. Your sandbox CANNOT reach the Hetzner box (5001) directly (egress); that is a sandbox limit, not a system limit. Reach box ops through the engine relay/courier, not direct.
-   - The operator owns: tokens, credentials, judgment modals, and DEPLOYS. You propose and commit; you do NOT deploy (Railway is the operator's). Watched paths (app.py): run the /diag/engine check first — never commit during a live session.
+   - DEPLOY AUTONOMY (corrected June 10): the operator owns tokens, credentials, judgment modals, and holds DEPLOY AUTHORITY + accountability + the ability to stop/rollback. This does NOT mean every redeploy waits for a human click — that would gut autonomous work. You HAVE Railway deploy capability via the project token and SHOULD use it for routine work: read the build logs, fix, redeploy. The failure mode to avoid: manufacturing a fake "waiting for operator approval" gate out of a deploy that actually FAILED — read the build logs before concluding anything about why a deploy didn't come up. Watched paths (app.py): run the /diag/engine check first — never commit during a live session — then commit and deploy. The operator is the fuse and oversight, not the button-presser.
 
 4. THEN act, via the open ritual on the specific task. If you are about to say something "can't be done," exhaust the corpus and check your hands first.
 
@@ -130,7 +140,7 @@ Each in-cycle role's provider/model/key is set on the engine's Railway service v
 - MODEL_<ROLE>_MODEL — provider model string
 - MODEL_<ROLE>_API_KEY — provider key
 Beneath those, PROVIDER_URL / PROVIDER_API_KEY are the SHARED fallback any role with no role-specific var inherits. (This is why MAIN's Challenger, having no MODEL_B_* vars, inherited the shared Novita PROVIDER and died on a Novita 404 — fixed June 10 by setting MODEL_B_* to Cerebras GLM-4.7.) MODEL_A_URL=external means that role is staffed by the mailbox seat (a Claude answering /mailbox), not a provider model.
-Set them via the Railway GraphQL API (backboard.railway.app/graphql/v2, Project-Access-Token = the project token) with the variableUpsert mutation {projectId, environmentId, serviceId, name, value}. Read current values with the variables(projectId,environmentId,serviceId) query first (read-then-write). A variable change triggers a ~30s service redeploy to take effect; it is a config change, not a code commit or a serviceInstanceDeploy. DESIGN RULE: keep adversarial roles on different training lineages — e.g. Challenger and Parietal should not share a provider/lineage, so their error geometries differ (the whole point of the adversarial layer).
+Set them via the Railway GraphQL API (backboard.railway.app/graphql/v2, Project-Access-Token = the project token) with the variableUpsert mutation {projectId, environmentId, serviceId, name, value}. Read current values with the variables(projectId,environmentId,serviceId) query first (read-then-write). A variable change triggers a ~30s service redeploy to take effect; it is a config change, not a code commit or a serviceInstanceDeploy. STANDING DEPLOY-FAILURE FIX (June 10): if a build fails with mise `no precompiled python found for core:python@3.13.14` (or any 3.13.x ahead of what python-build-standalone has published — latest precompiled is 3.13.12), pin the EXACT version: Railway vars RAILPACK_PYTHON_VERSION=3.13.12 + NO_CACHE=1 (the bare "3.13" does NOT work — it still resolves to the unreleased latest). These are already set on MAIN. Always READ THE BUILD LOGS (Railway buildLogs GraphQL by deploymentId) before diagnosing a failed deploy — do not assume an approval gate. DESIGN RULE: keep adversarial roles on different training lineages — e.g. Challenger and Parietal should not share a provider/lineage, so their error geometries differ (the whole point of the adversarial layer).
 
 ## TWO AXES THAT ARE EASILY CONFUSED — START MODE vs SEAT STAFFING (read this; fresh seats keep conflating them)
 These are DIFFERENT questions. A fresh seat collapsed them and wrongly concluded "I can never be the Researcher." Keep them separate:
@@ -157,7 +167,7 @@ The credential-bootstrap vault = the Railway PROJECT VARIABLES, read via the Rai
 Commits are AGENT work (standing rule: initiation and work is the agent's; the operator is the fuse/sign-off). Commit via the GitHub API with ghtok.txt.
 - Single file: contents API PUT (needs the file's current blob sha).
 - MULTIPLE files as ONE atomic commit: use the git TREES API (create blobs -> build a tree -> create one commit -> update the ref). Use this when several files must land together (e.g. a code change + its manual update in the same commit, per currency discipline). A sequence of contents-PUTs risks a half-committed state if one fails.
-- Trailers: `Assisted-by: claude.ai-chat:<model>`; on watched paths also `Operator-Signoff: <operator-session>`. Watched paths (app.py): run the /diag/engine check first, never commit during a live session, and DO NOT deploy (operator owns Railway deploys).
+- Trailers: `Assisted-by: claude.ai-chat:<model>`; on watched paths also `Operator-Signoff: <operator-session>`. Watched paths (app.py): run the /diag/engine check first, never commit during a live session. You DO deploy routine work yourself (read build logs, fix, redeploy via the project token); the operator owns deploy AUTHORITY + rollback, not a per-redeploy click (see DEPLOY AUTONOMY in the cold-boot section).
 
 ## STALE PROJECT SNAPSHOTS — /mnt/project/* is frozen, often behind live
 The /mnt/project/ files (app.py, file_server.py, etc.) are a SNAPSHOT, frequently OLDER than the deployed code (e.g. an old socketio engine with no /diag, /op, /agent routes). Two fresh seats nearly built against them. ALWAYS build against the LIVE repo source via authed api.github.com, not the project snapshot. (Also: raw.githubusercontent.com serves stale CDN cache for hot files — use the authed api.github.com raw accept header.)
