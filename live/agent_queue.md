@@ -387,3 +387,20 @@ The real firewall fix from the verdict (queue line 288), done by hand with a sav
 - SECURITY MODEL NOW: gunicorn (connection handling, solves the original bot-starvation properly) + open port + key-auth (diag-key/api-key the routes already require). NO Hetzner cloud firewall exists (operator confirmed — none attached; Hetzner only filters if one is attached). 
 - FOLLOW-UP (note, not tonight): with 5001 now public, security rests on EVERY route being properly auth-gated. Worth an audit that no unauthenticated mutating route is exposed. The scoped /op/* and /register_egress are diag-key gated; /governor/* data routes are X-API-Key gated; page routes are open (read-only HTML). 
 - The OPERATING_MANUAL firewall section is now partly obsolete (IP-whitelist retired) — updated.
+
+
+## FOLD — delegation blocker map + next step (mailbox + worker manual) (June 10 early)
+WHAT TONIGHT UNLOCKED (honest): a reliable environment (workspace reachable without IP-coupling) + a proven scoped-operations PATTERN (ledger + /op/* endpoints, auditable). NOT a change to what punch-list work the worker can do — most of that was already within reach (corpus + repo commit); the new scoped ops are mostly INFRASTRUCTURE ops the CONTROL seat uses. So tonight matured the FOUNDATION, not delegation itself.
+
+NEXT STEP (ready for operator's hands next session) — the two actual delegation-unblockers:
+1. CONTROL<->WORKER MAILBOX: a channel so the control seat feeds the worker tasks and harvests output WITHOUT the human relaying. Use the existing agent-mailbox mechanism pattern; separate mailbox from the role-cycle mailbox to avoid collision. Control drops a task item; worker (proto-loop: finish current -> pull next from mailbox -> dispatch by item type) processes and drops output back; control reasons about next, escalates to human only on judgment-exceeding items.
+2. WORKER OPERATING MANUAL: the worker has no manual (OPERATING_MANUAL is control-seat-scoped by design). Build a WORKER manual (doing-the-work: ground against corpus, propose-don't-deploy, read-queue/punch-list-first, redaction, verification recipe, deploy-ready meaning, sign-off trailer, AND now: the scoped /op/* endpoints it may call + how). Same open/close ritual discipline applies to the worker.
+
+REMAINING DELEGATION BLOCKERS after the mailbox+worker-manual (honest order):
+1. VERIFIED worker access to the scoped ops — ASSUMED, never tested. The worker's environment may not reach the workspace /op/* with the diag key. Test, don't assume.
+2. **HARNESS-SIGNED VERDICT (the keystone)** — today the control seat reviews worker output by JUDGMENT (frontier peer review). For delegation to SCALE, sign-off must be the DETERMINISTIC HARNESS's verdict, not the reviewer's opinion — else every delegated chunk funnels back through one reviewer (bottleneck of one). This is the cheapest-trustworthy-verification question = the keystone of the fractal. THE real unlock; the rest is plumbing.
+3. DELEGATION LEDGER — durable record of what was delegated, to whom, state, verdict (sibling of tonight's operations_ledger). Untracked delegated work = the faith problem applied to in-flight work.
+4. FAILURE HANDLING for delegated work — escalation rule: back-to-worker for revision / up-to-control / to-human (the two-track escalation). Without it a bad chunk silently lands or stalls.
+5. DELEGATION TIERING — what can be handed to the worker without operator sign-off vs. what must escalate (reuse SAFE/REVIEW/RISK applied to what-gets-delegated). Doc-cleanup != live deploy.
+
+HIERARCHY: #2 (harness-signed verdict) is the real unlock — solve it and delegation scales; without it you've automated handing-off but not trusting-the-result. #1/#3/#4/#5 are tractable plumbing. PATH: mailbox + worker manual (channel) -> verified worker access -> harness-signed verdict (keystone) -> delegation ledger + escalation + tiering.
