@@ -42,6 +42,7 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 - Health: /diag/api/health?diag_key=KEY
 - Farm engine base: https://ontinuity-farm-production.up.railway.app  (same /diag/* routes)
 - Mailbox (answer an orphaned turn): POST /mailbox/respond {mailbox_key, turn_id, response}; check /mailbox/turn?mailbox_key=...
+- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist: read_journal, restart_workspace, register_egress. (The arm that lets a sandbox seat reach the box through the engine.)
 
 ## FIREWALL (VPS workspace, port 5001) — June 9
 - Workspace 5001 is firewalled to whitelisted sources ONLY (default-drop). Whitelisted: operator laptop 47.37.119.177, operator parents' net 66.132.172.101, Railway relay 162.220.232.0/24, Railway FARM egress 52.52.202.228.
@@ -88,7 +89,10 @@ The operator seat performs privileged box actions through NAMED, BOUNDED operati
 - POST /op/read_journal {lines:1..200} — SAFE, read-only. Recent ontinuity-workspace journal lines. Use to check VPS history (e.g. blocked-connection IPs) without operator hands.
 - POST /op/restart_workspace — SAFE, reversible. Restarts the workspace service (detached, returns first, back in a few seconds; confirm via /status:401).
 - POST /register_egress {cidr? optional} — SAFE. ufw-allow caller's own egress IP (or allowlisted CIDR) on 5001. (Becomes obsolete when the gunicorn/key-auth fix lands.)
-All diag-key gated (X-Diag-Key), all log to operations_ledger. To invoke from the operator seat: POST with the DIAG_KEY. Pending op#2: gunicorn/key-auth firewall fix.
+All diag-key gated (X-Diag-Key), all log to operations_ledger.
+INVOCATION — two paths, same ops:
+- From the operator/Railway network (can reach the box directly): POST the box directly, e.g. POST {WORKSPACE_URL}/op/read_journal with X-Diag-Key.
+- From a chat-SANDBOX seat (control or worker — cannot reach the box directly; egress can't open the box connection): go through the RELAY-COURIER on the engine — POST {ENGINE}/diag/op/<name> with the DIAG_KEY. The engine forwards the bounded JSON body to the box's /op/<name> as X-Diag-Key and returns the box response verbatim. The box still enforces the full contract (bounded args, ledger, tier); the engine is only the courier. This is THE way a sandbox seat gets box hands — no IP whitelisting. Courier op allowlist mirrors this list; adding a box op means adding its name to OP_ALLOWED in app.py too.
 
 
 ## WORKSPACE SERVING + ACCESS (current — IP-whitelist RETIRED, June 10)

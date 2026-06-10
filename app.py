@@ -3330,6 +3330,92 @@ def diag_relay(endpoint):
     except Exception as e:
         return jsonify({"error": f"relay error: {str(e)}"}), 502
 
+# ============================================================
+# RELAY-COURIER: /diag/op/<name>  (sandbox-seat box hands)
+# ------------------------------------------------------------
+# THE ARM that connects any chat-sandbox seat (control or worker) to the
+# box's proven scoped operations. A sandbox seat cannot open a direct
+# connection to the box (its outbound egress can't reach the box IP), but it
+# CAN reach this engine's /diag/* relay, and this engine CAN reach the box.
+# So: sandbox -> this engine (courier) -> box /op/<name> -> back.
+#
+# This route is ONLY a courier. The box still enforces the full scoped-op
+# contract (bounded args, X-Diag-Key gate, operations_ledger dual-end log,
+# fail-safe). The engine adds nothing privileged: it gates on the SAME
+# DIAG_KEY as diag_relay, validates <name> against a small allowlist (so a
+# typo or not-yet-built op fails fast at the engine, not blindly forwarded),
+# forwards the bounded JSON body with X-Diag-Key (exactly as _register_egress
+# already does for the box), and returns the box's response VERBATIM
+# (status + body), so a box-side 401/403/400 surfaces cleanly instead of
+# being masked.
+#
+# Mirrors diag_relay's gate verbatim and _register_egress's forward verbatim.
+# No new env var, no new key, no IP whitelisting. Built once -> every
+# sandboxed seat gets real box hands.
+#
+# ----------------------------------------------------------------------
+# MULTI-USER / OPEN-SOURCE NOTE (read before extending this for tenancy):
+# DIAG_KEY here is an OPERATOR-TRUST boundary, NOT a per-tenant AUTHORIZATION
+# layer. It answers "is the caller the operator of THIS deployment?" — it does
+# NOT answer "may this user act on THIS user's workspace." In the current
+# single-operator deployment those questions collapse into one. They do NOT
+# collapse once this ships multi-user: a single shared diag key means anyone
+# holding it can invoke box ops on the one shared box, which is exactly the
+# "a stranger inherits the operator's authority" failure tracked as the
+# HIGH product blocker (multi-tenancy + real auth) in PUNCH_LIST.md.
+# Do NOT mistake this courier (or its key gate) for an authorization layer
+# when adding tenancy. The courier is transport + a name-gate; per-user
+# authorization must be solved at the auth/tenancy layer ABOVE it, and the
+# op allowlist + ledger must then become tenant-scoped. Until that exists,
+# this endpoint assumes one trusted operator.
+# ----------------------------------------------------------------------
+
+# Engine-side allowlist of forwardable scoped ops. Mirrors the box's live
+# /op/* allowlist (corpus: scoped-op folds, June 10). Adding a box op = add
+# its name here too. This is a name-gate, NOT a contract relaxation: the box
+# remains the authority on args/tier/ledger.
+OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress"}
+
+@app.route('/diag/op/<name>', methods=['POST'])
+def diag_op_courier(name):
+    # 1) Same diag-key gate as diag_relay (constant text-compare on the env key).
+    diag_key = os.environ.get("DIAG_KEY", "").strip()
+    if not diag_key:
+        return jsonify({"error": "diag disabled — set DIAG_KEY in Railway variables"}), 503
+    if request.headers.get("X-Diag-Key", "") != diag_key and request.args.get("diag_key", "") != diag_key:
+        return jsonify({"error": "unauthorized"}), 401
+
+    # 2) Name-gate: only forward known scoped ops; unknown -> fail fast here.
+    if name not in OP_ALLOWED:
+        return jsonify({"error": "op not in courier allowlist", "allowed": sorted(OP_ALLOWED)}), 403
+
+    # 3) Need a box to forward to.
+    if not WORKSPACE_URL:
+        return jsonify({"error": "WORKSPACE_URL not configured"}), 503
+
+    # 4) Bounded body: forward only a JSON object (the op's bounded args), or {}.
+    #    The box validates the args; the courier just refuses non-object bodies.
+    body = request.get_json(silent=True)
+    if body is None:
+        body = {}
+    if not isinstance(body, dict):
+        return jsonify({"error": "op args must be a JSON object"}), 400
+
+    # 5) Forward to the box's /op/<name> with the box's diag-key gate header,
+    #    exactly as _register_egress forwards to /register_egress. Return the
+    #    box response verbatim so its status/body are not masked by the courier.
+    try:
+        r = http_requests.post(
+            f"{WORKSPACE_URL}/op/{name}",
+            headers={"X-Diag-Key": diag_key, "Content-Type": "application/json"},
+            json=body,
+            timeout=25,
+        )
+        return (r.text, r.status_code, {"Content-Type": r.headers.get("Content-Type", "application/json")})
+    except Exception as e:
+        return jsonify({"error": f"courier relay error: {str(e)}"}), 502
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
