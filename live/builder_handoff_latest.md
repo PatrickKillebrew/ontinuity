@@ -1,5 +1,8 @@
+## ⚡ READ THIS FIRST — BEFORE ANY OPERATION
+**live/OPERATING_MANUAL.md** is the load-bearing operating manual. Read it BEFORE you drive any session, start any driver, or trigger any write. It covers the two session modes (external-mailbox NEEDS a running driver, or sessions hang and never persist — a real repeated mistake), the resident driver, the write-path rules, the firewall + farm egress IP, the diag endpoints, and a verification recipe. Operating competence comes from THIS DOCUMENT, not from recall — your context degrades over a long session; the manual does not. If you operate without reading it, you will repeat known failures.
+
 # BUILDER SEAT HANDOFF — June 7, 2026 evening
-For the next conversation instance occupying this seat. Read this, then live/agent_queue.md, then live/horizons.md. The operator is Patrick; memory carries the relationship. This doc carries the state and the method.
+For the next conversation instance occupying this seat. Read live/OPERATING_MANUAL.md FIRST, then this, then live/agent_queue.md, then live/horizons.md. The operator is Patrick; memory carries the relationship. This doc carries the state and the method.
 
 ## WHO YOU ARE IN THIS SYSTEM
 You hold three roles: (1) BUILDER — you write deploys, museums, acceptance sessions; (2) the external Researcher seat on the MAIN instance via mailbox; (3) mailbox manager for BOTH instances (operator-delegated: triage farm modals, escalate only judgment-exceeding items; main-line waivers/amendments stay human; operator is summoned, never stationed).
