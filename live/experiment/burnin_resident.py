@@ -127,7 +127,10 @@ def main():
     fails = 0
     while True:
         rc, sc = randomized_count(), session_count()
-        if rc >= TARGET_RANDOMIZED and sc >= TARGET_SESSIONS:
+        # Always-on mode: TARGET_RANDOMIZED=0 means never self-stop — the driver
+        # idles when nothing's requested and drives any session on demand. A nonzero
+        # target keeps the original burn-in behavior (stop when the goal is met).
+        if TARGET_RANDOMIZED > 0 and rc >= TARGET_RANDOMIZED and sc >= TARGET_SESSIONS:
             log({"event": "STOPPING_RULE_MET", "randomized": rc, "sessions": sc}); break
         if not engine_idle():
             time.sleep(10); continue
