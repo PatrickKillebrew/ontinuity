@@ -1415,7 +1415,15 @@ def _ops_ledger_init():
         print(f"ops_ledger init failed: {e}")
 
 def _ops_begin(operation, tier, caller, source_ip, args):
-    """Log intent; return op_id (or None on failure — never blocks the op)."""
+    """Log intent; return op_id (or None on failure — never blocks the op).
+    CALLER-1: `caller` is a TRUSTED-NOT-AUTHENTICATED label. For seat ops it is the
+    self-asserted seat name ('seat:<name>', threaded by the _ledger wrappers in
+    seat_mailbox.py/box_ops.py from the request body); for this module's own routes
+    that carry no seat (register_egress/read_journal/restart_workspace) it stays the
+    auth-method label 'diag-key'. The shared diag key proves a keyholder called, NOT
+    which seat — so caller records who CLAIMS to act, not proof. Authenticated only
+    once per-identity keys derive the seat from the key (see
+    live/specs/mailbox_threat_audit.md SECAUDIT-1 Q4)."""
     try:
         c = _ops_sqlite.connect(_OPS_DB)
         cur = c.execute(
