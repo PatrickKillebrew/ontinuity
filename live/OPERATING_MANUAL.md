@@ -42,7 +42,7 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 - Health: /diag/api/health?diag_key=KEY
 - Farm engine base: https://ontinuity-farm-production.up.railway.app  (same /diag/* routes)
 - Mailbox (answer an orphaned turn): POST /mailbox/respond {mailbox_key, turn_id, response}; check /mailbox/turn?mailbox_key=...
-- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist (live, 10 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file, commit_self. (The arm that lets a sandbox seat reach the box through the engine.)
+- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist (live, 12 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file, commit_self, read_file, commit_file. (The arm that lets a sandbox seat reach the box through the engine.)
 
 ## FIREWALL (VPS workspace, port 5001) — June 9
 - Workspace 5001 is firewalled to whitelisted sources ONLY (default-drop). Whitelisted: operator laptop 47.37.119.177, operator parents' net 66.132.172.101, Railway relay 162.220.232.0/24, Railway FARM egress 52.52.202.228.
@@ -103,6 +103,13 @@ All diag-key gated (X-Diag-Key), all log to operations_ledger.
 INVOCATION — two paths, same ops:
 - From the operator/Railway network (can reach the box directly): POST the box directly, e.g. POST {WORKSPACE_URL}/op/read_journal with X-Diag-Key.
 - From a chat-SANDBOX seat (control or worker — cannot reach the box directly; egress can't open the box connection): go through the RELAY-COURIER on the engine — POST {ENGINE}/diag/op/<name> with the DIAG_KEY. The engine forwards the bounded JSON body to the box's /op/<name> as X-Diag-Key and returns the box response verbatim. The box still enforces the full contract (bounded args, ledger, tier); the engine is only the courier. This is THE way a sandbox seat gets box hands — no IP whitelisting. Courier op allowlist mirrors this list; adding a box op means adding its name to OP_ALLOWED in app.py too.
+
+OPERATING INVARIANTS (the mechanics a seat must state correctly — these are what CHECK 6 MECHANICS of the bootstrap gate ratifies; a seat that misstates these is drifting on mechanics, not state):
+- NO SELF-POLL: a chat seat does NOT self-poll the mailbox. It acts only when its conversation is given a turn. So coordination is mailbox-native (seats reach the mailbox directly, no human relays content), BUT a dormant chat-window worker still needs its conversation NUDGED to take a turn — nothing server-side can wake a dormant chat window. (A farm-style ENGINE-instance worker is different: it is a live process that parks on its mailbox and IS woken by a mailbox write / shepherd heartbeat. Self-driving fan-out uses engine-instance workers, not chat windows.) This invariant is here because the control seat drifted on it June 10 — asserted the loop was fully autonomous, then contradicted it one turn later.
+- COURIER-ONLY: a sandbox seat cannot reach the box directly; it reaches box ops only through the relay-courier on the engine.
+- DEPLOY AUTHORITY: operator owns deploys = authority + rollback, NOT a per-redeploy human click; the seat deploys routine work, operator is the fuse and oversight.
+- NEW BOX OP: needs BOTH a box install (write_file + restart, hands-free) AND an OP_ALLOWED entry in app.py (commit + deploy). The box-install half is hands-free; only the very first bootstrap (before write_file existed on the box) ever needed SSH.
+- ARTIFACT FLOW: a worker writes an artifact to the box (write_file); control reads it back (read_file) and commits it to the repo (commit_file); the worker holds no token — propose, don't deploy.
 
 
 ## WORKSPACE SERVING + ACCESS (current — IP-whitelist RETIRED, June 10)
