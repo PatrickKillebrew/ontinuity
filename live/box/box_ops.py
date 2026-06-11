@@ -253,3 +253,95 @@ def op_commit_file():
     except Exception as e:
         _ledger_finish(op_id, "fail", str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500
+
+
+@box_ops_bp.route("/op/read_repo", methods=["POST"])
+def op_read_repo():
+    """Read ANY file from the repo and return its content, so a worker can read
+    repo files (incl. app.py, which is engine-side and NOT a box file, so read_file
+    can't reach it) without depending on sandbox web-fetch (which rate-limits on the
+    shared egress IP). SAFE tier, read-only. Bounded input: a repo path (+ optional
+    ref/branch, + optional github_token to force the authoritative API read).
+
+    SOURCE ORDER (first success wins; the response says which served it):
+      1. If github_token supplied -> GitHub contents API (authoritative, freshest,
+         no staleness) from the box egress.
+      2. raw.githubusercontent.com with a cache-bust query param (no rate limit;
+         cache-bust mitigates the known stale-CDN trap for hot files).
+      3. Unauthenticated GitHub contents API (box egress 60/hr bucket) as a last
+         resort if raw is unreachable.
+    The box stores NO token (no-credentials posture); auth is only ever a caller arg.
+
+    WHY BOX-SIDE (not engine-side): every scoped op is box-side so it logs to the
+    operations_ledger natively (_ops_begin/_ops_finish live in file_server on the
+    box; app.py has no ledger writer). An engine-local op would have to skip the
+    ledger or call back to the box to log. Keeping read_repo box-side preserves the
+    uniform contract. Trade-off: without a caller token the box reads via raw-CDN
+    (staleness-mitigated by cache-bust) rather than the authenticated API. Pass
+    github_token when you need the guaranteed-fresh authoritative read.
+    """
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    path_in_repo = (b.get("path") or "").strip().lstrip("/")
+    if not path_in_repo:
+        return jsonify({"error": "path required"}), 400
+    repo = (b.get("repo") or GITHUB_REPO_DEFAULT).strip()
+    branch = (b.get("ref") or b.get("branch") or GITHUB_BRANCH_DEFAULT).strip()
+    token = (b.get("github_token") or "").strip()
+    op_id = _ledger_begin("read_repo", {"path": path_in_repo, "repo": repo, "ref": branch,
+                                        "auth": bool(token)})
+
+    def _via_api(tok):
+        url = f"https://api.github.com/repos/{repo}/contents/{path_in_repo}?ref={branch}"
+        hdrs = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+        if tok:
+            hdrs["Authorization"] = f"Bearer {tok}"
+        req = urllib.request.Request(url, headers=hdrs)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read().decode())
+        return base64.b64decode(data["content"]).decode("utf-8", "replace")
+
+    def _via_raw():
+        import time as _t
+        url = (f"https://raw.githubusercontent.com/{repo}/{branch}/{path_in_repo}"
+               f"?cb={int(_t.time())}")
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.read().decode("utf-8", "replace")
+
+    attempts = []
+    # 1) authoritative API if a token was supplied
+    if token:
+        try:
+            content = _via_api(token)
+            _ledger_finish(op_id, "ok", f"api(auth) {path_in_repo} {len(content)}b")
+            return jsonify({"ok": True, "path": path_in_repo, "ref": branch,
+                            "source": "github_api_authenticated", "bytes": len(content),
+                            "content": content})
+        except Exception as e:
+            attempts.append(f"api(auth): {str(e)[:80]}")
+    # 2) raw CDN with cache-bust
+    try:
+        content = _via_raw()
+        _ledger_finish(op_id, "ok", f"raw {path_in_repo} {len(content)}b")
+        return jsonify({"ok": True, "path": path_in_repo, "ref": branch,
+                        "source": "raw_cdn_cachebust", "bytes": len(content),
+                        "content": content,
+                        "note": "raw CDN; pass github_token for the guaranteed-fresh authoritative read"})
+    except Exception as e:
+        attempts.append(f"raw: {str(e)[:80]}")
+    # 3) unauthenticated API last resort
+    try:
+        content = _via_api("")
+        _ledger_finish(op_id, "ok", f"api(unauth) {path_in_repo} {len(content)}b")
+        return jsonify({"ok": True, "path": path_in_repo, "ref": branch,
+                        "source": "github_api_unauthenticated", "bytes": len(content),
+                        "content": content})
+    except Exception as e:
+        attempts.append(f"api(unauth): {str(e)[:80]}")
+
+    _ledger_finish(op_id, "fail", "; ".join(attempts)[:200])
+    return jsonify({"error": "all sources failed", "attempts": attempts,
+                    "path": path_in_repo}), 502
+
