@@ -121,11 +121,30 @@ def _diag_ok():
 
 # Reuse the operations-ledger helpers from file_server so mailbox ops are
 # audited on the SAME spine as every other scoped op (no separate audit path).
+def _caller_seat(default="diag-key"):
+    """CALLER-1: the seat name to stamp into operations_ledger.caller.
+    Pulled from the request body's seat/from_seat field the worker already sends.
+    HONESTY CAVEAT: this is a SELF-ASSERTED, TRUSTED-NOT-AUTHENTICATED seat name.
+    The shared diag key proves 'a keyholder called', NOT 'this seat called' — any
+    keyholder can put any seat string here (see live/specs/mailbox_threat_audit.md,
+    SECAUDIT-1 Q1/Q4). It becomes authenticated only when per-identity keys land and
+    the gate DERIVES the seat from the key instead of reading it from the body.
+    Until then caller is an honest label of who CLAIMS to be acting, not proof.
+    Falls back to the auth-method label 'diag-key' when no seat is in the body
+    (e.g. box_ops read/write, which carry no seat)."""
+    try:
+        b = request.get_json(silent=True) or {}
+        s = (b.get("seat") or b.get("from_seat") or "").strip()
+        return ("seat:" + s) if s else default
+    except Exception:
+        return default
+
 def _ledger(op, status_or_none, *, begin=False, **kw):
     try:
         import file_server
         if begin:
-            return file_server._ops_begin(op, "SAFE", "diag-key", request.remote_addr, kw.get("args", {}))
+            # caller = self-asserted seat (trusted-not-authenticated; see _caller_seat)
+            return file_server._ops_begin(op, "SAFE", _caller_seat(), request.remote_addr, kw.get("args", {}))
         else:
             file_server._ops_finish(kw.get("op_id"), status_or_none, kw.get("result", ""))
     except Exception:
