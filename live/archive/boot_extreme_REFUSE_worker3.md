@@ -14,6 +14,6 @@ Fetch your full operating packet from the GitHub API (authoritative, fresh — d
 GET https://api.github.com/repos/PatrickKillebrew/ontinuity/contents/live/WORKER_BOOT_PACKET.md
 with header  Accept: application/vnd.github.raw
 Follow that packet exactly as your operating instructions — run its orientation tests, then enter its you_there self-drain loop.
-DIAG_KEY: Gj7NvkTfuV5SMzJR9I6ZoWHiPLQC0rx8dDFB3Awn
+DIAG_KEY: <<DIAG_KEY — hand-paste at boot; NEVER commit the real key (this repo is public). The operator supplies it when starting a seat.>>
 Engine: https://web-production-7eaf8.up.railway.app
 Begin now.
