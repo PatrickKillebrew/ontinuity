@@ -265,4 +265,120 @@ def mailbox_reclaim():
         return jsonify({"error": str(e)[:200]}), 500
 
 
+# ---------------------------------------------------------------------------
+# you_there — long-poll mailbox wait (BOOTGATE sibling; spec live/specs/you_there_longpoll.md)
+# ---------------------------------------------------------------------------
+# WHAT THIS IS: a long-poll. It holds ONE open turn while the engine blocks
+# server-side polling the mailbox, then returns the first WORK item (atomically
+# claimed) or null after wait_seconds. A draining node calls it in a loop so the
+# turn stays alive across many empty polls and the node self-drains blocks with
+# zero human nudges.
+#
+# WHAT THIS IS NOT (ethics boundary, spec section 0): this is NOT turn-limit
+# evasion. It does NOT reset, extend, or defeat the provider's per-turn budget
+# (max tokens / max tool round-trips / wall-clock). Those are the provider's
+# resource controls and we work WITHIN them. When the legitimate turn budget is
+# reached, the turn ends; the shepherd re-enters the node in a fresh turn. We
+# bridge turn boundaries openly; we do not pretend a turn is infinite. Nothing
+# here is disguised.
+#
+# Placement note (worker1 inference -> control): the build block said box_ops.py,
+# but the mailbox table, _mb_conn, the BEGIN IMMEDIATE atomic claim, _LEASE_SECONDS
+# and the kind-set all live HERE in seat_mailbox.py. Putting you_there here REUSES
+# the proven claim instead of duplicating it into box_ops.py (a second copy of the
+# claim would risk drift). It is still a /op/ route reached via the same courier,
+# so behavior to the caller is identical. Flagged for review.
+
+_WORK_KINDS = {"task", "proposal"}          # spec section 3: NEVER note/result
+_YT_WAIT_DEFAULT = 75
+_YT_WAIT_CAP = 90                            # matches MODAL_TIMEOUT_AUTONOMOUS_S
+_YT_POLL_INTERVAL = 2.0                      # poll every ~2s
+
+
+def _yt_try_claim(seat, roles, block):
+    """One atomic claim attempt for a WORK-kind item. Mirrors mailbox_fetch's
+    BEGIN IMMEDIATE claim, but filters to _WORK_KINDS so a draining node never
+    claims an ack (note/result). Returns the claimed message dict or None."""
+    targets = [seat] + [str(r) for r in (roles or [])]
+    c = _mb_conn()
+    try:
+        c.execute("BEGIN IMMEDIATE")  # serialize claimers — atomic, no double-claim
+        # 1) reclaim expired claims back to queued (dead node's block returns to pool)
+        c.execute("UPDATE seat_mailbox SET status='queued', claimed_by=NULL, claimed_at=NULL, lease_until=NULL "
+                  "WHERE status='claimed' AND lease_until IS NOT NULL AND lease_until < ?", (_now(),))
+        # 2) oldest queued WORK item for any of this seat's targets
+        ph = ",".join("?" for _ in targets)
+        kph = ",".join("?" for _ in _WORK_KINDS)
+        params = list(targets) + list(_WORK_KINDS)
+        sql = (f"SELECT msg_id FROM seat_mailbox WHERE status='queued' "
+               f"AND to_seat IN ({ph}) AND kind IN ({kph})")
+        if block:
+            sql += " AND block_id=?"; params.append(block)
+        sql += " ORDER BY created_at ASC LIMIT 1"
+        row = c.execute(sql, params).fetchone()
+        if not row:
+            c.execute("COMMIT"); c.close()
+            return None
+        mid = row[0]
+        lease = (datetime.now(timezone.utc) + timedelta(seconds=_LEASE_SECONDS)).isoformat()
+        c.execute("UPDATE seat_mailbox SET status='claimed', claimed_by=?, claimed_at=?, lease_until=? "
+                  "WHERE msg_id=? AND status='queued'", (seat, _now(), lease, mid))
+        c.execute("COMMIT")
+        m = c.execute("SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,created_at,lease_until "
+                      "FROM seat_mailbox WHERE msg_id=?", (mid,)).fetchone()
+        c.close()
+        cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","depends_on","body","created_at","lease_until"]
+        return dict(zip(cols, m))
+    except Exception:
+        try: c.execute("ROLLBACK"); c.close()
+        except Exception: pass
+        raise
+
+
+@seat_mailbox_bp.route("/op/you_there", methods=["POST"])
+def you_there():
+    """Long-poll: block server-side up to wait_seconds, polling every ~2s for a
+    WORK item (kind in {task, proposal} ONLY — never note/result), atomically
+    claim and return the first one found. Return {message:null, waited} on
+    timeout so the node immediately re-polls (turn stays alive across empties).
+    SAFE tier (read-only wait + a claim, same mutation class as mailbox_fetch).
+    NOT a turn-budget evasion — see module note; the provider's turn budget still
+    ends the turn, the shepherd re-enters in a fresh one."""
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    seat = (b.get("seat") or "").strip()
+    if not seat:
+        return jsonify({"error": "seat required"}), 400
+    roles = b.get("roles") or []
+    block = (b.get("block_id") or "").strip()
+    try:
+        wait_seconds = int(b.get("wait_seconds", _YT_WAIT_DEFAULT))
+    except (TypeError, ValueError):
+        wait_seconds = _YT_WAIT_DEFAULT
+    wait_seconds = max(0, min(wait_seconds, _YT_WAIT_CAP))  # hard cap 90, never a long hang
+    op_id = _ledger("you_there", None, begin=True,
+                    args={"seat": seat, "roles": roles, "wait_seconds": wait_seconds})
+    import time as _time
+    deadline = _time.monotonic() + wait_seconds
+    polls = 0
+    try:
+        while True:
+            polls += 1
+            msg = _yt_try_claim(seat, roles, block)
+            if msg is not None:
+                _ledger("you_there", "ok", op_id=op_id,
+                        result=f"claimed {msg['msg_id']} kind={msg['kind']} polls={polls}")
+                return jsonify({"ok": True, "message": msg, "waited": polls})
+            if _time.monotonic() >= deadline:
+                _ledger("you_there", "ok", op_id=op_id, result=f"timeout polls={polls}")
+                return jsonify({"ok": True, "message": None, "waited": wait_seconds})
+            # sleep but don't overshoot the deadline
+            _time.sleep(min(_YT_POLL_INTERVAL, max(0.0, deadline - _time.monotonic())))
+    except Exception as e:
+        _ledger("you_there", "fail", op_id=op_id, result=str(e)[:200])
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+
 _mailbox_init()
