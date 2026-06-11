@@ -57,6 +57,14 @@ if DB_INTEGRATION:
     app.register_blueprint(seat_mailbox_bp)
     from box_ops import box_ops_bp
     app.register_blueprint(box_ops_bp)
+    # Launch the shepherd detect-and-alert loop as a daemon thread (built SHEP-1,
+    # wired to start with the workspace so restart_workspace brings it up).
+    try:
+        import threading, shepherd_alert
+        threading.Thread(target=shepherd_alert.main, daemon=True, name="shepherd").start()
+        print("[startup] shepherd_alert daemon launched")
+    except Exception as _e:
+        print("[startup] shepherd launch failed:", _e)
 
 # ── PATHS ─────────────────────────────────────────────────────────────
 
@@ -1395,6 +1403,79 @@ def governor_punchlist_data():
 import sqlite3 as _ops_sqlite
 from datetime import datetime as _ops_dt, timezone as _ops_tz
 _OPS_DB = os.environ.get("ONTINUITY_DB_PATH", os.path.join(os.path.dirname(__file__), "ontinuity.db"))
+
+# ---------------------------------------------------------------------------
+# KEYS-2 — per-identity key registry + authentication (KEYS-1 spec).
+# Identity comes from WHICH key authenticated, never from a body field. The
+# registry maps sha256(key) -> {seat, lineage, status}; NO plaintext key is ever
+# stored (hash only — repo/box-safe per the no-credentials rule). The key material
+# lives only in each seat's sandbox + the operator vault (#42). This is the lookup
+# the vault populates on issuance.
+# ---------------------------------------------------------------------------
+import hashlib as _kr_hashlib
+
+_SEAT_KEYS_PATH = os.environ.get("ONTINUITY_SEAT_KEYS",
+                                 os.path.join(BASE_DIR, "live", "seat_keys.json"))
+
+def _kr_hash(key):
+    return _kr_hashlib.sha256((key or "").encode("utf-8")).hexdigest()
+
+def _kr_load():
+    """Load the hash->identity registry. {sha256hex: {seat, lineage, status}}.
+    Absent file -> empty registry (system runs in shared-key mode)."""
+    try:
+        with open(_SEAT_KEYS_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+def authenticate_identity(presented_key):
+    """Resolve a presented key to a seat identity. Returns:
+      {seat, lineage, status, authenticated: bool, mode: 'per_identity'|'shared'|'none'}.
+    - per-identity hit (active)  -> authenticated=True, the registry identity.
+    - the shared DIAG_KEY        -> authenticated=False, seat='unattributed' (BACK-COMPAT:
+                                    old callers still pass the gate, but are visibly NOT a
+                                    real seat; identity-sensitive routes may downgrade to
+                                    body fallback or refuse).
+    - anything else              -> None (caller should 401).
+    Constant-time compares; no plaintext stored."""
+    if not presented_key:
+        return None
+    reg = _kr_load()
+    h = _kr_hash(presented_key)
+    # per-identity: constant-time scan so a hit/miss isn't timing-distinguishable
+    match = None
+    for stored_hash, ident in reg.items():
+        if secrets.compare_digest(stored_hash, h):
+            match = ident
+    if match is not None:
+        if match.get("status", "active") != "active":
+            return {"seat": match.get("seat"), "lineage": match.get("lineage"),
+                    "status": match.get("status"), "authenticated": False, "mode": "revoked"}
+        return {"seat": match.get("seat"), "lineage": match.get("lineage"),
+                "status": "active", "authenticated": True, "mode": "per_identity"}
+    # shared-key back-compat
+    try:
+        dk = load_config().get("diag_key", "") or os.environ.get("DIAG_KEY", "")
+    except Exception:
+        dk = os.environ.get("DIAG_KEY", "")
+    if dk and secrets.compare_digest(presented_key, dk):
+        return {"seat": "unattributed", "lineage": "shared-key",
+                "status": "active", "authenticated": False, "mode": "shared"}
+    return None
+
+def register_seat_key(plaintext_key, seat, lineage, status="active"):
+    """Issuance helper (called by the vault / bootstrap-gate issuance-on-pass).
+    Stores ONLY the hash. Returns the hash. Never logs the plaintext."""
+    reg = _kr_load()
+    reg[_kr_hash(plaintext_key)] = {"seat": seat, "lineage": lineage, "status": status}
+    os.makedirs(os.path.dirname(_SEAT_KEYS_PATH), exist_ok=True)
+    tmp = _SEAT_KEYS_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(reg, f, indent=2)
+    os.replace(tmp, _SEAT_KEYS_PATH)
+    return _kr_hash(plaintext_key)
+
 
 def _ops_ledger_init():
     try:
