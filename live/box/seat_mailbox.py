@@ -232,11 +232,33 @@ def mailbox_ack():
     msg_id = (b.get("msg_id") or "").strip()
     if not msg_id:
         return jsonify({"error": "msg_id required"}), 400
-    op_id = _ledger("mailbox_ack", None, begin=True, args={"msg_id": msg_id})
+    # HARDEN-1 (SECAUDIT-1 rec): a seat may only ack a block IT claimed. The caller
+    # names its seat; we reject acking a block whose claimed_by != that seat. PARTIAL
+    # hardening: the seat name in the body is still SELF-ASSERTED (one shared DIAG_KEY),
+    # so this assumes honest seat names. The full fix is per-identity keys (then the
+    # claimed_by check becomes cryptographically attributable, not name-trust). Until
+    # keys land, claimed_by-scoping stops accidental/cross cross-acks, not a forger.
+    seat = (b.get("seat") or "").strip()
+    op_id = _ledger("mailbox_ack", None, begin=True, args={"msg_id": msg_id, "seat": seat})
     try:
         c = _mb_conn()
-        cur = c.execute("UPDATE seat_mailbox SET status='done', done_at=? WHERE msg_id=? AND status!='done'",
-                        (_now(), msg_id))
+        # Guard: if a seat is named, the block must have been claimed BY that seat.
+        if seat:
+            owner = c.execute("SELECT claimed_by, status FROM seat_mailbox WHERE msg_id=?", (msg_id,)).fetchone()
+            if owner is None:
+                c.close(); _ledger("mailbox_ack", "fail", op_id=op_id, result="no such msg")
+                return jsonify({"error": "no such msg_id"}), 404
+            if owner[0] is not None and owner[0] != seat:
+                c.close(); _ledger("mailbox_ack", "fail", op_id=op_id,
+                                   result=f"claimed_by={owner[0]} != seat={seat}")
+                return jsonify({"error": "cannot ack a block you did not claim",
+                                "claimed_by": owner[0], "seat": seat}), 403
+            cur = c.execute("UPDATE seat_mailbox SET status='done', done_at=? "
+                            "WHERE msg_id=? AND status!='done' AND (claimed_by=? OR claimed_by IS NULL)",
+                            (_now(), msg_id, seat))
+        else:
+            cur = c.execute("UPDATE seat_mailbox SET status='done', done_at=? WHERE msg_id=? AND status!='done'",
+                            (_now(), msg_id))
         acked = cur.rowcount
         reply_id = None
         reply = b.get("reply")
@@ -288,14 +310,31 @@ def mailbox_reclaim():
     Exposed standalone so a coordinator can sweep stalled blocks explicitly."""
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    op_id = _ledger("mailbox_reclaim", None, begin=True, args={})
+    b = request.get_json(silent=True) or {}
+    # HARDEN-1 (SECAUDIT-1 rec): scope reclaim like ack. If a seat is named, only that
+    # seat's OWN expired claims are returned to the queue. The unscoped global sweep
+    # (a coordinator returning ALL stalled blocks) now requires an explicit all=true,
+    # so a casual reclaim can't yank another seat's in-flight (if-expired) work by
+    # default. PARTIAL: seat name is self-asserted until per-identity keys land —
+    # this assumes honest seat names; keys make claimed_by attributable.
+    seat = (b.get("seat") or "").strip()
+    sweep_all = bool(b.get("all"))
+    op_id = _ledger("mailbox_reclaim", None, begin=True, args={"seat": seat, "all": sweep_all})
     try:
         c = _mb_conn()
-        cur = c.execute("UPDATE seat_mailbox SET status='queued', claimed_by=NULL, claimed_at=NULL, lease_until=NULL "
-                        "WHERE status='claimed' AND lease_until IS NOT NULL AND lease_until < ?", (_now(),))
+        if seat and not sweep_all:
+            cur = c.execute("UPDATE seat_mailbox SET status='queued', claimed_by=NULL, claimed_at=NULL, lease_until=NULL "
+                            "WHERE status='claimed' AND claimed_by=? AND lease_until IS NOT NULL AND lease_until < ?",
+                            (seat, _now()))
+        elif sweep_all:
+            cur = c.execute("UPDATE seat_mailbox SET status='queued', claimed_by=NULL, claimed_at=NULL, lease_until=NULL "
+                            "WHERE status='claimed' AND lease_until IS NOT NULL AND lease_until < ?", (_now(),))
+        else:
+            c.close(); _ledger("mailbox_reclaim", "fail", op_id=op_id, result="no seat and not all")
+            return jsonify({"error": "provide seat (scope to your own expired claims) or all=true (coordinator global sweep)"}), 400
         n = cur.rowcount; c.commit(); c.close()
-        _ledger("mailbox_reclaim", "ok", op_id=op_id, result=f"reclaimed={n}")
-        return jsonify({"ok": True, "reclaimed": n})
+        _ledger("mailbox_reclaim", "ok", op_id=op_id, result=f"reclaimed={n} scope={'all' if sweep_all else seat}")
+        return jsonify({"ok": True, "reclaimed": n, "scope": "all" if sweep_all else seat})
     except Exception as e:
         _ledger("mailbox_reclaim", "fail", op_id=op_id, result=str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500
