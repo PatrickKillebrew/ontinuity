@@ -1642,9 +1642,10 @@ def extract_signal(response):
     match = re.search(r'SIGNAL:\s*([0-4])', response)
     return int(match.group(1)) if match else 0
 
-def get_ambient_signal_line(signal):
+def get_ambient_signal_line(signal, cycle=None):
     labels = {0: "clear", 1: "nominal", 2: "caution", 3: "warning", 4: "override"}
-    return f"AMBIENT_SIGNAL: {signal} ({labels.get(signal, 'unknown')})"
+    coord = f"CYCLE: {cycle} | " if cycle is not None else ""
+    return f"{coord}AMBIENT_SIGNAL: {signal} ({labels.get(signal, 'unknown')})"
 
 def extract_ledger_entry(response, cycle):
     """Extract a one-line summary of established results from Model A response."""
@@ -2314,7 +2315,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         if randomized_flag:
             socketio.emit('routing_action', {'type': 'info',
                 'message': f"EXPERIMENT: cycle {active_session['cycle']} computed={computed_signal} injected={signal} (randomized)"})
-        ambient_line = get_ambient_signal_line(signal)
+        ambient_line = get_ambient_signal_line(signal, active_session["cycle"])
 
         # Tag
         tag = extract_tag(a_response)
