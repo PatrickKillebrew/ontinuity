@@ -139,6 +139,29 @@ def _caller_seat(default="diag-key"):
     except Exception:
         return default
 
+
+def _authed_identity():
+    """KEYS-2: the AUTHENTICATED identity from WHICH key called (file_server registry).
+    Returns {seat, lineage, authenticated, mode} or None. authenticated=True only for a
+    per-identity key; the shared DIAG_KEY -> {seat:'unattributed', authenticated:False}."""
+    try:
+        import file_server
+        presented = request.headers.get("X-Diag-Key", "") or request.args.get("diag_key", "")
+        return file_server.authenticate_identity(presented)
+    except Exception:
+        return None
+
+
+def _trusted_seat(body_seat, body_lineage=None):
+    """KEYS-2 chokepoint: the (seat, lineage) to TRUST. Per-identity key -> the
+    key-derived identity (body IGNORED). Shared-key mode -> the body field (honest-
+    but-asserted, CALLER-1 semantics). Returns (seat, lineage, authenticated)."""
+    ident = _authed_identity()
+    if ident and ident.get("authenticated"):
+        return ident.get("seat"), ident.get("lineage"), True
+    return (body_seat or "").strip() or None, (body_lineage or "").strip() or None, False
+
+
 def _ledger(op, status_or_none, *, begin=False, **kw):
     try:
         import file_server
@@ -194,7 +217,8 @@ def mailbox_fetch():
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
     b = request.get_json(silent=True) or {}
-    seat = (b.get("seat") or "").strip()
+    seat, _lin, _authed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2: key-derived if authenticated
+    seat = seat or ""
     if not seat:
         return jsonify({"error": "seat required"}), 400
     # roles this seat will accept broadcast on (e.g. a worker accepts 'any_worker')
@@ -214,7 +238,7 @@ def mailbox_fetch():
         sql = (f"SELECT msg_id FROM seat_mailbox WHERE status='queued' AND to_seat IN ({ph})")
         # NOSELF-1: exclude reviewable items this seat authored (returns null if its own
         # is the only reviewable item -> the node long-polls on rather than self-signing).
-        _nf, _np = _noself_predicate(seat, (b.get("lineage") or "").strip())
+        _nf, _np = _noself_predicate(seat, (_lin or b.get("lineage") or "").strip())  # KEYS-2: trusted lineage
         sql += _nf; params += _np
         if block:
             sql += " AND block_id=?"; params.append(block)
@@ -257,7 +281,8 @@ def mailbox_ack():
     # so this assumes honest seat names. The full fix is per-identity keys (then the
     # claimed_by check becomes cryptographically attributable, not name-trust). Until
     # keys land, claimed_by-scoping stops accidental/cross cross-acks, not a forger.
-    seat = (b.get("seat") or "").strip()
+    seat, _lin, _authed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2: key-derived if authenticated, else body
+    seat = seat or ""
     op_id = _ledger("mailbox_ack", None, begin=True, args={"msg_id": msg_id, "seat": seat})
     try:
         c = _mb_conn()
@@ -336,7 +361,8 @@ def mailbox_reclaim():
     # so a casual reclaim can't yank another seat's in-flight (if-expired) work by
     # default. PARTIAL: seat name is self-asserted until per-identity keys land —
     # this assumes honest seat names; keys make claimed_by attributable.
-    seat = (b.get("seat") or "").strip()
+    seat, _lin, _authed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2
+    seat = seat or ""
     sweep_all = bool(b.get("all"))
     op_id = _ledger("mailbox_reclaim", None, begin=True, args={"seat": seat, "all": sweep_all})
     try:
@@ -444,12 +470,13 @@ def you_there():
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
     b = request.get_json(silent=True) or {}
-    seat = (b.get("seat") or "").strip()
+    seat, _ylin, _yauthed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2
+    seat = seat or ""
     if not seat:
         return jsonify({"error": "seat required"}), 400
     roles = b.get("roles") or []
     block = (b.get("block_id") or "").strip()
-    lineage = (b.get("lineage") or "").strip()
+    lineage = (_ylin or b.get("lineage") or "").strip()  # KEYS-2: trusted lineage if authenticated
     try:
         wait_seconds = int(b.get("wait_seconds", _YT_WAIT_DEFAULT))
     except (TypeError, ValueError):
