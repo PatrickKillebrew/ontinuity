@@ -42,7 +42,7 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 - Health: /diag/api/health?diag_key=KEY
 - Farm engine base: https://ontinuity-farm-production.up.railway.app  (same /diag/* routes)
 - Mailbox (answer an orphaned turn): POST /mailbox/respond {mailbox_key, turn_id, response}; check /mailbox/turn?mailbox_key=...
-- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist (live, 15 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file, commit_self, read_file, commit_file, you_there, read_repo, bootstrap_gate. (The arm that lets a sandbox seat reach the box through the engine.)
+- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist (live, 16 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file, commit_self, read_file, commit_file, you_there, read_repo, bootstrap_gate, deploy. (The arm that lets a sandbox seat reach the box through the engine.)
 
 ## FIREWALL (VPS workspace, port 5001) — June 9
 - Workspace 5001 is firewalled to whitelisted sources ONLY (default-drop). Whitelisted: operator laptop 47.37.119.177, operator parents' net 66.132.172.101, Railway relay 162.220.232.0/24, Railway FARM egress 52.52.202.228.
