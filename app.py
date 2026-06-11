@@ -1158,6 +1158,26 @@ def extract_db_query(response):
             return line[6:].strip()
     return ""
 
+def _has_unquoted_semicolon(s):
+    """True iff s has a ; OUTSIDE any quoted literal. Handles the '' escaped quote."""
+    i, n = 0, len(s); in_single = in_double = False
+    while i < n:
+        ch = s[i]
+        if in_single:
+            if ch == "'":
+                if i+1 < n and s[i+1] == "'": i += 2; continue
+                in_single = False
+        elif in_double:
+            if ch == '"':
+                if i+1 < n and s[i+1] == '"': i += 2; continue
+                in_double = False
+        else:
+            if ch == "'": in_single = True
+            elif ch == '"': in_double = True
+            elif ch == ";": return True
+        i += 1
+    return False
+
 def db_query_guard(sql):
     """Deploy 14: in-session corpus evidence channel admits exactly one read-only
     SELECT. Returns (ok, reason). The lap-1 UPHOLD established the rule this
@@ -1168,7 +1188,7 @@ def db_query_guard(sql):
         return False, "empty query"
     if len(s) > 1200:
         return False, "query too long (1200 char cap)"
-    if ";" in s:
+    if _has_unquoted_semicolon(s):
         return False, "multiple statements not allowed"
     if not s.lower().startswith("select"):
         return False, "only SELECT statements are allowed"
@@ -3263,7 +3283,54 @@ def mailbox_respond():
 # workspace response verbatim. No write surface is exposed.
 DIAG_ALLOWED = {"status", "log", "manifest", "history",
                 "api/health", "api/ledger", "api/project_state",
-                "api/behavioral_corpus", "api/query", "engine", "console", "egress"}
+                "api/behavioral_corpus", "api/query", "engine", "console", "egress", "version"}
+
+@app.route('/agent/handoff')
+def agent_handoff():
+    """HANDOFF-1: one keyed call returns live resumption state (this engine + peer,
+    queue head, open turns, latest receipts). Read-only, composes existing sources."""
+    diag_key = os.environ.get("DIAG_KEY", "").strip()
+    if not diag_key:
+        return jsonify({"error": "diag disabled"}), 503
+    if request.headers.get("X-Diag-Key", "") != diag_key and request.args.get("diag_key", "") != diag_key:
+        return jsonify({"error": "unauthorized"}), 401
+    from datetime import datetime, timezone
+    out = {"ok": True, "generated_at": datetime.now(timezone.utc).isoformat(), "engines": {}}
+    inst = os.environ.get("INSTANCE_NAME", "main").strip() or "main"
+    try:
+        out["engines"][inst] = {
+            "running": active_session.get("running", False),
+            "cycle": active_session.get("cycle", 0),
+            "waiting_for_input": active_session.get("waiting_for_input", False),
+            "finalizing": active_session.get("finalizing", False),
+        }
+    except Exception as e:
+        out["engines"][inst] = {"error": str(e)[:120]}
+    if request.args.get("include_farm", "1") != "0":
+        peer = os.environ.get("PEER_ENGINE_URL", "").strip()
+        if peer:
+            try:
+                pr = http_requests.get(f"{peer}/diag/engine?diag_key={diag_key}", timeout=10)
+                out["engines"]["peer"] = pr.json()
+            except Exception as e:
+                out["engines"]["peer"] = {"error": str(e)[:120]}
+    def _rows(q):
+        r = call_workspace_query(q)
+        if isinstance(r, dict):
+            return r.get("rows", []) if "error" not in r else []
+        return r or []
+    try:
+        qh = _rows("SELECT block_id, kind, from_seat, created_at FROM seat_mailbox WHERE status='queued' AND to_seat='any_worker' AND kind IN ('task','proposal') ORDER BY created_at ASC LIMIT 1")
+        out["queue_head"] = qh[0] if qh else None
+        out["seat_mailbox_queued"] = _rows("SELECT to_seat, COUNT(*) FROM seat_mailbox WHERE status='queued' GROUP BY to_seat")
+        out["latest_receipts"] = _rows("SELECT receipt_id, session_id, outcome FROM write_receipts ORDER BY receipt_id DESC LIMIT 3")
+    except Exception as e:
+        out["corpus_error"] = str(e)[:160]
+    try:
+        out["external_mailbox"] = {"waiting": external_mailbox.get("waiting", False), "turn_id": external_mailbox.get("turn_id", 0), "cycle": external_mailbox.get("cycle", 0)}
+    except Exception:
+        pass
+    return jsonify(out)
 
 @app.route('/diag/<path:endpoint>')
 def diag_relay(endpoint):
@@ -3307,6 +3374,23 @@ def diag_relay(endpoint):
                                                 if k.lower() in ("cf-ray","server","cf-mitigated","x-ratelimit-limit-requests-day")}
             except Exception as e:
                 out["provider_error"] = str(e)[:200]
+        return jsonify(out)
+    if base == "version":
+        # DRIFT-1: report the git blob sha (content id) of the RUNNING app.py on disk,
+        # so an auditor can compare the deployed binary to repo HEAD. Read-only, no secrets.
+        import hashlib
+        out = {"instance": os.environ.get("INSTANCE_NAME", "main").strip() or "main"}
+        try:
+            with open(os.path.abspath(__file__), "rb") as _f:
+                _data = _f.read()
+            _h = hashlib.sha1()
+            _h.update(b"blob " + str(len(_data)).encode() + b"\x00" + _data)
+            out["app_py_blob_sha"] = _h.hexdigest()
+            out["app_py_bytes"] = len(_data)
+        except Exception as e:
+            out["error"] = str(e)[:120]
+        out["repo"] = "PatrickKillebrew/ontinuity"
+        out["branch"] = os.environ.get("DEPLOY_BRANCH", "main")
         return jsonify(out)
     if base == "engine":
         # Local engine state — never relayed. Exists so the BUILDER agent can
