@@ -45,10 +45,23 @@ def _diag_ok():
     return bool(dk) and secrets.compare_digest(request.headers.get("X-Diag-Key", ""), dk)
 
 
+def _caller_seat(default="diag-key"):
+    """CALLER-1: seat name for operations_ledger.caller, from the request body.
+    SELF-ASSERTED, TRUSTED-NOT-AUTHENTICATED (shared diag key proves a keyholder
+    called, not which seat). Authenticated only with per-identity keys. Falls back
+    to 'diag-key' when the op carries no seat (write_file/read_file have none)."""
+    try:
+        b = request.get_json(silent=True) or {}
+        s = (b.get("seat") or b.get("from_seat") or "").strip()
+        return ("seat:" + s) if s else default
+    except Exception:
+        return default
+
 def _ledger_begin(op, args):
     try:
         import file_server
-        return file_server._ops_begin(op, "REVIEW", "diag-key", request.remote_addr, args)
+        # caller = self-asserted seat (trusted-not-authenticated; see _caller_seat)
+        return file_server._ops_begin(op, "REVIEW", _caller_seat(), request.remote_addr, args)
     except Exception:
         return None
 
@@ -344,4 +357,111 @@ def op_read_repo():
     _ledger_finish(op_id, "fail", "; ".join(attempts)[:200])
     return jsonify({"error": "all sources failed", "attempts": attempts,
                     "path": path_in_repo}), 502
+
+
+# ---------------------------------------------------------------------------
+# bootstrap_gate — verified bootstrap gate, step 2 (the courier op)
+# Spec: live/specs/verified_bootstrap_gate.md. Wraps the sandbox-local runnable
+# (live/bootstrap/gate.py, BOOTGATE-2) as a SERVER-SIDE op so a seat self-gates
+# through the courier and the box LOGS the pass/fail to operations_ledger — the
+# audit evidence that an acting seat proved orientation before acting.
+# ---------------------------------------------------------------------------
+import importlib.util as _ilu
+
+# Canonical CHECK-1 courier-allowlist count. SOURCE OF TRUTH is app.py OP_ALLOWED.
+# 14 entries now; becomes 15 when THIS op (bootstrap_gate) is added to OP_ALLOWED.
+# The op accepts an override in the body so control can bump it in the same commit
+# that lands the OP_ALLOWED entry (gate CHECK-1 currency); default tracks the
+# post-this-op value so a fresh seat checks against the right number once deployed.
+_GATE_CANONICAL_OP_COUNT = 15
+
+_gate_mod = None
+def _load_gate():
+    """Import the committed gate runnable from the box's repo checkout.
+    Cached. The file lives at live/bootstrap/gate.py on the box (verified present)."""
+    global _gate_mod
+    if _gate_mod is not None:
+        return _gate_mod
+    path = os.path.join(_BASE_DIR, "live", "bootstrap", "gate.py")
+    if not os.path.exists(path):
+        # fallback: some box layouts keep it alongside box_ops.py
+        alt = os.path.join(_BASE_DIR, "gate.py")
+        path = alt if os.path.exists(alt) else path
+    spec = _ilu.spec_from_file_location("ontinuity_bootstrap_gate", path)
+    mod = _ilu.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _gate_mod = mod
+    return mod
+
+
+@box_ops_bp.route("/op/bootstrap_gate", methods=["POST"])
+def op_bootstrap_gate():
+    """Run the verified bootstrap gate server-side for {seat, role} and return the
+    structured {oriented, checks, ...} result. SAFE tier (read-only checks + a
+    mailbox_peek hand-probe; same mutation class as mailbox_peek — none). Logs a
+    bootstrap_gate row to operations_ledger (dual-end) as the audit evidence that
+    a seat proved orientation. On oriented:true, issues a per-identity key —
+    STUBBED to the shared DIAG_KEY for now (real per-seat keys arrive with the key
+    build); the issuance block is structured so real keys hook in without changing
+    the contract.
+
+    Body: {seat (req), role ('worker'|'control', default 'worker'),
+           lineage (str), seat_invariants ({key->text} for CHECK 6 MECHANICS),
+           canonical_op_count (int, optional override for CHECK 1)}.
+    """
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    seat = (b.get("seat") or "").strip()
+    if not seat:
+        return jsonify({"error": "seat required"}), 400
+    role = (b.get("role") or "worker").strip()
+    if role not in ("worker", "control"):
+        return jsonify({"error": "role must be 'worker' or 'control'"}), 400
+    lineage = (b.get("lineage") or "").strip()
+    seat_invariants = b.get("seat_invariants") or {}
+    canonical = b.get("canonical_op_count")
+    op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role})
+    try:
+        gate = _load_gate()
+        # Set CHECK-1 canonical to the current courier-allowlist length. Override
+        # from the body wins; else the post-this-op default (15).
+        gate.CANONICAL_COURIER_OP_COUNT = int(canonical) if canonical is not None else _GATE_CANONICAL_OP_COUNT
+        # The box holds the box diag-key in config; pass it so the gate's corpus/
+        # hands/engine checks authenticate through the relay exactly as a seat would.
+        try:
+            import file_server
+            diag_key = file_server.load_config().get("diag_key", "") or os.environ.get("DIAG_KEY", "")
+        except Exception:
+            diag_key = os.environ.get("DIAG_KEY", "")
+        result = gate.run_gate(seat, lineage, role=role, diag_key=diag_key,
+                               seat_invariants=seat_invariants)
+
+        # KEY ISSUANCE-ON-PASS (stubbed). Structured so real per-identity keys
+        # (CALLER-1 + the key build) drop in here without changing the response
+        # shape: oriented seats get an `issued_key` bound to {seat, lineage};
+        # today that key IS the shared DIAG_KEY (so nothing changes operationally),
+        # but the field + binding exist so callers can start reading it now.
+        if result.get("oriented"):
+            result["key_issuance"] = {
+                "issued": True,
+                "bound_to": {"seat": seat, "lineage": lineage},
+                "key_kind": "shared_diag_key_stub",   # -> 'per_identity' when the key build lands
+                "note": "stubbed to shared DIAG_KEY until per-identity key issuance ships",
+            }
+        else:
+            result["key_issuance"] = {"issued": False,
+                                      "reason": "gate not passed — no key issued"}
+
+        status = "ok" if result.get("oriented") else "fail"
+        # summarize the failing check (if any) for the ledger
+        failed = next((c for c in result.get("checks", []) if not c.get("pass")), None)
+        detail = (f"oriented seat={seat} role={role}" if result.get("oriented")
+                  else f"NOT ORIENTED seat={seat} role={role} at "
+                       f"{failed.get('name') if failed else '?'}")
+        _ledger_finish(op_id, status, detail[:200])
+        return jsonify(result)
+    except Exception as e:
+        _ledger_finish(op_id, "fail", f"gate error: {str(e)[:180]}")
+        return jsonify({"error": f"bootstrap_gate error: {str(e)[:200]}"}), 500
 
