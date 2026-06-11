@@ -39,6 +39,27 @@ _LEASE_SECONDS = int(os.environ.get("MAILBOX_LEASE_SECONDS", "900"))  # 15 min
 
 _KINDS = {"task", "proposal", "review_finding", "signoff", "result", "note"}
 
+# NOSELF-1 — no-self-sign-off (one-node-primitive guardrail, corpus fold 310:
+# "verify anyone's work but your own"). Reviewable kinds must never be claimed by
+# the node that AUTHORED them, even if a different seat dispatched the mailbox
+# message. Authorship is COALESCE(author_seat, from_seat) / COALESCE(author_lineage,
+# from_lineage): the explicit author stamp wins; absent it, the sender is the author
+# (true for a node self-sending its own proposal).
+_REVIEWABLE_KINDS = {"proposal", "review_finding", "signoff"}
+
+def _noself_predicate(seat, lineage):
+    """SQL fragment + params that EXCLUDE reviewable items authored by this seat.
+    A row is excluded iff: kind is reviewable AND (author_seat==seat OR author_lineage==lineage).
+    Non-reviewable items (task/result/note) are never excluded by this filter.
+    Returns (sql_fragment, params). lineage may be empty -> only the seat match applies."""
+    rk = ",".join("?" for _ in _REVIEWABLE_KINDS)
+    # NOT ( reviewable AND own-authored )
+    frag = (f" AND NOT ( kind IN ({rk}) AND ( "
+            f"COALESCE(author_seat, from_seat) = ? "
+            f"OR (? != '' AND COALESCE(author_lineage, from_lineage) = ?) ) )")
+    params = list(_REVIEWABLE_KINDS) + [seat, (lineage or ""), (lineage or "")]
+    return frag, params
+
 
 def _now():
     return datetime.now(timezone.utc).isoformat()
@@ -70,6 +91,15 @@ def _mailbox_init():
             done_at       TEXT,
             reply_to      TEXT               -- msg_id this is a reply to (ack-with-reply)
         )""")
+        # NOSELF-1 additive migration (SAFE class: nullable, no rewrite of existing rows).
+        # author_seat/author_lineage = who AUTHORED the thing under review, distinct from
+        # from_seat (who SENT the mailbox message). Used by the no-self-sign-off filter so a
+        # node is never handed its own work to review, even when a different seat dispatched it.
+        for _col in ("author_seat", "author_lineage"):
+            try:
+                c.execute(f"ALTER TABLE seat_mailbox ADD COLUMN {_col} TEXT")
+            except Exception:
+                pass  # already exists -> idempotent
         c.commit(); c.close()
     except Exception as e:
         print(f"[seat_mailbox] init failed: {e}")
@@ -121,12 +151,14 @@ def mailbox_send():
     try:
         c = _mb_conn()
         c.execute("""INSERT INTO seat_mailbox
-            (msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,status,created_at,reply_to)
-            VALUES (?,?,?,?,?,?,?,?,?, 'queued', ?, ?)""",
+            (msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,status,created_at,reply_to,author_seat,author_lineage)
+            VALUES (?,?,?,?,?,?,?,?,?, 'queued', ?, ?, ?, ?)""",
             (msg_id, from_seat, (b.get("from_lineage") or "").strip() or None, to_seat, kind,
              (b.get("block_id") or "").strip() or None, (b.get("ref") or "").strip() or None,
              (b.get("depends_on") or "").strip() or None, str(body), _now(),
-             (b.get("reply_to") or "").strip() or None))
+             (b.get("reply_to") or "").strip() or None,
+             (b.get("author_seat") or from_seat).strip() or None,
+             (b.get("author_lineage") or (b.get("from_lineage") or "")).strip() or None))
         c.commit(); c.close()
         _ledger("mailbox_send", "ok", op_id=op_id, result=msg_id)
         return jsonify({"ok": True, "msg_id": msg_id})
@@ -161,6 +193,10 @@ def mailbox_fetch():
         ph = ",".join("?" for _ in targets)
         params = list(targets)
         sql = (f"SELECT msg_id FROM seat_mailbox WHERE status='queued' AND to_seat IN ({ph})")
+        # NOSELF-1: exclude reviewable items this seat authored (returns null if its own
+        # is the only reviewable item -> the node long-polls on rather than self-signing).
+        _nf, _np = _noself_predicate(seat, (b.get("lineage") or "").strip())
+        sql += _nf; params += _np
         if block:
             sql += " AND block_id=?"; params.append(block)
         sql += " ORDER BY created_at ASC LIMIT 1"
@@ -295,7 +331,7 @@ _YT_WAIT_CAP = 90                            # matches MODAL_TIMEOUT_AUTONOMOUS_
 _YT_POLL_INTERVAL = 2.0                      # poll every ~2s
 
 
-def _yt_try_claim(seat, roles, block):
+def _yt_try_claim(seat, roles, block, lineage=""):
     """One atomic claim attempt for a WORK-kind item. Mirrors mailbox_fetch's
     BEGIN IMMEDIATE claim, but filters to _WORK_KINDS so a draining node never
     claims an ack (note/result). Returns the claimed message dict or None."""
@@ -312,6 +348,9 @@ def _yt_try_claim(seat, roles, block):
         params = list(targets) + list(_WORK_KINDS)
         sql = (f"SELECT msg_id FROM seat_mailbox WHERE status='queued' "
                f"AND to_seat IN ({ph}) AND kind IN ({kph})")
+        # NOSELF-1: same guardrail on the long-poll claim path.
+        _nf, _np = _noself_predicate(seat, lineage)
+        sql += _nf; params += _np
         if block:
             sql += " AND block_id=?"; params.append(block)
         sql += " ORDER BY created_at ASC LIMIT 1"
@@ -352,6 +391,7 @@ def you_there():
         return jsonify({"error": "seat required"}), 400
     roles = b.get("roles") or []
     block = (b.get("block_id") or "").strip()
+    lineage = (b.get("lineage") or "").strip()
     try:
         wait_seconds = int(b.get("wait_seconds", _YT_WAIT_DEFAULT))
     except (TypeError, ValueError):
@@ -365,7 +405,7 @@ def you_there():
     try:
         while True:
             polls += 1
-            msg = _yt_try_claim(seat, roles, block)
+            msg = _yt_try_claim(seat, roles, block, lineage)
             if msg is not None:
                 _ledger("you_there", "ok", op_id=op_id,
                         result=f"claimed {msg['msg_id']} kind={msg['kind']} polls={polls}")
