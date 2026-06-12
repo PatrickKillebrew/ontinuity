@@ -3639,7 +3639,41 @@ def intake_capture():
     if not isinstance(transcript, list):
         transcript = []
     workspace_state = data.get("workspace_state", None)
+    workspace_state_raw = data.get("workspace_state_raw", None)
     is_final = bool(data.get("final", False))
+
+    # Server-authoritative completion: if a WORKSPACE_STATE block is present in
+    # the transcript (or sent as raw), the discovery has reached its close —
+    # regardless of the client's flag or whether the block parsed as JSON. The
+    # block's PRESENCE is ground truth, so a rich (unparse-able) closing block
+    # still produces a final record instead of being lost.
+    def _has_ws_block(t):
+        for m in t:
+            if isinstance(m, dict) and m.get("role") == "assistant":
+                c = m.get("content", "") or ""
+                if "[WORKSPACE_STATE]" in c and "[/WORKSPACE_STATE]" in c:
+                    return True
+        return False
+    # If the client didn't send the raw block but the transcript carries one,
+    # recover it server-side so the final record always holds the structured text.
+    if not workspace_state_raw:
+        for m in reversed(transcript):
+            if isinstance(m, dict) and m.get("role") == "assistant":
+                c = m.get("content", "") or ""
+                if "[WORKSPACE_STATE]" in c and "[/WORKSPACE_STATE]" in c:
+                    try:
+                        workspace_state_raw = c.split("[WORKSPACE_STATE]", 1)[1].split("[/WORKSPACE_STATE]", 1)[0].strip()
+                    except Exception:
+                        workspace_state_raw = None
+                    break
+    is_final = is_final or _has_ws_block(transcript) or bool(workspace_state_raw)
+    # If we have raw but no parsed state, try to parse it server-side.
+    if workspace_state is None and workspace_state_raw:
+        try:
+            import json as _jp
+            workspace_state = _jp.loads(workspace_state_raw)
+        except Exception:
+            workspace_state = None  # keep raw for later repair
     # Sequence number from the client (history length): monotonic across sittings.
     try:
         seq = max(0, min(int(data.get("seq", 0)), 9999))
@@ -3654,6 +3688,7 @@ def intake_capture():
         "exchange_count": sum(1 for m in transcript if isinstance(m, dict) and m.get("role") == "user"),
         "transcript": transcript[:200],
         "workspace_state": workspace_state,
+        "workspace_state_raw": workspace_state_raw,
     }
 
     # Append-only: every checkpoint is a NEW file. Nothing ever overwrites a
@@ -3748,11 +3783,20 @@ def intake_resume():
         import json as _j
         content_b64 = get_r.json().get("content", "")
         record = _j.loads(base64.b64decode(content_b64).decode("utf-8"))
+        ws = record.get("workspace_state")
+        ws_raw = record.get("workspace_state_raw")
+        # Reconstruct parsed state from the raw block if only the raw survived.
+        if ws is None and ws_raw:
+            try:
+                ws = _j.loads(ws_raw)
+            except Exception:
+                ws = None
         return (jsonify({
             "found": True,
             "final": bool(record.get("final", False)) or found_final,
             "transcript": record.get("transcript", []),
-            "workspace_state": record.get("workspace_state"),
+            "workspace_state": ws,
+            "workspace_state_raw": ws_raw,
         }), 200, headers)
     except Exception:
         # Resume is best-effort: any failure means a fresh start, never an error screen.

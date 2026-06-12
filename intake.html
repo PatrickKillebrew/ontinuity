@@ -188,8 +188,10 @@
     font-weight: 300;
     line-height: 1.6;
     resize: none;
-    min-height: 24px;
-    max-height: 160px;
+    /* Roomy by default so a paragraph is visible at a glance, and grows tall
+       before it ever scrolls — the user can scan back over what they typed. */
+    min-height: 76px;
+    max-height: 40vh;
     overflow-y: auto;
   }
 
@@ -422,7 +424,7 @@
       </svg>
     </button>
   </div>
-  <div class="hint">Press Enter to send · Shift+Enter for new line · Your responses are saved securely as you go</div>
+  <div class="hint">Press Enter to send · Shift+Enter for new line · Your answers are saved as you go</div>
 </div>
 
 <script>
@@ -451,7 +453,7 @@ const sessionId = _urlKey
 // overwrites the previous checkpoint server-side, so the latest capture is
 // always the complete session to that moment. Failures are silent — capture
 // must never interrupt the conversation.
-function captureSession(isFinal, wsData) {
+function captureSession(isFinal, wsData, wsRaw) {
   try {
     fetch(CAPTURE_ENDPOINT, {
       method: 'POST',
@@ -461,6 +463,10 @@ function captureSession(isFinal, wsData) {
         seq: history.length,   // monotonic checkpoint number, survives resumes
         transcript: history,
         workspace_state: wsData || null,
+        // Raw block text is sent on the final capture even when JSON.parse
+        // failed (wsData null). A malformed-but-present block must persist so
+        // it can be repaired server-side — never silently dropped.
+        workspace_state_raw: wsRaw || null,
         final: !!isFinal
       }),
       keepalive: true  // lets a final capture survive tab close mid-flight
@@ -537,6 +543,15 @@ function extractWorkspaceState(text) {
   try { return JSON.parse(m[1].trim()); } catch { return null; }
 }
 
+// Returns the RAW block text if a WORKSPACE_STATE block is present at all,
+// regardless of whether it is valid JSON. Completion is signalled by the
+// block's PRESENCE — a strict JSON.parse must never gate whether the final
+// capture fires, or a rich (large, quote-heavy) intake silently fails to save.
+function extractWorkspaceRaw(text) {
+  const m = text.match(/\[WORKSPACE_STATE\]([\s\S]*?)\[\/WORKSPACE_STATE\]/);
+  return m ? m[1].trim() : null;
+}
+
 function showCompletion(text, data) {
   progressFill.style.width = '100%';
   progressLabel.textContent = 'Complete';
@@ -562,10 +577,15 @@ function showCompletion(text, data) {
 
   // Deliverable 2: structured workspace data (for the system / future crawler)
   document.getElementById('dlDataBtn').addEventListener('click', () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    // If the structured data parsed, hand back clean JSON. If it didn't parse
+    // (rich block that failed strict JSON), the data is still safe server-side
+    // via the raw capture; locally we hand back the readable summary so the
+    // button never produces a "null" file.
+    const payload = data ? JSON.stringify(data, null, 2) : clean;
+    const blob = new Blob([payload], { type: data ? 'application/json' : 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `ontinuity_intake_${Date.now()}.json`;
+    a.download = `ontinuity_intake_${Date.now()}.${data ? 'json' : 'txt'}`;
     a.click();
   });
 }
@@ -608,17 +628,21 @@ async function sendMessage(userText) {
 
     history.push({ role: 'assistant', content: reply });
 
-    const wsData = extractWorkspaceState(reply);
-    if (wsData) {
+    const wsRaw = extractWorkspaceRaw(reply);
+    if (wsRaw) {
+      // A WORKSPACE_STATE block is present → this is the closing turn.
+      // wsData may be null if the block didn't parse as strict JSON; we still
+      // fire the FINAL capture and send the raw block so nothing is lost.
       // Final capture FIRST — before rendering — so even an instant tab-close
       // after the finish screen loses nothing.
-      captureSession(true, wsData);
+      const wsData = extractWorkspaceState(reply);
+      captureSession(true, wsData, wsRaw);
       addMessage('assistant', reply);
       showCompletion(reply, wsData);
     } else {
       addMessage('assistant', reply);
       // Checkpoint after every completed exchange — full transcript so far.
-      captureSession(false, null);
+      captureSession(false, null, null);
     }
   } catch (e) {
     hideThinking();
@@ -689,13 +713,31 @@ function renderHistory() {
     });
     const prior = r.ok ? await r.json() : { found: false };
 
-    if (prior.found && prior.final && prior.workspace_state) {
+    // Detect completion robustly: an explicit final flag, OR a WORKSPACE_STATE
+    // block present anywhere in the stored transcript. The block's presence is
+    // the ground truth that the discovery reached its close — the final flag
+    // and the parsed workspace_state can both be absent if the closing JSON
+    // failed strict parsing, but the participant still finished.
+    let priorRaw = null;
+    if (prior.found && Array.isArray(prior.transcript)) {
+      for (const m of prior.transcript) {
+        if (m.role === 'assistant') {
+          const rb = extractWorkspaceRaw(m.content || '');
+          if (rb) priorRaw = rb;
+        }
+      }
+    }
+    const priorComplete = prior.found && (prior.final || prior.workspace_state || priorRaw);
+
+    if (priorComplete) {
       // Already completed: show their summary again, not a fresh intake.
       hideThinking();
       history = prior.transcript || [];
       renderHistory();
       const lastAssistant = [...history].reverse().find(m => m.role === 'assistant');
-      showCompletion(lastAssistant ? lastAssistant.content : 'Discovery complete.', prior.workspace_state);
+      const wsForDisplay = prior.workspace_state
+        || (priorRaw ? (extractWorkspaceState('[WORKSPACE_STATE]' + priorRaw + '[/WORKSPACE_STATE]')) : null);
+      showCompletion(lastAssistant ? lastAssistant.content : 'Discovery complete.', wsForDisplay);
       isThinking = false;
       return;
     }
