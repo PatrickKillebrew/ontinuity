@@ -53,24 +53,35 @@ WORKSPACE_URL     = os.environ.get("WORKSPACE_URL", "").strip().rstrip("/")
 WORKSPACE_PROJECT = os.environ.get("WORKSPACE_PROJECT", "Ontinuity Platform").strip()
 WORKSPACE_BRANCH  = os.environ.get("WORKSPACE_BRANCH", "main").strip()
 
-def get_knowtext_filename():
-    """Return branch-aware Knowtext filename.
-    Uses knowtext_{branch}.txt when WORKSPACE_BRANCH is set and not 'main'.
-    Falls back to knowtext_current.txt for backward compatibility."""
-    branch = WORKSPACE_BRANCH
-    if branch and branch != "main":
-        # Sanitize branch name for filename safety
-        safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch)
-        return f"knowtext_{safe_branch}.txt"
-    return "knowtext_current.txt"
+def _scope_slug(project_id=None, branch=None):
+    """Project+branch scope slug for corpus file naming. Session scope wins;
+    absent it, deployment globals (unchanged single-project operation)."""
+    proj = (project_id or WORKSPACE_PROJECT or "").strip()
+    br = (branch or WORKSPACE_BRANCH or "main").strip()
+    proj_safe = re.sub(r'[^a-zA-Z0-9_-]', '_', proj) if proj else ""
+    br_safe = re.sub(r'[^a-zA-Z0-9_-]', '_', br)
+    if proj in ("", "Ontinuity Platform") and br in ("", "main"):
+        return None
+    parts = [p for p in [proj_safe, br_safe] if p]
+    return "_".join(parts)
 
-def get_github_knowtext_path():
-    """Return branch-aware GitHub file path for Knowtext."""
-    branch = WORKSPACE_BRANCH
-    if branch and branch != "main":
-        safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch)
-        return f"knowtext_{safe_branch}.txt"
-    return "knowtext_current.txt"
+def get_knowtext_filename(project_id=None, branch=None):
+    """Project+branch-aware Knowtext filename; legacy default for main project."""
+    slug = _scope_slug(project_id, branch)
+    return "knowtext_current.txt" if slug is None else f"knowtext_{slug}.txt"
+
+def get_github_knowtext_path(project_id=None, branch=None):
+    """Project+branch-aware GitHub Knowtext path."""
+    slug = _scope_slug(project_id, branch)
+    return "knowtext_current.txt" if slug is None else f"knowtext_{slug}.txt"
+
+def session_knowtext_path():
+    """Knowtext path for the RUNNING session, scoped to its own project_id/branch.
+    Structural isolation: no parameter lets a session name another project's file.
+    Falls back to deployment default when no session scope is set."""
+    pid = active_session.get("project_id"); br = active_session.get("branch")
+    if not pid and not br: return CONFIG["knowtext_path"]
+    return get_knowtext_filename(pid, br)
 
 # -----------------------------------------
 # CONFIGURATION
@@ -125,6 +136,8 @@ SCHEMA_VERSION = "KNOWTEXT SCHEMA VERSION: 1.1"
 # -----------------------------------------
 active_session = {
     "running": False,
+    "project_id": None,
+    "branch": None,
     "transcript": [],
     "tag_sequence": [],
     "signal_sequence": [],
@@ -607,7 +620,7 @@ def github_pull_knowtext():
     if not token:
         return False
     try:
-        url = f"https://api.github.com/repos/{repo}/contents/{GITHUB_FILE_PATH}"
+        url = f"https://api.github.com/repos/{repo}/contents/{get_github_knowtext_path(active_session.get('project_id'), active_session.get('branch'))}"
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
@@ -617,7 +630,7 @@ def github_pull_knowtext():
         if response.status_code == 200:
             data = response.json()
             content = base64.b64decode(data["content"]).decode("utf-8")
-            save_file(CONFIG["knowtext_path"], content)
+            save_file(session_knowtext_path(), content)
             socketio.emit('routing_action', {'type': 'injection', 'message': 'Knowtext pulled from GitHub.'})
             return True
         else:
@@ -633,11 +646,11 @@ def github_push_knowtext():
     repo = runtime_github.get("repo") or GITHUB_REPO
     if not token:
         return False
-    content = load_file(CONFIG["knowtext_path"])
+    content = load_file(session_knowtext_path())
     if not content:
         return False
     try:
-        url = f"https://api.github.com/repos/{repo}/contents/{GITHUB_FILE_PATH}"
+        url = f"https://api.github.com/repos/{repo}/contents/{get_github_knowtext_path(active_session.get('project_id'), active_session.get('branch'))}"
         headers = {
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
@@ -1006,7 +1019,9 @@ def run_projenius_synthesize(delta_log, knowtext):
     """Run SYNTHESIZE — updates Established Results Ledger after session distillation."""
     if not delta_log:
         return None
-    branch = os.environ.get("WORKSPACE_BRANCH", "main")
+    # ERL half of isolation: scope from the session, not the deployment global.
+    project_id = active_session.get("project_id") or WORKSPACE_PROJECT
+    branch = active_session.get("branch") or os.environ.get("WORKSPACE_BRANCH", "main")
     session_id = active_session.get("start_time", "unknown")
     correction_history = ""
     for entry in active_session.get("session_ledger", []):
@@ -1014,6 +1029,7 @@ def run_projenius_synthesize(delta_log, knowtext):
             correction_history += f"Cycle {entry['cycle']}: {entry['summary']}\n"
     response = call_projenius("SYNTHESIZE",
                                delta_log=delta_log,
+                               project=project_id,
                                branch=branch,
                                session_id=session_id,
                                correction_history=correction_history or "None")
@@ -2057,7 +2073,7 @@ def run_distillation():
         return False
     rotate_backups()
     new_knowtext = f"{SCHEMA_VERSION}\n\n{response}"
-    save_file(CONFIG["knowtext_path"], new_knowtext)
+    save_file(session_knowtext_path(), new_knowtext)
     socketio.emit('routing_action', {'type': 'distillation', 'message': 'Knowtext updated successfully.'})
     # Push to GitHub for persistence across deployments
     github_push_knowtext()
@@ -2160,7 +2176,7 @@ def run_work_product_extraction():
 # -----------------------------------------
 def run_final_synthesis():
     socketio.emit('routing_action', {'type': 'distillation', 'message': 'Generating final synthesis...'})
-    knowtext = load_file(CONFIG["knowtext_path"]) or ""
+    knowtext = load_file(session_knowtext_path()) or ""
     transcript_text = "\n\n".join([f"[{e['role'].upper()}] {e['content']}" for e in active_session["transcript"]])
     synthesis_prompt = (
         "You are generating a final project synthesis. Review the accumulated Knowtext context "
@@ -2225,6 +2241,10 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     # Deploy 27: the agent-start path passes start_fresh as a parameter only;
     # session state must carry it or the deploy-26 lineage seal never engages.
     active_session["start_fresh"] = bool(start_fresh)
+    # Project scope set by the start path before this runs; ensure keys exist so
+    # no session inherits a stale prior scope.
+    active_session.setdefault("project_id", None)
+    active_session.setdefault("branch", None)
     active_session["running"] = True
     active_session["end_status"] = "complete"   # Deploy 34 (#51 fold): overwritten by abnormal exits
     active_session["start_time"] = timestamp()
@@ -2260,10 +2280,10 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         socketio.emit('routing_action', {'type': 'injection', 'message': 'Starting fresh — Knowtext context cleared for this session. GitHub copy preserved.'})
     else:
         socketio.emit('routing_action', {'type': 'injection', 'message': 'Loading Knowtext...'})
-        if not os.path.exists(CONFIG["knowtext_path"]) or os.path.getsize(CONFIG["knowtext_path"]) == 0:
+        if not os.path.exists(session_knowtext_path()) or os.path.getsize(session_knowtext_path()) == 0:
             socketio.emit('routing_action', {'type': 'injection', 'message': 'Local Knowtext not found — pulling from GitHub...'})
             github_pull_knowtext()
-        knowtext = load_file(CONFIG["knowtext_path"]) or ""
+        knowtext = load_file(session_knowtext_path()) or ""
         if knowtext:
             first_line = knowtext.split("\n")[0].strip()
             active_session["knowtext_version"] = first_line
@@ -2981,11 +3001,18 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     # did not read the lineage does not write to it — start_fresh seals both
     # narrative layers (Knowtext AND the Established Results ledger). Data
     # writes (corpus, transcripts, receipts) are untouched: data in, narrative out.
-    lineage_sealed = bool(active_session.get("start_fresh"))
+    # Seal evolved to project-scoped: a session with its OWN project writes to
+    # its own corpus (path/row resolved from its project_id; main untouched).
+    # start_fresh with NO project stays fully sealed = legacy default unchanged.
+    has_own_project = bool(active_session.get("project_id"))
+    lineage_sealed = bool(active_session.get("start_fresh")) and not has_own_project
     if lineage_sealed:
         socketio.emit('routing_action', {'type': 'distillation',
-            'message': 'Lineage isolation: start_fresh session — Knowtext and Established Results writes skipped by design.'})
+            'message': 'Lineage isolation: start_fresh, no project scope — Knowtext and Established Results writes skipped by design.'})
         active_session["distillation_method"] = "isolated"
+    elif has_own_project and bool(active_session.get("start_fresh")):
+        socketio.emit('routing_action', {'type': 'distillation',
+            'message': f"Project-scoped lineage: writing to project '{active_session.get('project_id')}' corpus only — main corpus sealed."})
     try:
         parietal_distilled = None if lineage_sealed else run_distillation_with_timeout(lambda: run_parietal_distill(knowtext))
         distilled = False
@@ -2994,7 +3021,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
             if valid:
                 rotate_backups()
                 new_knowtext = f"{SCHEMA_VERSION}\n\n{parietal_distilled}"
-                save_file(CONFIG["knowtext_path"], new_knowtext)
+                save_file(session_knowtext_path(), new_knowtext)
                 socketio.emit('routing_action', {'type': 'distillation', 'message': 'Knowtext updated by Parietal.'})
                 github_push_knowtext()
                 active_session["distillation_method"] = "parietal"
@@ -3168,6 +3195,8 @@ def agent_start():
     if blockers:
         return jsonify({"error": "cannot start", "blockers": blockers}), 409
     active_session["started_by"] = "external-mailbox"
+    active_session["project_id"] = (body.get("project_id") or "").strip() or None
+    active_session["branch"] = (body.get("branch") or "").strip() or None
     active_session["close_refusals"] = 0
     active_session["stopped_by"] = None
     socketio.emit('routing_action', {'type': 'injection',
@@ -3839,7 +3868,7 @@ def pre_session_then_start(obj, start_fresh=False):
     # Uses a short timeout — if ORIENT is slow or unavailable, session starts without it
     # F.7: start_fresh skips ORIENT entirely — otherwise prior-session knowledge
     # leaks into the objective even though Knowtext injection is correctly skipped.
-    knowtext = load_file(CONFIG["knowtext_path"]) or ""
+    knowtext = load_file(session_knowtext_path()) or ""
     orient_context = ""
     if start_fresh:
         socketio.emit('routing_action', {'type': 'injection', 'message': 'Starting fresh — skipping Projenius ORIENT (no project context).'})
