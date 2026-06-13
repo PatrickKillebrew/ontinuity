@@ -83,75 +83,102 @@ def session_knowtext_path():
     if not pid and not br: return CONFIG["knowtext_path"]
     return get_knowtext_filename(pid, br)
 
-def get_erl_filename(project_id=None, branch=None):
-    """Project+branch-aware Established Results Ledger filename. The ERL is the
-    cross-session canonical record; like Knowtext it is GitHub-backed plain text,
-    scoped per project. Legacy/main project uses erl_current.txt."""
-    slug = _scope_slug(project_id, branch)
-    return "erl_current.txt" if slug is None else f"erl_{slug}.txt"
+# -----------------------------------------
+# CONFIGURATION
+# -----------------------------------------
+CONFIG = {
+    "knowtext_path": get_knowtext_filename(),
+    "backup1_path": "knowtext_backup1.txt",
+    "backup2_path": "knowtext_backup2.txt",
+    "artifacts_dir": "session_artifacts",
+    "checkpoint_interval": 10,
+    "model_a": {
+        "url": "",
+        "api_key": "",
+        "model": "",
+        "system_prompt_path": "prompts/model_a_system.txt"
+    },
+    "model_b": {
+        "url": "",
+        "api_key": "",
+        "model": "",
+        "system_prompt_path": "prompts/model_b_system.txt"
+    },
+    "model_c": {
+        "url": "",
+        "api_key": "",
+        "model": "",
+        "system_prompt_path": "prompts/model_c_system.txt"
+    },
+    "projenius": {
+        "url": "",
+        "api_key": "",
+        "model": "",
+        "system_prompt_path": "prompts/projenius_system.txt"
+    },
+    "parietal": {
+        "url": "",
+        "api_key": "",
+        "model": "",
+        "system_prompt_path": "prompts/parietal_system.txt"
+    }
+}
 
-def session_erl_path():
-    """ERL path for the RUNNING session, scoped to its own project. Same
-    structural isolation guarantee as Knowtext: resolved from the session's own
-    project_id, no parameter to name another project's ledger."""
-    pid = active_session.get("project_id"); br = active_session.get("branch")
-    return get_erl_filename(pid, br)
+KNOWTEXT_REQUIRED_FIELDS = [
+    "Identity", "Active Frameworks", "Open Questions",
+    "Valence Mapping", "Delta Log", "Correction History", "Climate Notes"
+]
 
-def github_push_erl():
-    """Commit the session's project-scoped ERL file to GitHub. Mirrors
-    github_push_knowtext: same scoping, same SHA-aware update."""
-    token = runtime_github.get("token") or os.environ.get("GITHUB_TOKEN", "").strip()
-    repo = runtime_github.get("repo") or GITHUB_REPO
-    if not token:
-        return False
-    content = load_file(session_erl_path())
-    if not content:
-        return False
-    try:
-        remote = get_erl_filename(active_session.get("project_id"), active_session.get("branch"))
-        url = f"https://api.github.com/repos/{repo}/contents/{remote}"
-        headers = {"Authorization": f"Bearer {token}",
-                   "Accept": "application/vnd.github+json",
-                   "X-GitHub-Api-Version": "2022-11-28"}
-        get_response = http_requests.get(url, headers=headers, timeout=30)
-        sha = get_response.json().get("sha", "") if get_response.status_code == 200 else ""
-        encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
-        body = {"message": f"ERL update — {timestamp()}", "content": encoded, "branch": GITHUB_BRANCH}
-        if sha:
-            body["sha"] = sha
-        put_response = http_requests.put(url, headers=headers, json=body, timeout=30)
-        if put_response.status_code in (200, 201):
-            socketio.emit('routing_action', {'type': 'distillation', 'message': 'ERL committed to GitHub.'})
-            return True
-        socketio.emit('routing_action', {'type': 'error', 'message': f'ERL push failed: {put_response.status_code}'})
-        return False
-    except Exception as e:
-        socketio.emit('routing_action', {'type': 'error', 'message': f'ERL push error: {str(e)}'})
-        return False
+SCHEMA_VERSION = "KNOWTEXT SCHEMA VERSION: 1.1"
 
-def append_to_erl(synthesize_output):
-    """Persist the COMPLETE ledger SYNTHESIZE returned (per spec: all prior
-    entries preserved, new appended, retractions marked in place). The engine
-    writes it back wholesale to the session's project-scoped ERL file and pushes
-    to GitHub — no engine-side parsing or merging; the intelligence lives in
-    Projenius. Returns the count of RESULT entries in the written ledger (for the
-    status message), 0 if nothing usable was returned. File is source of truth;
-    DB index is Phase 2."""
-    if not synthesize_output or "RESULT:" not in synthesize_output:
-        return 0
-    ledger = synthesize_output.strip()
-    # Guard: SYNTHESIZE is spec'd to return the COMPLETE ledger. If what came back
-    # is shorter than what we already have, treat it as a suspect truncation and
-    # do NOT overwrite — preserving the no-delete guarantee against a bad model
-    # return. (A correct update is always >= prior length: entries are preserved.)
-    existing = load_file(session_erl_path()) or ""
-    if existing and len(ledger) < len(existing.strip()) * 0.9:
-        socketio.emit('routing_action', {'type': 'error',
-            'message': 'SYNTHESIZE returned a shorter ledger than current — suspected truncation, NOT overwriting. Prior ledger preserved.'})
-        return 0
-    save_file(session_erl_path(), ledger + chr(10))
-    github_push_erl()
-    return ledger.count("RESULT:")
+# -----------------------------------------
+# SESSION STATE
+# -----------------------------------------
+active_session = {
+    "running": False,
+    "project_id": None,
+    "branch": None,
+    "transcript": [],
+    "tag_sequence": [],
+    "signal_sequence": [],
+    "challenge_events": [],
+    "unreviewed_cycles": [],
+    "errors": [],
+    "cycle": 0,
+    "start_time": None,
+    "end_time": None,
+    "knowtext_version": None,
+    "waiting_for_input": False,
+    "input_type": None,
+    "human_input_event": threading.Event(),
+    "human_input_value": None,
+    "artifacts": [],
+    "session_ledger": [],  # Running list of established results per cycle
+    "parietal_navigate_outputs": [],   # All NAVIGATE outputs this session
+    "parietal_adjudicate_rulings": [], # All ADJUDICATE rulings this session
+    "rejected_claims": [],             # Claims formally ruled against — injected into Researcher system prompt each cycle
+    "start_fresh": False,              # If True, skip Knowtext injection for this session
+    "distillation_method": "failed",   # Tracks which method succeeded: parietal/projenius/failed
+    "no_progress_count": 0,            # F.1: consecutive cycles Challenger flagged no progress; reset on progress or successful RESOLVE
+    "malformed_count": 0,             # F.1: consecutive Researcher cycles with no valid status tag
+    "execution_log": [],               # F.2: deterministic record of every real workspace execution this session (F.3 detector ground truth)
+    "claim_warning_count": 0           # F.2: consecutive Researcher cycles with execution-claims but no real execution
+}
+
+# Runtime config overrides (set from frontend settings modal)
+# Structure: { 'model_b': {'key': '...', 'url': '...', 'model': '...'} }
+runtime_configs = {}
+
+# User-supplied GitHub config (overrides environment variable)
+# Structure: { 'token': '...', 'repo': 'user/repo' }
+runtime_github = {}
+
+# Deploy 18: Railway is the vault, the tab is the override. Configs armed from a
+# dashboard always win; when a deploy restart wipes process memory and no tab has
+# re-armed, roles fall back to operator-provisioned env vars so agent-started
+# sessions survive restarts. Keys remain operator-provisioned, never in the repo.
+# Vault envs: <ROLE>_API_KEY / <ROLE>_URL / <ROLE>_MODEL (e.g. MODEL_B_API_KEY),
+# with PROVIDER_API_KEY / PROVIDER_URL as the shared default beneath those.
 def _vault_fallback(role, config):
     prefix = role.upper()
     shared_key = os.environ.get("PROVIDER_API_KEY", "").strip()
@@ -1000,12 +1027,8 @@ def run_projenius_synthesize(delta_log, knowtext):
     for entry in active_session.get("session_ledger", []):
         if "retract" in entry.get("summary", "").lower():
             correction_history += f"Cycle {entry['cycle']}: {entry['summary']}\n"
-    # Per spec, SYNTHESIZE receives the current ledger so it preserves all prior
-    # entries and updates retractions in place, returning the COMPLETE ledger.
-    current_ledger = load_file(session_erl_path()) or "(empty ledger - no prior results)"
     response = call_projenius("SYNTHESIZE",
                                delta_log=delta_log,
-                               established_results_ledger=current_ledger,
                                project=project_id,
                                branch=branch,
                                session_id=session_id,
@@ -3078,11 +3101,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                     if synth_thread.is_alive():
                         socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE timed out — ledger not updated this session.'})
                     elif synthesize_result[0]:
-                        appended = append_to_erl(synthesize_result[0])
-                        if appended:
-                            socketio.emit('routing_action', {'type': 'parietal', 'message': f'Established Results Ledger updated — {appended} entr{"y" if appended==1 else "ies"} appended.'})
-                        else:
-                            socketio.emit('routing_action', {'type': 'parietal', 'message': 'SYNTHESIZE produced no qualifying ledger entries this session.'})
+                        socketio.emit('routing_action', {'type': 'parietal', 'message': 'Established Results Ledger updated.'})
                     else:
                         socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE returned no result — ledger not updated.'})
                 except Exception as e:
