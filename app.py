@@ -678,6 +678,75 @@ def github_push_knowtext():
         socketio.emit('routing_action', {'type': 'error', 'message': f'GitHub push error: {str(e)}'})
         return False
 
+def get_erl_filename(project_id=None, branch=None):
+    """Project+branch-aware Established Results Ledger filename. The ERL is the
+    cross-session permanent record; like Knowtext it is GitHub-backed plain text,
+    scoped per project. Legacy/main project uses erl_current.txt."""
+    slug = _scope_slug(project_id, branch)
+    return "erl_current.txt" if slug is None else f"erl_{slug}.txt"
+
+def session_erl_path():
+    """ERL path for the running session, scoped to its own project. Same
+    structural isolation as Knowtext: resolved from the session's own
+    project_id, no parameter to name another project's ledger."""
+    pid = active_session.get("project_id")
+    br = active_session.get("branch")
+    return get_erl_filename(pid, br)
+
+def github_push_erl():
+    """Commit the session's project-scoped ERL file to GitHub. Mirrors
+    github_push_knowtext exactly: same scoping, same SHA-aware update."""
+    token = runtime_github.get("token") or os.environ.get("GITHUB_TOKEN", "").strip()
+    repo = runtime_github.get("repo") or GITHUB_REPO
+    if not token:
+        return False
+    content = load_file(session_erl_path())
+    if not content:
+        return False
+    try:
+        remote = get_erl_filename(active_session.get("project_id"), active_session.get("branch"))
+        url = f"https://api.github.com/repos/{repo}/contents/{remote}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28"
+        }
+        get_response = http_requests.get(url, headers=headers, timeout=30)
+        sha = get_response.json().get("sha", "") if get_response.status_code == 200 else ""
+        encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
+        body = {"message": f"ERL update - {timestamp()}", "content": encoded, "branch": GITHUB_BRANCH}
+        if sha:
+            body["sha"] = sha
+        put_response = http_requests.put(url, headers=headers, json=body, timeout=30)
+        if put_response.status_code in (200, 201):
+            socketio.emit('routing_action', {'type': 'distillation', 'message': 'ERL committed to GitHub.'})
+            return True
+        socketio.emit('routing_action', {'type': 'error', 'message': f'ERL push failed: {put_response.status_code}'})
+        return False
+    except Exception as e:
+        socketio.emit('routing_action', {'type': 'error', 'message': f'ERL push error: {str(e)}'})
+        return False
+
+def write_erl_ledger(synthesize_output):
+    """Persist the COMPLETE ledger Projenius SYNTHESIZE returned (per spec: all
+    prior entries preserved, new appended, retractions marked in place). The
+    engine writes it back wholesale to the session's project-scoped ERL file and
+    pushes to GitHub - no engine-side parsing; the intelligence lives in Projenius.
+    Truncation guard: a returned ledger materially shorter than the current one is
+    treated as a suspect bad return and NOT written, protecting no-delete.
+    Returns the count of RESULT entries written, 0 if nothing usable."""
+    if not synthesize_output or "RESULT:" not in synthesize_output:
+        return 0
+    ledger = synthesize_output.strip()
+    existing = load_file(session_erl_path()) or ""
+    if existing and len(ledger) < len(existing.strip()) * 0.9:
+        socketio.emit('routing_action', {'type': 'error',
+            'message': 'SYNTHESIZE returned a shorter ledger than current - suspected truncation, NOT overwriting. Prior ledger preserved.'})
+        return 0
+    save_file(session_erl_path(), ledger + "\n")
+    github_push_erl()
+    return ledger.count("RESULT:")
+
 # -----------------------------------------
 # KNOWTEXT SECTION EXTRACTION
 # -----------------------------------------
@@ -1027,8 +1096,10 @@ def run_projenius_synthesize(delta_log, knowtext):
     for entry in active_session.get("session_ledger", []):
         if "retract" in entry.get("summary", "").lower():
             correction_history += f"Cycle {entry['cycle']}: {entry['summary']}\n"
+    current_ledger = load_file(session_erl_path()) or "(empty ledger - no prior results)"
     response = call_projenius("SYNTHESIZE",
                                delta_log=delta_log,
+                               established_results_ledger=current_ledger,
                                project=project_id,
                                branch=branch,
                                session_id=session_id,
@@ -3101,7 +3172,11 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                     if synth_thread.is_alive():
                         socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE timed out — ledger not updated this session.'})
                     elif synthesize_result[0]:
-                        socketio.emit('routing_action', {'type': 'parietal', 'message': 'Established Results Ledger updated.'})
+                        written = write_erl_ledger(synthesize_result[0])
+                        if written:
+                            socketio.emit('routing_action', {'type': 'parietal', 'message': f'Established Results Ledger updated - {written} result entr{"y" if written==1 else "ies"} in ledger.'})
+                        else:
+                            socketio.emit('routing_action', {'type': 'parietal', 'message': 'SYNTHESIZE produced no qualifying ledger entries this session.'})
                     else:
                         socketio.emit('routing_action', {'type': 'parietal', 'message': 'Projenius SYNTHESIZE returned no result — ledger not updated.'})
                 except Exception as e:
