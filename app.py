@@ -130,44 +130,28 @@ def github_push_erl():
         return False
 
 def append_to_erl(synthesize_output):
-    """Phase 1 persistence: parse Projenius SYNTHESIZE output (RESULT:/CONFIDENCE:
-    blocks) and append qualifying entries to the session's project-scoped ERL
-    file, with provenance. Cumulative: read existing ledger, append, write back,
-    push to GitHub. Returns count appended. File is source of truth (DB is Phase 2)."""
+    """Persist the COMPLETE ledger SYNTHESIZE returned (per spec: all prior
+    entries preserved, new appended, retractions marked in place). The engine
+    writes it back wholesale to the session's project-scoped ERL file and pushes
+    to GitHub — no engine-side parsing or merging; the intelligence lives in
+    Projenius. Returns the count of RESULT entries in the written ledger (for the
+    status message), 0 if nothing usable was returned. File is source of truth;
+    DB index is Phase 2."""
     if not synthesize_output or "RESULT:" not in synthesize_output:
         return 0
-    sid = active_session.get("start_time", "unknown")
-    ts = timestamp()
-    entries = []
-    cur = None
-    for line in synthesize_output.split(chr(10)):
-        st = line.strip()
-        if st.startswith("RESULT:"):
-            if cur: entries.append(cur)
-            cur = {"result": st[7:].strip(), "confidence": "PROVISIONAL", "extra": []}
-        elif st.startswith("CONFIDENCE:") and cur is not None:
-            cur["confidence"] = st[11:].strip() or "PROVISIONAL"
-        elif cur is not None and st and not st.startswith("RESULT:"):
-            cur["extra"].append(st)
-    if cur: entries.append(cur)
-    if not entries:
+    ledger = synthesize_output.strip()
+    # Guard: SYNTHESIZE is spec'd to return the COMPLETE ledger. If what came back
+    # is shorter than what we already have, treat it as a suspect truncation and
+    # do NOT overwrite — preserving the no-delete guarantee against a bad model
+    # return. (A correct update is always >= prior length: entries are preserved.)
+    existing = load_file(session_erl_path()) or ""
+    if existing and len(ledger) < len(existing.strip()) * 0.9:
+        socketio.emit('routing_action', {'type': 'error',
+            'message': 'SYNTHESIZE returned a shorter ledger than current — suspected truncation, NOT overwriting. Prior ledger preserved.'})
         return 0
-    existing = load_file(session_erl_path()) or ("ESTABLISHED RESULTS LEDGER" + chr(10))
-    blocks = []
-    for e in entries:
-        extra = (chr(10).join(e["extra"]) + chr(10)) if e["extra"] else ""
-        blocks.append(
-            chr(10) + "--- entry ---" + chr(10) +
-            "RESULT: " + e["result"] + chr(10) +
-            "CONFIDENCE: " + e["confidence"] + chr(10) +
-            "SESSION: " + str(sid) + chr(10) +
-            "ESTABLISHED_AT: " + str(ts) + chr(10) +
-            extra
-        )
-    new_content = existing.rstrip() + chr(10) + "".join(blocks)
-    save_file(session_erl_path(), new_content)
+    save_file(session_erl_path(), ledger + chr(10))
     github_push_erl()
-    return len(entries)
+    return ledger.count("RESULT:")
 def _vault_fallback(role, config):
     prefix = role.upper()
     shared_key = os.environ.get("PROVIDER_API_KEY", "").strip()
@@ -1016,8 +1000,12 @@ def run_projenius_synthesize(delta_log, knowtext):
     for entry in active_session.get("session_ledger", []):
         if "retract" in entry.get("summary", "").lower():
             correction_history += f"Cycle {entry['cycle']}: {entry['summary']}\n"
+    # Per spec, SYNTHESIZE receives the current ledger so it preserves all prior
+    # entries and updates retractions in place, returning the COMPLETE ledger.
+    current_ledger = load_file(session_erl_path()) or "(empty ledger - no prior results)"
     response = call_projenius("SYNTHESIZE",
                                delta_log=delta_log,
+                               established_results_ledger=current_ledger,
                                project=project_id,
                                branch=branch,
                                session_id=session_id,
