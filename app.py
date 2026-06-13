@@ -1543,7 +1543,28 @@ def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
                 continue
             response.raise_for_status()
             data = response.json()
-            return data["choices"][0]["message"]["content"]
+            # Robust extraction: reasoning models (e.g. glm-4.7 on Cerebras) may
+            # return the answer in a 'reasoning' field with 'content' empty or
+            # absent — reading 'content' alone caused the intermittent 'content'
+            # KeyError that looked like provider death. Prefer content; fall back
+            # to reasoning; if a length-truncation left content empty, surface a
+            # retryable signal rather than crashing the session.
+            try:
+                msg_obj = data["choices"][0]["message"]
+            except (KeyError, IndexError, TypeError):
+                raise KeyError(f"malformed response (no choices/message): {str(data)[:200]}")
+            extracted = (msg_obj.get("content") or "").strip()
+            if not extracted:
+                extracted = (msg_obj.get("reasoning") or "").strip()
+            if not extracted:
+                fr = data["choices"][0].get("finish_reason", "")
+                if delay is not None and attempt < 2:
+                    socketio.emit('routing_action', {'type': 'error',
+                        'message': f"Empty content (finish_reason={fr}) — retrying in 5s (attempt {attempt + 1}/3)..."})
+                    time.sleep(5)
+                    continue
+                raise ValueError(f"model returned empty content and empty reasoning (finish_reason={fr})")
+            return extracted
         except http_requests.exceptions.Timeout as e:
             # Read-timeout flake (Novita): retry instead of killing the session.
             if delay is not None:
