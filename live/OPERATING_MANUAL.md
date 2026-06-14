@@ -16,6 +16,16 @@ A farm/engine session can be started two ways, and they behave fundamentally dif
 - Runs the loop INTERNALLY; does not require an external mailbox driver.
 - This is the mode to use for a self-contained run that closes on its own.
 
+## PUTTING A CLAUDE IN THE RESEARCHER SEAT (mailbox-seat mode — the real harness-from-inside)
+This is how a control seat experiences the harness as the Researcher (Model A), with the REAL Challenger/Friction/Parietal/close gates firing on its own answers — NOT chat role-play (that's theater, no gate fires).
+- THE SWITCH: Model A's EFFECTIVE config url must be "external". app.py (~1716): if model_a's url startswith "external", the engine posts each Researcher turn to the external mailbox instead of calling an API ("the engine cannot tell what occupies the seat"). The vault has MODEL_A_URL=external as the DEFAULT — but do NOT trust it (see THE CONFIG TRAP below).
+- DRIVE BY HAND (control IS the driver on MAIN; the resident driver is FARM-only, so no collision on MAIN): POST /agent/start {mailbox_key, objective, start_fresh:true} → poll GET /mailbox/turn?mailbox_key= → answer by KIND: `pre_session_questions` (answer the Parietal's contract questions in plain prose, no status tag), `researcher_turn` (do the REAL Researcher work — ground every claim, issue DB_QUERY/CODE_TEST/SEARCH tags, never fabricate a result), `human_input_needed` (modal) → POST /mailbox/respond {mailbox_key, turn_id, response}. Loop to a gated SESSION_END. turn_id may NOT start at 1 (stale external-mailbox state) — fetch first to get the live id. Adversarial-review floor: cannot close in 1 cycle.
+- PROOF you're actually in the seat: a `researcher_turn` arriving at the mailbox. (shepherd.py halts on this as config-drift for an all-API farm; in mailbox-seat mode it is the intended signal.) If instead the console shows a Cerebras/API call, the config is wrong — STOP immediately.
+- mailbox_key: in the vault (MAILBOX_KEY), distinct from DIAG_KEY.
+
+## THE CONFIG TRAP (why a Researcher-seat start silently staffs Cerebras — cost a failed run 2026-06-14)
+get_effective_config precedence (app.py ~195): base CONFIG (empty for model_a) → runtime_configs[role] → _vault_fallback. runtime_configs is set by the dashboard KEYS modal (save_api_keys socket event); it FULLY REPLACES on every save (last-write-wins, process-global) and OUTRANKS the vault. So a STALE runtime override — an old keys-modal save from a different browser/device — beats the vault's MODEL_A_URL=external and staffs the old Cerebras endpoint (404s, spins cycles). RULE: verify/set the EFFECTIVE config (the LAST keys-modal save) before starting; do not rely on the vault default. Multiple open keys modals (iPad + laptop) are a live race — the last save wins. There is NO diag route that reports live runtime_configs — confirm by behavioral probe (does a researcher_turn post, or a Cerebras call appear) and stop instantly if wrong. "Model configuration saved for this session" in the console is the first line of a keys-modal save / session-begin — not a mystery process.
+
 ## THE RESIDENT DRIVER (the shepherd)
 - systemd service `ontinuity-burnin` on the VPS (/opt/ontinuity/burnin_resident.py).
 - It is the thing that ANSWERS the external mailbox for /agent/start sessions and drives them cycle-by-cycle to a normal close.

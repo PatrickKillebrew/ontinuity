@@ -724,3 +724,20 @@ ERRATA flagged: four_stage_pipeline.md branding line says "octagon-in-octagon"; 
 CARRIED OPEN: mini-corpus build (automation track, prioritize); close-ritual gate (banked, top-justified); KEYS-2-FIX (genuinely unsigned — needs real peer sign-off); tenancy tightening (proto); ERL write bug + FARM stale (Ontinuity-track, unchanged).
 
 CLOSE-RITUAL STATE: MAIN engine idle + healthy. No box-source changed this session (no commit_self needed). No worker-contract change (boot packet untouched). Secrets sweep clean on all committed files. Records committed: conversation d8e90976, this fold. State left clean. NEXT (fresh control): operator critique-feedback on the delivered proposal when it lands; build the per-project mini-corpus (automation track); or the close-ritual gate.
+
+---
+
+## FOLD — 2026-06-14 (evening) — public-button lockdown + Researcher-seat mechanism
+Conversation record: live/conversations/2026-06-14_evening_button-lockdown-researcher-seat.md (f378cd4f). Site commit 7477ce5d.
+
+PUBLIC EXPOSURE LOCKED: ontinuity.org (GitHub Pages from repo index.html) had public Begin Session buttons (hero + try-it) + footer Live System link, all wired to the UNAUTHENTICATED MAIN engine — live since April (it was the original manual session-starter). Anyone could start a MAIN session, burn credits, write the corpus, UNLOGGED (operations_ledger captures only courier/box ops, NOT web-UI socket events save_api_keys/agent_start). Ledger audit: zero unauthorized box activity, one MAIN session today (seat's own stopped run). Fixed (7477ce5d): CTAs → disabled coming-soon, footer neutralized, verified live (engine-links 3→0). RESIDUAL + now-urgent: the engine URL itself is still public + unauthed — multi-tenancy/auth blocker is the real fix; the button was the family-tonight stopgap.
+
+RESEARCHER-SEAT MECHANISM (manual hole closed — see OPERATING_MANUAL addition this commit): Model A effective-config url="external" routes the Researcher turn to the mailbox (app.py ~1716); control drives by hand (agent/start → poll /mailbox/turn by KIND → /mailbox/respond → gated SESSION_END). A `researcher_turn` at the mailbox is the proof of mailbox-seat mode (shepherd halts on it as drift; here it's intended).
+
+CONFIG TRAP (cost a failed run): get_effective_config precedence base→runtime_configs(KEYS modal, last-write-wins, global)→vault. A STALE runtime override from an old device's keys-modal save outranks vault MODEL_A_URL=external and staffs Cerebras (404s). Verify the EFFECTIVE config (last modal save), not the vault default. No diag route reports live runtime_configs — confirm by behavioral probe, stop instantly if Cerebras shows.
+
+SEAT ERRORS (inference-as-fact, logged): asserted vault=effective config (failed run); asserted "nothing persisted" (it wrote a correctly-labeled `stopped` row); invented a "mystery config-setter" (it was the operator's own modal saves — "Model configuration saved" is the first console line of a save/begin).
+
+WORKER HALF ORIENTED (was a gap): courier allowlist is FLAT (worker sees same 16 ops); the boundary is the CREDENTIAL (workers hold no token → read/reason/stage, never commit/deploy). So Fix #2/#3 "needs hands we lack" was WRONG — a worker can build+stage them; only commit+deploy is control's.
+
+CARRIED OPEN: Researcher-seat session (re-run, objective = CDN reconciliation, after confirming laptop config is last save); engine-URL auth gating (now urgent); web-UI socket events not in ledger (audit gap); mini-corpus, close-ritual gate, KEYS-2-FIX unsigned (unchanged).
