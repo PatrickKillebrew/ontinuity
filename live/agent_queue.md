@@ -741,3 +741,28 @@ SEAT ERRORS (inference-as-fact, logged): asserted vault=effective config (failed
 WORKER HALF ORIENTED (was a gap): courier allowlist is FLAT (worker sees same 16 ops); the boundary is the CREDENTIAL (workers hold no token → read/reason/stage, never commit/deploy). So Fix #2/#3 "needs hands we lack" was WRONG — a worker can build+stage them; only commit+deploy is control's.
 
 CARRIED OPEN: Researcher-seat session (re-run, objective = CDN reconciliation, after confirming laptop config is last save); engine-URL auth gating (now urgent); web-UI socket events not in ledger (audit gap); mini-corpus, close-ritual gate, KEYS-2-FIX unsigned (unchanged).
+
+---
+
+## FOLD — 2026-06-14 (night) — first CERTIFIED Researcher-seat session (output-shape reliability proven)
+Conversation record: live/conversations/2026-06-14_night_first-certified-researcher-seat-session.md (bef24e44). Session 2026-06-14_22-19-08 (complete, 5 cycles, challenge_count 3, uphold_count 3, ERL +3 entries).
+
+MILESTONE: a Claude sat in the Researcher seat for the first time via mailbox-seat mode (MODEL_A_URL=external effective, confirmed by a researcher_turn posting to the mailbox) and drove a real session to a CERTIFIED COMPLETE close. The harness fired on the seat's own answers — NOT chat role-play.
+
+THE THESIS, DEMONSTRATED (operator's framing — fold this, not "a session ran"): the architecture took the most expensive seat occupant (frontier Claude) and forced its output into a predictable, verifiable, PRE-INSTRUCTED shape. The contract was authored from the objective BEFORE the session, frozen (3 criteria), and the gate held the seat to it through 3 upheld challenges until the deliverable matched. Output-shape reliability is what makes stage-2 (problem-dissolution) outputs reliable + predictably-shaped + therefore usable as stage-3 (decomposition) inputs. A cheap open-source frontier model under the IDENTICAL gate inherits the same reliability — the expensive run proved the gate; the penny-a-cycle run gets it free. Reliability lives in the ARCHITECTURE, not the model.
+
+THE 3 GATE CATCHES (the near-misses that make raw model output unusable downstream): C1 cited a line number not the code → forced verbatim quote; C2 argued from ledger outcomes not code → forced quoting the rate-limit docstring + ?cb cache-bust mitigation; C3 gave prose not formatted edits + scattered evidence → forced exact insertion blocks + one consolidated deliverable. A frontier model alone closes at cycle 2 on a paraphrase; the gate forced grounding before close.
+
+ERL WROTE (open thread advanced): the close committed the ERL to GitHub with 3 entries — the day-long "SYNTHESIZE fires but never persists" bug did NOT recur on a real complete close. Narrows the bug to whatever differed in the isotest test-session closes, not the write path.
+
+SESSION CONTENT (CDN reconciliation — the objective): read_repo lives box-side (box_ops.py op_read_repo, NOT app.py). Source order: (1) auth API if github_token; (2) raw.githubusercontent + ?cb cache-bust; (3) unauth API last resort. Tokenless callers (workers) → path 2 is the STRUCTURAL PRIMARY, not a fallback. operations_ledger: every tokenless read_repo success via raw_cdn_cachebust (incl. app.py 216/220/230KB), zero staleness fails, 24 fails are 404s not rate-limits. The stale-CDN trap is mitigated in-code by ?cb. VERDICT: the agent_queue ~606 "delete raw-CDN" decision is WRONG; keep the code, correct the docs (3 exact edits delivered). The contradiction was documentation drift.
+
+DECISION: write a PAPER documenting this (operator: help others understand + benefit). Drafting this session.
+
+CARRIED OPEN: apply the 3 CDN doc-edits (control commits, pending); paper draft (in progress); ERL bug narrowed; engine-URL auth gating (urgent); web-UI socket events not in ledger; mini-corpus; close-ritual gate; KEYS-2-FIX unsigned (unchanged).
+
+CLOSE-RITUAL STATE: MAIN idle, session complete + written, ERL written, both engines healthy. No box source changed. No worker-contract change. Records: conv bef24e44, this fold. State left clean. NEXT (fresh control): apply the 3 CDN edits; finish/publish the paper; ERL-close diff (what differed in isotest closes); engine auth gating.
+
+---
+## CDN-DECISION SUPERSEDED (read_repo source-priority item — re-scoped 2026-06-14)
+The earlier "CDN KILLED / delete raw-CDN entirely from read_repo" decision (this file, above) is CONTRADICTED by live box_ops.py op_read_repo (raw.githubusercontent + ?cb=<unixtime> is the deliberate tokenless source #2) and by operations_ledger (every tokenless read_repo success serves via raw_cdn_cachebust incl. app.py at 216/220/230 KB; zero staleness failures; the 24 fails are 404s, not 403/429 rate-limits). The stale-CDN trap the decision targeted is already mitigated in-code by the cache-bust param. CORRECT FRAMING: (1) api.github.com authoritative WITH a github_token, (2) raw+?cb = the tokenless PRIMARY, (3) unauth-API last resort. DO NOT delete source #2 — it is the only working read path for a tokenless worker. The read_repo source-priority punch-list item is RE-SCOPED: from "DELETE raw-CDN" to "no code change needed; correct the docs" (done: WORKER_MANUAL updated same commit). Source: certified Researcher-seat session 2026-06-14_22-19-08 (the system's own adversarial output).
