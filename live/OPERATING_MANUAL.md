@@ -171,6 +171,9 @@ CHECK for the files; if absent, ASK the operator for the values — do not concl
 ## THE SEAT-BOOTSTRAP VAULT IS NOT IN app.py (a fresh seat looked in the wrong place)
 The credential-bootstrap vault = the Railway PROJECT VARIABLES, read via the Railway GraphQL API (backboard.railway.app/graphql/v2, header `Project-Access-Token`) using the Railway PROJECT TOKEN (the master key). The keyring root is that one project token; it recovers GitHub token + DIAG_KEY + mailbox keys (main's MAILBOX_KEY is in main's vault — pull both services). DISTINCT from app.py's own runtime model-key reading (the engine reading <ROLE>_API_KEY from its own env) — that is a different mechanism; do not mistake it for the seat vault.
 
+## CLIENT INTAKES LIVE IN A SEPARATE PRIVATE REPO (not in the main repo)
+Captured client intakes are NOT in PatrickKillebrew/ontinuity. They land in the PRIVATE repo `PatrickKillebrew/ontinuity-intake-data`, reachable with the `INTAKE_GITHUB_TOKEN` from the vault (the main repo PAT does not see it). Path: `sessions/intake_<tag>_final.json` (plus incremental `_NNNN` autosaves). The `?k=<tag>` capture link writes here; it does NOT create a corpus-side tenant (tenancy is still proto). A fresh seat needing a client's own words (e.g. for a pipeline stage) reads from here — e.g. Seniors Helping Seniors = `intake_Kshs_final.json`. This saves the tool-discovery hops a fresh seat otherwise burns finding the private repo + the right token.
+
 ## COMMITTING — mechanism + multi-file atomicity
 Commits are AGENT work (standing rule: initiation and work is the agent's; the operator is the fuse/sign-off). Commit via the GitHub API with ghtok.txt.
 - Single file: contents API PUT (needs the file's current blob sha).
