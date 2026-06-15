@@ -297,6 +297,67 @@ def op_commit_file():
         return jsonify({"error": str(e)[:200]}), 500
 
 
+@box_ops_bp.route("/op/backup_db", methods=["POST"])
+def op_backup_db():
+    """Produce a CONSISTENT plain-text .sql dump of the live ontinuity.db and
+    write it to the box project dir, so the existing text-only commit_file can
+    ship it to a (private) repo. Solves the binary problem: read_file/commit_file
+    are UTF-8 text ops and cannot carry the raw .db; a .sql dump is text, diffs
+    in git, and is restore-portable across SQLite versions. Uses sqlite3's
+    online .backup first (a consistent snapshot even if the DB is mid-write),
+    then .dump on the snapshot. SAFE (read-only against the live DB). Returns the
+    box path of the written dump; the caller then commits it via commit_file.
+    """
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    db_path = os.environ.get("ONTINUITY_DB_PATH",
+                             os.path.join(_BASE_DIR, "ontinuity.db"))
+    if not os.path.exists(db_path):
+        return jsonify({"error": "db not found", "path": db_path}), 404
+    out_name = (b.get("out") or "backups/ontinuity_dump.sql").strip().lstrip("/")
+    out_full = _safe_box_path(out_name)
+    if not out_full:
+        return jsonify({"error": "path traversal rejected"}), 403
+    op_id = _ledger_begin("backup_db", {"db": db_path, "out": out_name})
+    snap = out_full + ".snap"
+    try:
+        os.makedirs(os.path.dirname(out_full) or ".", exist_ok=True)
+        # 1) consistent online snapshot (safe even mid-write)
+        r1 = subprocess.run(["sqlite3", db_path, f".backup '{snap}'"],
+                            capture_output=True, text=True, timeout=120)
+        if r1.returncode != 0:
+            _ledger_finish(op_id, "fail", f".backup: {r1.stderr[:160]}")
+            return jsonify({"error": f"sqlite .backup failed: {r1.stderr[:200]}"}), 500
+        # 2) text dump of the snapshot
+        r2 = subprocess.run(["sqlite3", snap, ".dump"],
+                            capture_output=True, text=True, timeout=180)
+        if r2.returncode != 0:
+            _ledger_finish(op_id, "fail", f".dump: {r2.stderr[:160]}")
+            return jsonify({"error": f"sqlite .dump failed: {r2.stderr[:200]}"}), 500
+        with open(out_full, "w", encoding="utf-8") as f:
+            f.write(r2.stdout)
+        dump_bytes = len(r2.stdout)
+        try:
+            os.remove(snap)
+        except Exception:
+            pass
+        _ledger_finish(op_id, "ok", f"dumped {dump_bytes} bytes to {out_name}")
+        return jsonify({"ok": True, "path": out_name, "bytes": dump_bytes,
+                        "db": db_path, "note": "commit with commit_file to a PRIVATE repo"})
+    except subprocess.TimeoutExpired:
+        _ledger_finish(op_id, "fail", "sqlite timeout")
+        return jsonify({"error": "sqlite timeout"}), 504
+    except Exception as e:
+        try:
+            if os.path.exists(snap):
+                os.remove(snap)
+        except Exception:
+            pass
+        _ledger_finish(op_id, "fail", str(e)[:200])
+        return jsonify({"error": str(e)[:200]}), 500
+
+
 @box_ops_bp.route("/op/read_repo", methods=["POST"])
 def op_read_repo():
     """Read ANY file from the repo and return its content, so a worker can read
