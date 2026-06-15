@@ -322,22 +322,23 @@ def op_backup_db():
     op_id = _ledger_begin("backup_db", {"db": db_path, "out": out_name})
     snap = out_full + ".snap"
     try:
+        import sqlite3
         os.makedirs(os.path.dirname(out_full) or ".", exist_ok=True)
-        # 1) consistent online snapshot (safe even mid-write)
-        r1 = subprocess.run(["sqlite3", db_path, f".backup '{snap}'"],
-                            capture_output=True, text=True, timeout=120)
-        if r1.returncode != 0:
-            _ledger_finish(op_id, "fail", f".backup: {r1.stderr[:160]}")
-            return jsonify({"error": f"sqlite .backup failed: {r1.stderr[:200]}"}), 500
-        # 2) text dump of the snapshot
-        r2 = subprocess.run(["sqlite3", snap, ".dump"],
-                            capture_output=True, text=True, timeout=180)
-        if r2.returncode != 0:
-            _ledger_finish(op_id, "fail", f".dump: {r2.stderr[:160]}")
-            return jsonify({"error": f"sqlite .dump failed: {r2.stderr[:200]}"}), 500
+        # 1) consistent online snapshot via the backup API (safe even mid-write)
+        src = sqlite3.connect(db_path)
+        dst = sqlite3.connect(snap)
+        with dst:
+            src.backup(dst)
+        src.close()
+        dst.close()
+        # 2) text dump of the snapshot via iterdump (== sqlite3 .dump output)
+        conn = sqlite3.connect(snap)
+        dump_bytes = 0
         with open(out_full, "w", encoding="utf-8") as f:
-            f.write(r2.stdout)
-        dump_bytes = len(r2.stdout)
+            for line in conn.iterdump():
+                f.write(line + "\n")
+                dump_bytes += len(line) + 1
+        conn.close()
         try:
             os.remove(snap)
         except Exception:
@@ -345,9 +346,6 @@ def op_backup_db():
         _ledger_finish(op_id, "ok", f"dumped {dump_bytes} bytes to {out_name}")
         return jsonify({"ok": True, "path": out_name, "bytes": dump_bytes,
                         "db": db_path, "note": "commit with commit_file to a PRIVATE repo"})
-    except subprocess.TimeoutExpired:
-        _ledger_finish(op_id, "fail", "sqlite timeout")
-        return jsonify({"error": "sqlite timeout"}), 504
     except Exception as e:
         try:
             if os.path.exists(snap):
