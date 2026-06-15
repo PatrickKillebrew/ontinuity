@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ontinuity — Research Notes</title>
+<meta name="description" content="Reliability from the harness, not the model. Two research notes: an adversarial verification loop that shapes any seated model's output into a fixed, usable form.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#c9a84c; --gold-bright:#d9b85c; --gold-dim:#7a6530; --gold-deep:#3d2e0a;
+  --gold-glow:rgba(201,168,76,0.18);
+  --bg:#090909; --bg-raised:#0f0f0f; --bg-card:#121212; --bg-card-hover:#161616;
+  --text:#EFEFEF; --text-dim:#8A8A8A; --text-muted:#4A4A4A;
+  --border:rgba(201,168,76,0.18); --border-subtle:rgba(255,255,255,0.07);
+  --refuse:#8A8A8A; --accept:var(--gold-bright);
+  --max-w:1000px; --read-w:720px; --pad:48px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:16px;line-height:1.7;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad)}
+.read{max-width:var(--read-w);margin:0 auto}
+@media (max-width:640px){:root{--pad:20px}}
+
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(9,9,9,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-subtle)}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:'Orbitron',monospace;font-size:clamp(13px,1.6vw,17px);font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:.04em;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.nav-logo .o{color:var(--text-muted)}
+.wordmark{display:inline}
+.wordmark .o{color:var(--text-muted)}
+.nav-logo svg{flex-shrink:0}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;letter-spacing:.08em;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:var(--gold)}
+@media (max-width:640px){.nav-links{display:none}}
+
+/* reveal */
+@media (prefers-reduced-motion:no-preference){
+  .rv{opacity:0;transform:translateY(12px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.34s}.d5{animation-delay:.44s}.d6{animation-delay:.56s}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+
+/* hero */
+header.hero{padding:140px 0 56px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:26px}
+h1{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(30px,5.4vw,50px);line-height:1.08;letter-spacing:-.01em;color:var(--text);margin-bottom:22px}
+h1 .em{color:var(--gold)}
+.dek{font-size:clamp(17px,2.3vw,21px);line-height:1.5;color:var(--text-dim);max-width:46ch;font-weight:300}
+.dek em{color:var(--text);font-style:italic}
+
+/* gate spine — signature */
+.gate{padding:24px 0 8px}
+.gate .lead{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.05em;color:var(--text-muted);text-transform:uppercase;margin-bottom:22px}
+.step{display:grid;grid-template-columns:118px 1fr;gap:20px;align-items:start;padding:20px 0;border-top:1px solid var(--border-subtle)}
+.verdict{font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:.08em;padding-top:3px}
+.verdict.r{color:var(--refuse)}
+.verdict.a{color:var(--accept);text-shadow:0 0 22px var(--gold-glow)}
+.step .what{margin:0;font-size:16px;line-height:1.55}
+.step .what b{font-weight:600;color:var(--text)}
+.step .forced{display:block;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold-dim);margin-top:8px}
+.step .forced .arrow{color:var(--text-muted);padding:0 .4em}
+.step.close{border-top:1px solid var(--gold-dim);background:linear-gradient(90deg,rgba(201,168,76,0.05),transparent);margin-top:2px}
+.gate .foot{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);line-height:1.7;margin-top:22px;border-top:1px solid var(--border-subtle);padding-top:20px}
+
+/* toc */
+.toc{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.toc a{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.04em;text-decoration:none;color:var(--gold);border:1px solid var(--border);padding:9px 15px;border-radius:3px;transition:background .2s,border-color .2s}
+.toc a:hover{background:rgba(201,168,76,0.06);border-color:var(--gold)}
+
+/* papers */
+.paper{padding:72px 0;border-top:1px solid var(--border-subtle)}
+.paper-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:16px}
+h2{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(23px,3.6vw,33px);line-height:1.12;letter-spacing:-.01em;color:var(--text);margin-bottom:12px}
+.paper-sub{font-size:18px;color:var(--gold);font-style:italic;line-height:1.45;margin-bottom:8px;font-weight:300}
+.paper-meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);letter-spacing:.02em;margin-bottom:44px}
+h3{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:46px 0 16px}
+.paper p{margin-bottom:18px;color:var(--text-dim)}
+.paper p.lede{font-size:18px;color:var(--text);font-weight:300;line-height:1.6}
+.paper strong{color:var(--text);font-weight:600}
+.paper em{font-style:italic;color:var(--text)}
+
+table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:14px}
+caption{caption-side:bottom;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);text-align:left;padding-top:12px;letter-spacing:.02em}
+thead th{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--gold-dim)}
+thead th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:'IBM Plex Mono',monospace}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--border-subtle);color:var(--text-dim)}
+tbody td:first-child{color:var(--text)}
+tbody tr:hover td{background:rgba(201,168,76,0.03)}
+
+.limits{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:30px 30px 14px;margin:32px 0}
+.limits h3{margin-top:0}
+
+footer{position:relative;z-index:1;border-top:1px solid var(--border-subtle);margin-top:24px}
+.footer-inner{padding:48px var(--pad);max-width:var(--max-w);margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px}
+.footer-logo{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--gold);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.footer-meta{font-size:12px;color:var(--text-muted);line-height:1.8}
+.footer-meta a{color:var(--text-dim);text-decoration:none}
+.footer-meta a:hover{color:var(--gold)}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-links a{font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s}
+.footer-links a:hover{color:var(--gold)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+      </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/#problems">What It Is</a></li>
+      <li><a href="/#architecture">Architecture</a></li>
+      <li><a href="/papers.html">Research</a></li>
+      <li><a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap read">
+    <p class="eyebrow rv">Research Notes · June 2026</p>
+    <h1 class="rv d1">Reliability from the<br><span class="em">harness</span>, not the model.</h1>
+    <p class="dek rv d2">A separate gate refuses to let a session close until a seated model's output matches a contract fixed <em>before it spoke</em>.</p>
+  </div>
+</header>
+
+<section class="wrap read gate" aria-label="One session, gate by gate">
+  <p class="lead rv d3">One session · a frontier model in the seat · a three-criterion contract</p>
+
+  <div class="step rv d3">
+    <div class="verdict r">REFUSED</div>
+    <p class="what"><b>It cited the source by location and paraphrase, then proposed to close.</b>
+      <span class="forced">paraphrase<span class="arrow">&rarr;</span>verbatim quotation</span></p>
+  </div>
+  <div class="step rv d4">
+    <div class="verdict r">REFUSED</div>
+    <p class="what"><b>It argued the triggering condition was gone by reasoning from outcomes, not the code that defines it.</b>
+      <span class="forced">inference<span class="arrow">&rarr;</span>cited mechanism</span></p>
+  </div>
+  <div class="step rv d5">
+    <div class="verdict r">REFUSED</div>
+    <p class="what"><b>Its edits were prose descriptions, and the evidence was scattered across turns.</b>
+      <span class="forced">description<span class="arrow">&rarr;</span>applicable edit, consolidated</span></p>
+  </div>
+  <div class="step close rv d6">
+    <div class="verdict a">ACCEPTED</div>
+    <p class="what"><b>Five cycles. Three challenges, three upheld. Only then did the gate open.</b>
+      <span class="forced">Left to itself, the model would have finished at cycle two on a confident paraphrase.</span></p>
+  </div>
+
+  <p class="foot rv d6">The gate checks output against the frozen contract and is indifferent to what produced it &mdash; so the same discipline holds whether the seat is a frontier model or a cheap open-weight one.</p>
+
+  <div class="toc rv d6">
+    <a href="#methodology">&darr; Methodology Note</a>
+    <a href="#demonstration">&darr; Demonstration Note</a>
+  </div>
+</section>
+
+<main>
+<article class="paper" id="methodology">
+  <div class="wrap read">
+    <p class="paper-eyebrow">Methodology Note · v0.1</p>
+    <h2>Reliability from the Harness, Not the Model</h2>
+    <p class="paper-sub">An adversarial verification loop that shapes any seated model's output into a fixed, usable form</p>
+    <p class="paper-meta">Patrick Killebrew · June 2026 · figures current as of 2026-06-14</p>
+
+    <h3>Summary</h3>
+    <p class="lede">We describe a verification architecture in which a language model is seated in one role of an adversarial multi-model loop and a separate gate refuses to let a session close until the model's output matches a contract fixed before the session began. The central property is that reliability is supplied by the harness rather than by the model in the seat: the gate checks output against the frozen contract and is indifferent to what produced it. We report a behavioral record of 319 sessions to date, in which the seat has been held by five different models &mdash; most often an inexpensive open-weight model &mdash; and present the per-cycle measurements the system records, including a randomized-signal control that distinguishes genuine adversarial response from its appearance. A companion demonstration note provides a single session in full detail as a close-up of the same mechanism.</p>
+
+    <h3>The problem</h3>
+    <p>A capable language model produces answers that are usually almost right. For a human reader, almost-right is often enough. For an automated pipeline that consumes one model's output as another stage's input, almost-right is unusable: a step that expects a known shape cannot consume output whose shape varies run to run. The gap is not intelligence. A model can be entirely capable of the correct answer and still, unprompted, deliver it in a form that is slightly under-grounded, slightly over-asserted, or slightly differently structured each time. That variance is what makes raw model output a poor input.</p>
+    <p>The usual response is to make the model better or to prompt it more carefully. Our approach is different: leave the model as it is and place a gate outside it that will not accept output until the output conforms to a specification written in advance. The discipline comes from the architecture, so it does not depend on which model is in the seat.</p>
+
+    <h3>The loop</h3>
+    <p>A session runs four models in defined roles. A <strong>Researcher</strong> advances the work toward an objective. A <strong>Challenger</strong> contests the Researcher's output each cycle. A <strong>Friction</strong> model scores session health out of band. A <strong>Parietal</strong> adjudicates challenges and distills the final result. Beneath them sits a persistent record of what the project has already established, so a session builds on prior results rather than re-deriving them.</p>
+    <p>Before a session starts, its objective is compiled into a <strong>frozen contract</strong>: a small set of criteria, each marked as checked-by-code against the execution log or judged by the Challenger. The contract cannot be edited, added to, or reinterpreted once the session begins. The session may not close until every criterion is satisfied. When the Researcher proposes to end, the gate tests the proposal against the contract; if any criterion is unmet, the close is refused and the session continues.</p>
+    <p>The Researcher seat is filled through a <strong>mailbox</strong>. The engine routes each Researcher turn to that mailbox and waits for a reply, and it cannot determine what is answering. This is the mechanism of interchangeability: a frontier chat model, an API model, or a cheap open-weight model all occupy the seat the same way and are gated identically.</p>
+
+    <h3>What the record shows</h3>
+    <p>As of this writing the system has run 319 sessions since mid-May 2026, of which 271 closed complete. The remainder failed in identifiable ways &mdash; a model process dying mid-session, or a session that never reached a clean close &mdash; which are recorded distinctly rather than laundered into the complete count. The Researcher seat has been held by five different models. The distribution is the point: the seat is usually not a frontier model.</p>
+
+    <table>
+      <caption>Completed sessions by occupant of the Researcher seat, to 2026-06-14.</caption>
+      <thead><tr><th>Model in the Researcher seat</th><th class="num">Complete</th><th class="num">Avg cycles</th><th class="num">Avg challenges</th></tr></thead>
+      <tbody>
+        <tr><td>Open-weight GLM-4.7 (primary)</td><td class="num">225</td><td class="num">2.5</td><td class="num">0.1</td></tr>
+        <tr><td>Frontier chat model</td><td class="num">30</td><td class="num">4.0</td><td class="num">0.8</td></tr>
+        <tr><td>Open-weight Qwen-235B</td><td class="num">3</td><td class="num">14.7</td><td class="num">3.0</td></tr>
+        <tr><td>Open-weight DeepSeek-V3.2</td><td class="num">3</td><td class="num">1.0</td><td class="num">0.0</td></tr>
+        <tr><td>Open-weight GLM-4.7 (API variant)</td><td class="num">10</td><td class="num">5.4</td><td class="num">0.2</td></tr>
+      </tbody>
+    </table>
+
+    <p>The inexpensive open-weight model carried the large majority of completed sessions. That is the empirical content of the interchangeability claim: it is not an argument from design that a cheap model could be substituted, but a record in which a cheap model has been the ordinary occupant, gated by the same contract machinery throughout. The frontier model is the exception in the seat, useful precisely because watching the gate operate on the most capable occupant shows the discipline is external to the model rather than a concession the model is making.</p>
+
+    <h3>Measuring whether the gate does work</h3>
+    <p>The system records a per-cycle behavioral observation for every Researcher turn &mdash; 1,240 to date. Each captures the cycle's friction signal and the reason given for it, the Researcher's word count and counts of hedging and certainty markers, whether the Challenger issued a challenge, and the running challenge and uphold totals. This is a behavioral corpus, not a set of anecdotes, and it makes the gate's activity measurable.</p>
+    <p>The measurements are coherent with the mechanism. On cycles where the Challenger issued a challenge, the Researcher's turn was markedly longer and more assertive than on uncontested cycles &mdash; roughly two to three times the word count and a sharp rise in certainty markers. The gate reacts to exactly the profile one would predict for an over-confident, under-grounded answer: longer, more certain, less hedged. That is the near-miss the architecture exists to catch.</p>
+    <p>The methodologically important part is a <strong>control</strong>. On a substantial fraction of cycles &mdash; 333 of the 1,240 &mdash; the friction signal presented to the Researcher was injected rather than computed from the session state. The purpose is to separate genuine response to adversarial pressure from mere response to a number: if the Researcher changes its behavior only when the signal's content warrants it, and not merely because a value moved, the pressure is real rather than theatrical. The signals exist to be testable, and they are tested against themselves.</p>
+
+    <h3>A close-up</h3>
+    <p>The companion demonstration note records a single session in full: a frontier model in the Researcher seat, a three-criterion contract, and a gate that refused to close three times &mdash; forcing the model to replace a paraphrase with a quotation, an inference with a cited mechanism, and a prose description with an applicable edit &mdash; before accepting a consolidated deliverable. That session is the aggregate behavior reported here, viewed at single-session resolution. The value of pairing them is that the close-up shows the mechanism legibly while the record shows it is not a one-off.</p>
+
+    <h3>Why the output is usable downstream</h3>
+    <p>Because a session cannot close until its output matches a contract specified in advance, the output emerges in a known shape: claims grounded, evidence cited, recommendation and any edits in a fixed form. A later stage can consume that output without re-interpreting it. This is the link between a single gated session and an automated pipeline: a problem dissolved into a predictably-shaped, evidence-backed artifact is a usable input to a decomposition stage, where a loosely-worded answer of varying shape is not. The gate is the converter from answer to data.</p>
+
+    <div class="limits">
+      <h3>Limitations and honesty about the numbers</h3>
+      <p>The record is observational, not a controlled study, and several limits should be stated plainly. The challenge-ruling field is cleanly captured only for a recent portion of the history: of 166 recorded challenge events, 110 carry an unresolved ruling label from an earlier schema period, leaving 51 upholds and 5 rejects clearly recorded. We therefore do not report a precise uphold rate across the full history; the defensible statements are the behavioral distribution above and the clean recent window. Counts of cycles, challenges, and completions are reliable; the full text of older challenges was not always retained. We have not run a matched comparison of the same objective across occupants under identical conditions, which is the natural next measurement and would convert the interchangeability claim from a strong observational pattern into a controlled result. None of these caveats bears on the architecture's logic; they bound what the current record can be said to prove.</p>
+    </div>
+
+    <h3>Relation to existing work</h3>
+    <p>Message-passing between model conversations is established: parallel coding assistants coordinate through shared task lists and mailboxes, and several independent systems let model sessions exchange messages to hand off tasks or share findings. Those are coordination mechanisms among cooperating peers, and they trust each participant's output. The contribution here is orthogonal to that line of work: an adversarial gate that refuses a seated model's output until it matches a pre-fixed contract, with a mailbox used not to coordinate peers but to seat an interchangeable occupant in an adversarial role. We have not found that combination described elsewhere.</p>
+  </div>
+</article>
+
+<article class="paper" id="demonstration">
+  <div class="wrap read">
+    <p class="paper-eyebrow">Demonstration Note · v0.1</p>
+    <h2>Watching a Harness Shape a Frontier Model</h2>
+    <p class="paper-sub">A worked record of one adversarial verification session</p>
+    <p class="paper-meta">Patrick Killebrew · June 2026 · session run 2026-06-14</p>
+
+    <h3>What this note is</h3>
+    <p class="lede">This is a record of a single session, written so the mechanism can be seen rather than described. In it, a frontier language model occupies one role inside an adversarial multi-model loop, and a separate verification gate refuses to let the session finish until the model's output has been forced into a shape specified in advance. The model could not certify its own work as complete. It was made to ground every claim in quoted evidence before the loop would close.</p>
+    <p>The point of showing it is narrow and, we think, useful: reliability here is a property of the architecture, not of the model in the seat. The same gate that disciplined a frontier model would discipline a cheap open-source one identically, because the gate checks the output against a frozen contract and does not care what produced it.</p>
+
+    <h3>The setup, briefly</h3>
+    <p>Ontinuity runs sessions in which four models cooperate adversarially. A Researcher advances the work. A Challenger contests it each cycle. A Friction model scores session health out of band. A Parietal adjudicates and distills. Before a session starts, its objective is turned into a frozen contract &mdash; a small set of criteria, each marked as checked-by-code or judged-by-the-Challenger. The contract cannot be edited mid-session. The session may not close until every criterion is met.</p>
+    <p>For this session, the Researcher seat was occupied not by an API model but by a chat-based frontier model answering through a mailbox. The engine routes each Researcher turn to that mailbox and waits for an answer; it cannot tell what is on the other side. This is what let us watch the gate operate on a frontier model directly, with the same machinery that would operate on any other occupant.</p>
+
+    <h3>The task</h3>
+    <p>The objective was a real housekeeping contradiction in the project's own records. One log said a particular code path &mdash; a fallback for reading files when an API rate-limits &mdash; had been deleted. Another document said that same fallback had recently done essential work. The session was asked to reconcile the two: read the live code, determine whether the original concern still applied, and produce a recommendation with exact document edits, without reintroducing the problem the deletion was meant to solve.</p>
+    <p>The contract froze three criteria: cite the current logic from the live source; establish whether the triggering condition still exists, citing code or configuration; and deliver a provenance-tagged recommendation with precise edits.</p>
+
+    <h3>What happened, cycle by cycle</h3>
+    <p>The model's first answer was substantively right. It identified where the code actually lived, described the order in which the fallback paths were tried, and began assembling the argument. It then proposed to close.</p>
+    <p>The gate refused. The Challenger noted that the model had cited the source by location and paraphrase but had not quoted it &mdash; a paraphrase is not a verifiable citation. The model retrieved the code and quoted it verbatim.</p>
+    <p>It proposed to close again. The gate refused again. This time the objection was sharper: the model had argued that the rate-limit condition was no longer the operative factor by reasoning from outcomes in a query result, rather than by citing the code that defines and mitigates the condition. The model quoted the relevant code &mdash; the line that names the rate limit as the reason the path exists, and the line that appends a cache-busting parameter to defeat staleness &mdash; and defended the outcome data as corroboration rather than sole basis.</p>
+    <p>It proposed to close a third time. The gate held once more, on a point that was almost pedantic and still correct: the recommendation's edits were written as prose descriptions rather than as concrete, applicable blocks, and the evidence for the three criteria was scattered across turns rather than assembled into one deliverable. The model produced formatted edit blocks and a single consolidated deliverable carrying all three criteria with their evidence inline.</p>
+    <p>Only then did the gate allow the close. The session was recorded as complete after five cycles, with three challenges raised and three upheld.</p>
+
+    <h3>Why the refusals matter</h3>
+    <p>Each thing the gate caught was a near-miss: a location instead of a quotation, an inference instead of a citation, a description instead of an applicable edit. A near-miss is exactly what makes raw model output unusable as an input to a later automated step. "Almost the right shape" cannot be consumed by a process that expects a known shape. The gate's function is to convert an answer into data &mdash; to force it into a form a downstream stage can take without re-interpreting it.</p>
+    <p>Left to itself, the model would have finished at the second cycle on a confident, well-written paraphrase. It was capable; it was not, unprompted, precise in the specific ways the contract required. The discipline came from outside the model. That is the part worth seeing directly.</p>
+
+    <h3>The output, and what it is good for</h3>
+    <p>The session produced three exact document edits &mdash; not a suggestion to revise, but the revisions themselves, ready to apply. The substantive finding was that the deletion decision had been wrong: the fallback path was, for a caller without credentials, the primary working path, and the staleness concern was already handled in code. The contradiction was documentation drift, and the fix was to correct the documents, not the code.</p>
+    <p>Because the output was forced into a fixed, verified shape, applying it required no judgment: the edits went into the record directly. This is the property that makes such an output usable as the input to a later stage. A problem dissolved into a predictably-shaped, evidence-backed artifact is something a subsequent decomposition step can consume mechanically. A loosely-worded answer of varying shape is not.</p>
+
+    <h3>On novelty, stated carefully</h3>
+    <p>Letting separate model conversations exchange messages is not new. As of early 2026, parallel coding assistants coordinate through shared task lists and mailboxes, and several independent projects let model sessions message one another to hand off tasks or share findings. Those systems are for coordination among cooperating peers, and they trust each participant's output.</p>
+    <p>What is shown here is different in two respects. The mailbox is not a coordination channel between peers; it is the transport that seats a model inside an adversarial role, where a separate gate refuses its output until that output matches a contract fixed before the model spoke. And because the engine cannot tell what occupies the seat, the occupant is interchangeable &mdash; a frontier model, an API model, or a cheap open-source model are gated identically. The reliability is supplied by the harness, so it survives swapping an expensive model for an inexpensive one. We have not found this combination &mdash; adversarial contract-gating of an interchangeable seated model, with a mailbox as the seat transport &mdash; described elsewhere.</p>
+    <p>A note on that interchangeability, to be exact about its standing. It is not, in this project, only a design argument. The frontier model demonstrated here is the rare occupant of the seat, not the usual one: across the run of sessions to date the seat has most often been held by an inexpensive open-weight model, with several others appearing as well. The companion methodology note reports that record. For this demonstration the claim is kept narrow &mdash; the gate operated on a frontier model, in full view &mdash; and the question of how the same gate behaves across occupants is left to the paper built to answer it.</p>
+
+    <h3>What this is not</h3>
+    <p>One session is a demonstration, not evidence of a distribution. It shows the mechanism operating cleanly once, on a real task, with the gate visibly doing work the model did not do on its own. It does not establish how often the gate catches a genuine error versus a stylistic one, nor how the dynamic changes with a weaker model in the seat. Those are measurement questions for the companion methodology note. The claim here is only that the mechanism is real and can be watched.</p>
+  </div>
+</article>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
+          <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+          <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+          <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+        </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+      </div>
+      <p class="footer-meta">Open research project. Session counts and behavioral figures are drawn from the system's<br>own operational record as of 2026-06-14 and will move as it runs.<br>Contact · <a href="mailto:killebrewpatrick@gmail.com">killebrewpatrick@gmail.com</a></p>
+    </div>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a>
+      <a href="#methodology">Methodology</a>
+      <a href="#demonstration">Demonstration</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
