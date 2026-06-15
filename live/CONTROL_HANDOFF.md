@@ -1,23 +1,21 @@
-# CONTROL_HANDOFF — next-seat boot target
-Last updated: 2026-06-15 (morning), after the seed_tenant close. This file states the SINGLE next action so a fresh control seat runs the open ritual onto a clear target instead of re-deriving state. Run the OPEN RITUAL (OPERATING_MANUAL) first: orient from the corpus, do not reason from memory.
+# CONTROL HANDOFF — current state + the single next action
+# Updated 2026-06-15 (afternoon close) by control seat (claude.ai-chat:opus-4.8).
+# Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the queue head.
 
-## STEP 0 — credentials (control seat)
-Read the provisioned credential file in the sandbox (LLaves in the Claude project) — diag key, Railway project token, GitHub PAT(s), mailbox key. Never fabricate; if absent, ask the operator. Out-of-band only; never commit to the public repo.
+## STATE AT CLOSE
+- Engine IDLE (running:false, cycle 0). Last deploy healthy (SKIPPED label = Railway dedup of an identical redeploy; engine live, 18-op allowlist serving). No half-finished deploy, no orphaned mailbox claim.
+- Repo == box: box_ops.py reconciled via commit_self (1ff93529) — the repo had a STALE subprocess version of backup_db; the box ran the corrected python-sqlite3 version; close-ritual provenance check caught it and pushed the box's version to the repo. A fresh seat rebuilding from the repo now gets the working version.
 
-## SINGLE NEXT ACTION
-The SHS-Wasserman build day. Nothing below is gated on infrastructure — Katie is seeded, the tenant path is live, the manuals are current. The work is the build, in this dependency order (full detail: private repo ontinuity-intake-data, projects/shs-wasserman/ROADMAP.md):
-1. P0 — Katie's sanitizer/de-identifier, as PLAIN DETERMINISTIC CODE (no model; her export has stable columns; deterministic beats probabilistic for an auditable guarantee). Gates everything: she can't hand over data until it exists. Build parameterized (columns declared via checklist) so it works the moment her sheet arrives. Spec in projects/shs-wasserman/mini_corpus.md.
-2. P1 — Katie's materials once sanitized (Google Sheet = real field schema; schedule export). Map columns to the matcher; flag absent fields (forward availability, structured service area) — those the intake + heartbeat must supply.
-3. P2 — two-way SMS loop (send + inbound webhook + first-valid-YES arbitration). Parallel to P0/P1; needs only a trial number.
-4. P3 — A2P 10DLC registration (start early, ~1-3wk wait, fire-and-forget).
-5. P4 — matcher ranking on her real fields.
-PARALLEL human track: coffee with David (operator's father, investor, knows the franchise agreements + consultant network). Printable question doc delivered: projects/shs-wasserman/FOR_DAVID_franchise_questions.docx. Katie's asks: FOR_KATIE_tomorrow.docx. The one question that decides the wider-network path: is reaching the other ~125 SHS partners gated by ONE approved-vendor decision at corporate (who decides?), or owner-by-owner?
+## ⚠️ CREDENTIALS — READ BEFORE BOOTING
+The operator was REVOKING the three exposed credentials at end of session 2026-06-15: DIAG_KEY, GitHub PAT, Railway project token. If that happened, the system is DARK — boot/ops/deploys will all fail until rotation. This is expected, not a breakage. Rotation (issue new keys + set in Railway vault + update LLaves) is a dedicated future session and is the likely FIRST action when the operator returns. Vault secrets (INTAKE token, mailbox key, provider keys) were NOT revoked (no evidence of vault-value exposure). The committed DB backup is independent of all these keys.
 
-## STATE AT THIS HANDOFF
-- Katie Wasserman seeded as first client tenant (user 07f75d61 / project eecb5348 "SHS Emergency Shift-Coverage Tool"), confirmed in the live DB.
-- seed_tenant op LIVE on box + engine, in both manuals (17-op allowlist), in punch-list DONE. Future tenants are hands-free via /diag/op/seed_tenant.
-- Engine idle. Hetzner Object-Storage outage (hel1/fsn1) still open but IRRELEVANT to operation (it's Object Storage, not the VPS; the VPS only accepts the Railway relay — direct :5001 timeout from a sandbox is firewall-by-design, NOT a dead box).
-- DB BACKUP still UNBUILT (the last single-homed risk): only the live ontinuity.db on the VPS is at risk if the box is lost; everything else is on GitHub. Set up dump-to-private-repo + laptop copy + test-restore when convenient (an on-the-box task). Tracked in projects/shs-wasserman/ROADMAP.md Track A.
+## WHAT SHIPPED THIS SESSION (all on the record, keyed to shas)
+- Boot-packet permanence: CONTROL_QUICKBOOT_SNIPPET.md (e2267613, the fixed verbatim pointer — NEVER regenerate it; a decohering seat must not author the boot artifact) + CONTROL_QUICKBOOT.md rewrite (9c2edb0b) + hard-gate on five-doc orientation (d3999e66). Cold-tested clean.
+- backup_db op (62c834a0 / app.py 308ea384, repo reconciled 1ff93529) + first DB backup committed to PRIVATE repo ontinuity-intake-data backups/ontinuity_dump.sql (cbfb6220). Repeatable: backup_db -> commit_file.
+- Website: /papers.html live (959a85f5) + index.html logo fix & Papers tab (88a0304f). Operator made site + TikTok outreach comment public.
+- Fabrication question grounded on the record: session 2026-06-14_22-19-08 shows the gate catching a fabricated completion-claim (Opus Researcher seat, C1 asserted-without-citation, challenged + close refused, real close cycle 5). Early-build fabrication examples are PRIOR-state; do not cite as current.
 
-## STANDING LESSON (read before declaring any blocker)
-This morning control twice declared an EXTERNAL blocker (Hetzner outage, then Railway egress throttle) without grounding in the corpus — same shape as the prior VPS-down miscall. Both real causes were INTERNAL and corpus-documented: (1) the relay-survives-firewall access pattern; (2) a new box op needs write_file-to-BOX-DISK + restart, NOT just a repo commit (manual line 122). RULE: when something "can't" be done, re-ground in the manual/corpus and verify ACTUAL state before declaring a blocker. The retrieval machinery is reliable; the only failure is not reaching for it.
+## THE SINGLE NEXT ACTION
+If credentials were rotated/are available: the declared next build is the SHS-Wasserman client work (P0 = Katie's deterministic sanitizer/de-identifier, plain code no model, parameterized to her declared columns; spec in the PRIVATE repo projects/shs-wasserman/). It gates everything downstream.
+If credentials are still revoked: the FIRST action is credential rotation (a dedicated session) — nothing live runs until then.
+NEW operator-priority item now in the queue: the VERBOSITY GATE (draft off-screen, return only the consolidated contract-shaped answer) — operator named it a priority this session.
