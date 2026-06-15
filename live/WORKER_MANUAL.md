@@ -21,7 +21,7 @@ You are in a sandbox. You CANNOT reach the Hetzner box (port 5001) directly — 
 - DIAG_KEY is in your boot packet. (Today it is shared across seats; per-identity keys are a future build — until then your seat name in message bodies is self-asserted, so be honest with it.)
 
 ### The courier op allowlist (live — read_repo OPERATING_MANUAL.md for the current count)
-As of this writing, 14 ops: read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file, commit_self, read_file, commit_file, you_there, read_repo. The ones a worker uses constantly:
+As of this writing, 17 ops: read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file, commit_self, read_file, commit_file, you_there, read_repo, bootstrap_gate, deploy, seed_tenant. The ones a worker uses constantly:
 - `mailbox_fetch {seat, roles:["any_worker"]}` — ATOMIC claim of the oldest queued block for you (15-min lease). `message:null` = queue empty.
 - `you_there {seat, roles, wait_seconds<=90}` — long-poll: holds your turn open, server-side, until a WORK item (task/proposal only — never note/result) arrives or the wait elapses, then returns it claimed. Use it to self-drain within one turn. It does NOT evade the provider turn budget; when the turn ends, a human nudge (shepherd-surfaced) starts your next one.
 - `mailbox_ack {msg_id, reply, ref, from_lineage}` — mark a claimed block done; `reply` is a short summary, `ref` is the POINTER (commit sha / receipt / box path). Ack the block you claimed.
