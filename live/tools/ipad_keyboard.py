@@ -339,45 +339,46 @@ function send(ev){
 // BLUE: the one real Enter.
 
 
-// LIVE keyboard (v9 capture): accumulate + diff, NEVER blank mid-stream.
-// iOS keeps feeding keys because the field is a normal growing textarea; we
-// send only the newly-changed characters. This is the capture that typed
-// reliably on-device; v8 regressed by blanking on every key (iOS then stops
-// firing input events). Enter/Tab/Backspace come through keydown below.
+// LIVE keyboard (v10 capture): keydown-first. The iOS `input` event is
+// unreliable on a constantly-reset field (it often does not fire for letters,
+// which is why letters did not transmit while Enter/Tab via keydown did). So we
+// capture EVERYTHING through keydown, the path proven to transmit. The input
+// listener stays only as a fallback for IME/autocorrect replacement text.
 function pushEcho(s){ echoText=(echoText+s).slice(-80); echo.textContent=echoText||' '; }
-var last='';
-cap.addEventListener('input', function(){
-  var now=cap.value;
-  var m=activeMods();
-  if(now.length>last.length && now.indexOf(last)===0){
-    var added=now.slice(last.length);
-    if(m.length && added.length===1){ send({t:'chord',mods:m,key:added}); consumeOneShots(); }
-    else { for(var i=0;i<added.length;i++){ var ch=added[i]; if(ch==='\n') send({t:'key',v:'enter'}); else send({t:'char',v:ch}); } }
-    pushEcho(added);
-  } else if(now.length<last.length && last.indexOf(now)===0){
-    var n=last.length-now.length;
-    for(var j=0;j<n;j++){ send({t:'key',v:'backspace'}); echoText=echoText.slice(0,-1); }
-    echo.textContent=echoText||' ';
-  } else if(now!==last){
-    // mid-edit / autocorrect replacement: backspace the divergent tail, retype it
-    var k=0, L=Math.min(now.length,last.length);
-    while(k<L && now[k]===last[k]) k++;
-    for(var b=0;b<last.length-k;b++) send({t:'key',v:'backspace'});
-    var tail=now.slice(k);
-    for(var t=0;t<tail.length;t++){ var c2=tail[t]; if(c2==='\n') send({t:'key',v:'enter'}); else send({t:'char',v:c2}); }
-    pushEcho(tail);
-  }
-  last=now;
-  // only reset when it gets long, never mid-keystroke
-  if(now.length>300){ cap.value=''; last=''; }
-});
-// Enter / Tab / Backspace via keydown (an empty field's input event misses these).
+
 cap.addEventListener('keydown', function(e){
   var key=e.key; var m=activeMods();
+  // printable single character (letters, digits, symbols, including shifted)
+  if(key && key.length===1){
+    if(m.length){ send({t:'chord',mods:m,key:key}); consumeOneShots(); }
+    else { send({t:'char',v:key}); }
+    pushEcho(key); e.preventDefault(); return;
+  }
+  if(key==='Spacebar' || key===' '){ send({t:'char',v:' '}); pushEcho(' '); e.preventDefault(); return; }
   if(key==='Enter'){ if(m.length){send({t:'chord',mods:m,key:'enter'});consumeOneShots();}else send({t:'key',v:'enter'}); pushEcho('\u23ce'); e.preventDefault(); return; }
   if(key==='Tab'){ if(m.length){send({t:'chord',mods:m,key:'tab'});consumeOneShots();}else send({t:'key',v:'tab'}); e.preventDefault(); return; }
-  // Backspace only handled here when field is already empty (otherwise input-diff catches it)
-  if(key==='Backspace' && cap.value===''){ send({t:'key',v:'backspace'}); echoText=echoText.slice(0,-1); echo.textContent=echoText||' '; e.preventDefault(); return; }
+  if(key==='Backspace'){ send({t:'key',v:'backspace'}); echoText=echoText.slice(0,-1); echo.textContent=echoText||' '; e.preventDefault(); return; }
+  // arrows / nav as a convenience from the soft keyboard
+  var navmap={ArrowLeft:'left',ArrowRight:'right',ArrowUp:'up',ArrowDown:'down',Home:'home',End:'end',Delete:'delete',Escape:'escape'};
+  if(navmap[key]){ if(m.length){send({t:'chord',mods:m,key:navmap[key]});consumeOneShots();}else send({t:'key',v:navmap[key]}); e.preventDefault(); return; }
+});
+
+// Fallback: IME / autocorrect / dictation insert multiple chars at once via input.
+// keydown does not fire per-char for those, so diff the field and send the delta.
+var last='';
+cap.addEventListener('input', function(e){
+  var now=cap.value;
+  // Only act on bulk inserts (autocorrect/dictation); single keystrokes already
+  // went through keydown and preventDefault kept the field empty.
+  if(now.length>last.length){
+    var added=now.slice(last.length);
+    if(added.length>1){ // a bulk insertion keydown didn't cover
+      for(var i=0;i<added.length;i++){ var ch=added[i]; if(ch==='\n') send({t:'key',v:'enter'}); else send({t:'char',v:ch}); }
+      pushEcho(added);
+    }
+  }
+  last=now;
+  if(now.length>200){ cap.value=''; last=''; }
 });
 
 // named keys with optional modifier chord
@@ -525,7 +526,7 @@ def main():
     port = 8765
     ip = lan_ip()
     print("=" * 56)
-    print("  iPad keyboard (v9: WebSocket + stable capture) is running.")
+    print("  iPad keyboard (v10: keydown capture) is running.")
     print("  On the iPad (same Wi-Fi), open Safari and go to:")
     print()
     print("      http://%s:%d" % (ip, port))
