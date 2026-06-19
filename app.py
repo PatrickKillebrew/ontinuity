@@ -3632,8 +3632,6 @@ def index():
 
 # -----------------------------------------
 # iPad KEYBOARD (WebRTC) — portable, works from any network.
-# Serves the offerer page SAME-ORIGIN so its mailbox fetches need no CORS.
-# Signaling rides the existing /diag/op mailbox; media is peer-to-peer (STUN).
 # -----------------------------------------
 _KB_PAGE = """<!doctype html>
 <html><head>
@@ -3792,15 +3790,23 @@ async function connectWS(){   // name kept so the rest of the page's calls work 
     dc.onclose=function(){ dcReady=false; setErr("disconnected"); };
     pc.onconnectionstatechange=function(){
       if(pc.connectionState==="failed"||pc.connectionState==="disconnected"){ dcReady=false; setErr("reconnecting..."); setTimeout(restart,800); } };
+    setErr("creating offer...");
     var offer=await pc.createOffer();
     await pc.setLocalDescription(offer);
-    // wait for ICE gathering to complete (non-trickle: send full offer)
+    // Wait briefly for ICE candidates, but ALWAYS proceed (iOS Safari often never
+    // fires gatheringState 'complete'). Use icecandidate null-signal OR a hard 1.5s cap.
+    setErr("gathering network info...");
     await new Promise(function(res){
-      if(pc.iceGatheringState==="complete") return res();
-      pc.onicegatheringstatechange=function(){ if(pc.iceGatheringState==="complete") res(); };
-      setTimeout(res,3000); // cap the wait
+      var done=false;
+      function finish(){ if(!done){done=true; res();} }
+      if(pc.iceGatheringState==="complete") return finish();
+      pc.addEventListener("icegatheringstatechange",function(){ if(pc.iceGatheringState==="complete") finish(); });
+      pc.addEventListener("icecandidate",function(e){ if(e.candidate===null) finish(); });
+      setTimeout(finish,1500); // hard cap — proceed regardless
     });
-    await mbSend("note",{type:"offer",sdp:pc.localDescription.sdp});
+    setErr("sending offer to laptop...");
+    var sres=await mbSend("note",{type:"offer",sdp:pc.localDescription.sdp}).catch(function(err){ setErr("send failed: "+err.message); return null; });
+    if(!sres){ setTimeout(restart,2000); return; }
     setErr("waiting for laptop...");
     var ans=await waitForAnswer();
     if(!ans){ setErr("no laptop answer — is the receiver running?"); setTimeout(restart,2000); return; }
