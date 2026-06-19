@@ -182,6 +182,18 @@ CHECK for the files; if absent, ASK the operator for the values — do not concl
 ## THE SEAT-BOOTSTRAP VAULT IS NOT IN app.py (a fresh seat looked in the wrong place)
 The credential-bootstrap vault = the Railway PROJECT VARIABLES, read via the Railway GraphQL API (backboard.railway.app/graphql/v2, header `Project-Access-Token`) using the Railway PROJECT TOKEN (the master key). The keyring root is that one project token; it recovers GitHub token + DIAG_KEY + mailbox keys (main's MAILBOX_KEY is in main's vault — pull both services). DISTINCT from app.py's own runtime model-key reading (the engine reading <ROLE>_API_KEY from its own env) — that is a different mechanism; do not mistake it for the seat vault.
 
+VERBATIM-RUNNABLE VAULT READ (verified live 2026-06-19 — a fresh seat kept getting 403 from guessing the query shape; this is the exact one that works). Railway project token is in LLaves (`Railway token: ce441d2a-...`). The query MUST pass projectId+environmentId+serviceId (the bare `{ projectToken {...} }` and `{ me {...} }` forms 403):
+```
+RAILWAY_TOKEN=<from LLaves>
+PROJECT=a8dea5f4-b34e-466e-b22c-0d5b59fc63b5
+ENV=6ff341f9-675e-4514-9b0c-5defe9d3d2a9
+SERVICE=72b20f74-d24d-4502-ba35-97e2d09f809a   # the "web" main engine service
+curl -sS -X POST https://backboard.railway.app/graphql/v2 \
+  -H "Project-Access-Token: $RAILWAY_TOKEN" -H "Content-Type: application/json" \
+  -d "{\"query\":\"query { variables(projectId: \\\"$PROJECT\\\", environmentId: \\\"$ENV\\\", serviceId: \\\"$SERVICE\\\") }\"}"
+```
+Returns all vault vars incl. INTAKE_GITHUB_TOKEN (93 chars), GITHUB_TOKEN, DIAG_KEY, MAILBOX_KEY. Then read/write the private repo with INTAKE_GITHUB_TOKEN as the Bearer (api.github.com contents API, same pattern as the main repo). Three distinct keys: DIAG_KEY = box/engine hands; Railway project token = vault key; INTAKE_GITHUB_TOKEN = private-repo key. LLaves hands you the first two directly; you MINT the third through the Railway token. Do not look for the intake token in LLaves — it is not there by design.
+
 ## CLIENT INTAKES LIVE IN A SEPARATE PRIVATE REPO (not in the main repo)
 Captured client intakes are NOT in PatrickKillebrew/ontinuity. They land in the PRIVATE repo `PatrickKillebrew/ontinuity-intake-data`, reachable with the `INTAKE_GITHUB_TOKEN` from the vault (the main repo PAT does not see it). Path: `sessions/intake_<tag>_final.json` (plus incremental `_NNNN` autosaves). The `?k=<tag>` capture link writes here; it does NOT create a corpus-side tenant (tenancy is still proto). A fresh seat needing a client's own words (e.g. for a pipeline stage) reads from here — e.g. Seniors Helping Seniors = `intake_Kshs_final.json`. This saves the tool-discovery hops a fresh seat otherwise burns finding the private repo + the right token.
 
@@ -205,3 +217,19 @@ A Researcher action does NOT route if the action name is a label and CYCLE_STATU
 
 ## FOUNDATION-EDIT INTEGRITY CHECK — parse-clean is necessary, not sufficient
 After editing a foundation file (app.py especially), `ast.parse` proving syntax does NOT prove the edit was safe. A displaced module-level global (e.g. the `active_session = {...}` dict) is valid Python, deploys "SUCCESS", then 500s on every request at runtime. MANDATORY post-edit check before commit: confirm the critical module-level globals (active_session, CONFIG, external_mailbox, OP_ALLOWED) are still defined AT MODULE LEVEL, and that zero prior top-level defs were lost (diff the def set against the pre-edit base). This is the exact check whose absence caused the 2026-06-13 NameError outage.
+
+
+## THE ORACLE — a corpus-grounded answering seat (DESIGN, proposed 2026-06-19; not built yet)
+ORIGIN: the recurring failure all over the record — a seat reasons from the boot-packet's SHORTHAND or its training PRIORS instead of the grounded corpus, and circles. The recovery has always been MANUAL: the operator goes and fetches grounded knowledge from an older, better-grounded conversation and pastes it in (e.g. 2026-06-19, the vault-read path — a fresh seat 403'd for an hour guessing the query; an older control had to explain it). The Oracle makes that recovery a STANDING SERVICE instead of a manual errand.
+
+WHAT IT IS: a hidden, READ-ONLY, corpus-grounded answering seat. Not a worker (never acts, never deploys, holds no task, holds no credentials beyond read access). Not a user-facing Q&A. It is a LIVING MANUAL made POLLABLE — any conversation USING Ontinuity, or being HARNESSED by it, can query it the moment it notices it has begun to CIRCLE. Circling is the trigger and it is detectable (re-trying the same failing approach, reasoning from shorthand, tone/judgment drift before hard errors — the decoherence signature). When a seat would otherwise GUESS, it asks the Oracle instead.
+
+KNOWLEDGE BASE: reads ACROSS all corpus layers authoritatively — system corpus (public repo live/), project corpuses (private repo projects/*/mini_corpus.md), Synapse archive, raw intake (sessions/), and this manual. It is the query interface over the corpus infrastructure that already exists.
+
+HONESTY CONTRACT (the thing that makes it trustworthy): it answers FROM the corpus, with the verified-not-assumed discipline. Its value is precisely that it will NOT paper a gap with a plausible guess — it says "that is not in the corpus; the nearest grounded thing is X" rather than inventing. A confused seat can trust it BECAUSE it refuses to guess. An Oracle that guesses is just another circling seat.
+
+INVOCATION SHAPE (open design question, 2026-06-19): seat-to-seat via the mailbox (a worker mid-task pings the Oracle seat, gets a grounded answer back) — NOT a place the human goes. The human-going-to-fetch-an-old-control IS the manual bottleneck the Oracle removes. So: Oracle is a SERVICE seats call, addressed like any seat (e.g. to_seat "oracle"), kind "question", body the confusion; it replies kind "answer" with corpus-grounded content + citations to which corpus/file/line.
+
+HARD PREREQUISITE: the Oracle is only as good as the corpus is CURRENT and REACHABLE. Today's failure was not "no answering seat" — it was that hard-won knowledge was buried and the seat couldn't reach it. So the Oracle's prerequisite is the CORPUS-WRITING DISCIPLINE: every hard-won path (like the vault read) gets WRITTEN to the corpus the moment it is learned, and the Oracle is wired to read every corpus location. The Oracle without disciplined corpus-writing is just another guesser. With it, it is the guessing-squelch principle delivered as a service.
+
+NEXT STEP TO BUILD: stand up an "oracle" mailbox seat (read-only corpus access: public repo live/, private repo via INTAKE_GITHUB_TOKEN, the query diag route) whose system prompt is the honesty contract above; teach control/worker boot packets to poll it on detected circling. Decide the circling-detection trigger (self-noticed vs. a wrapper that watches for repeated-failure).
