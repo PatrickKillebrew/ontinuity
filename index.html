@@ -782,6 +782,40 @@ footer {
   .hero-metrics { flex-direction: column; gap: 0; }
   .metric { border-right: none; border-bottom: 1px solid var(--border-subtle); }
 }
+
+/* ── small living mark (nav + footer) ── */
+.liveMark{display:inline-flex;width:1.25em;height:1.25em;vertical-align:-0.28em;perspective:300px}
+.nav-logo .liveMark{width:22px;height:22px}
+.footer-logo .liveMark{width:18px;height:18px}
+.lm-spin{display:block;width:100%;height:100%;transform-style:preserve-3d}
+.liveMark svg{width:100%;height:100%;overflow:visible;display:block}
+.lm-outer{transform-origin:center;animation:lmCW 46s linear infinite}
+.lm-inner{transform-origin:center;animation:lmCCW 17s linear infinite}
+@keyframes lmCW{to{transform:rotateY(360deg)}}
+@keyframes lmCCW{to{transform:rotateY(-360deg)}}
+
+/* ── hero: two columns, mark right, slate depth ── */
+:root{--plane-hero:#0f1113;--plane-body:#0c0d0f;--plane-header:#070708}
+#hero{position:relative;isolation:isolate;background:linear-gradient(180deg,var(--plane-hero) 0%,var(--plane-body) 100%)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(240px,30vw,380px);gap:clamp(20px,3vw,48px);align-items:center;max-width:var(--max-w);margin:0 auto}
+.hero-copy{min-width:0}
+.hero-markbox{position:relative;width:100%;max-width:380px;aspect-ratio:1;justify-self:end}
+.hero-markbox .lenscanvas{position:absolute;top:50%;left:50%;width:820px;height:660px;transform:translate(-46%,-50%);z-index:0;pointer-events:none}
+.hero-markbox .haze{position:absolute;inset:-70% -55% -70% -55%;z-index:0;pointer-events:none;mix-blend-mode:screen;background:radial-gradient(50% 50% at 53% 49%,rgba(150,108,52,0.075) 0%,rgba(128,92,44,0.045) 34%,rgba(96,68,34,0.018) 58%,transparent 78%)}
+.hero-markbox .haze2{position:absolute;inset:-46% -46% -46% -46%;z-index:0;pointer-events:none;mix-blend-mode:screen;animation:heroBreathe 8.5s ease-in-out infinite;background:radial-gradient(26% 25% at 53% 48%,rgba(196,150,80,0.11) 0%,rgba(170,128,66,0.06) 44%,rgba(140,104,52,0.02) 68%,transparent 84%)}
+@keyframes heroBreathe{0%,100%{opacity:.7}50%{opacity:.92}}
+.hero-markbox .scene{position:relative;z-index:2;width:83%;aspect-ratio:1;perspective:620px;margin:0 auto;top:50%;transform:translateY(-50%)}
+.hero-markbox .spin3d{width:100%;height:100%;position:relative;transform-style:preserve-3d}
+.hero-markbox .layer{position:absolute;inset:0;transform-style:preserve-3d}
+.hero-markbox .layer svg{width:100%;height:100%;overflow:visible;position:absolute;inset:0}
+.hero-markbox .outer{animation:heroSpinY 46s linear infinite}
+.hero-markbox .innerHex{animation:heroSpinYrev 17s linear infinite}
+@keyframes heroSpinY{to{transform:rotateY(360deg)}}
+@keyframes heroSpinYrev{to{transform:rotateY(-360deg)}}
+#hero .hero-mono,#hero .hero-statement,#hero .hero-punch,#hero .hero-tagline,#hero .hero-actions,#hero .hero-metrics{text-align:left}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}.hero-markbox{order:-1;max-width:240px;margin:0 auto}}
+@media (prefers-reduced-motion:reduce){.lm-outer,.lm-inner,.outer,.innerHex,.haze2{animation:none}}
+
 </style>
 </head>
 <body>
@@ -789,11 +823,17 @@ footer {
 <nav>
   <div class="nav-inner">
     <a href="#" class="nav-logo">
-      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
-        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
-        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
-      </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+      <span class="liveMark" aria-hidden="true"><span class="lm-spin">
+  <svg viewBox="0 0 200 200" fill="none">
+    <defs>
+      <linearGradient id="lmShine" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="50%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+      <radialGradient id="lmCore" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="100%" stop-color="var(--gold)"/></radialGradient>
+    </defs>
+    <g class="lm-outer"><polygon points="100,16 173,58 173,142 100,184 27,142 27,58" fill="none" stroke="url(#lmShine)" stroke-width="3"/></g>
+    <g class="lm-inner"><polygon points="100,52 145,78 145,122 100,148 55,122 55,78" fill="none" stroke="url(#lmShine)" stroke-width="2.4"/></g>
+    <circle cx="100" cy="100" r="13" fill="url(#lmCore)"><animate attributeName="opacity" values="0.7;1;0.7" dur="3.8s" repeatCount="indefinite"/></circle>
+  </svg>
+</span></span><span class="wordmark"><span class="o">O</span>ntinuity</span>
     </a>
     <ul class="nav-links">
       <li><a href="#problems">What It Is</a></li>
@@ -809,6 +849,8 @@ footer {
 
 <!-- HERO -->
 <div id="hero">
+  <div class="hero-grid">
+    <div class="hero-copy">
   <div class="hero-mono">Open Source · April 2026 · Deployed &amp; Running</div>
   <p class="hero-statement">
     AI models forget everything when the session ends, confirm each other's errors when they talk, and can't be trusted to do what they claim.
@@ -839,7 +881,43 @@ footer {
       <div class="metric-label">Source · MIT License</div>
     </div>
   </div>
+    </div>
+    <div class="hero-markbox" aria-hidden="true">
+      <canvas class="lenscanvas"></canvas>
+      <div class="haze"></div>
+      <div class="haze2"></div>
+      <div class="scene">
+        <div class="spin3d">
+          <div class="layer outer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <defs>
+                <linearGradient id="hShine" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="45%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <linearGradient id="hShineSoft" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="55%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <radialGradient id="hCore" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="100%" stop-color="var(--gold)"/></radialGradient>
+                <filter id="hGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <polygon points="100,16 173,58 173,142 100,184 27,142 27,58" fill="none" stroke="url(#hShine)" stroke-width="2.4"/>
+              <polygon points="100,28 162,64 162,136 100,172 38,136 38,64" fill="none" stroke="url(#hShineSoft)" stroke-width="1.1" opacity="0.7"/>
+            </svg>
+          </div>
+          <div class="layer innerHex">
+            <svg viewBox="0 0 200 200" fill="none">
+              <polygon points="100,52 145,78 145,122 100,148 55,122 55,78" fill="none" stroke="url(#hShine)" stroke-width="1.4"/>
+              <polygon points="100,63 135,83 135,117 100,137 65,117 65,83" fill="none" stroke="url(#hShineSoft)" stroke-width="0.9" opacity="0.65"/>
+            </svg>
+          </div>
+          <div class="layer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <g id="heroFeeders" filter="url(#hGlow)"></g>
+              <circle cx="100" cy="100" r="8.5" fill="url(#hCore)" filter="url(#hGlow)"><animate attributeName="r" values="7.5;9.5;7.5" dur="3.8s" repeatCount="indefinite"/></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
 
 <!-- PROBLEMS -->
 <div class="section-wrap" id="problems">
@@ -1133,11 +1211,17 @@ footer {
 <footer>
   <div>
     <div class="footer-logo">
-      <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
-        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
-        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
-        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
-      </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+      <span class="liveMark" aria-hidden="true"><span class="lm-spin">
+  <svg viewBox="0 0 200 200" fill="none">
+    <defs>
+      <linearGradient id="lmShine" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="50%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+      <radialGradient id="lmCore" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="100%" stop-color="var(--gold)"/></radialGradient>
+    </defs>
+    <g class="lm-outer"><polygon points="100,16 173,58 173,142 100,184 27,142 27,58" fill="none" stroke="url(#lmShine)" stroke-width="3"/></g>
+    <g class="lm-inner"><polygon points="100,52 145,78 145,122 100,148 55,122 55,78" fill="none" stroke="url(#lmShine)" stroke-width="2.4"/></g>
+    <circle cx="100" cy="100" r="13" fill="url(#lmCore)"><animate attributeName="opacity" values="0.7;1;0.7" dur="3.8s" repeatCount="indefinite"/></circle>
+  </svg>
+</span></span><span class="wordmark"><span class="o">O</span>ntinuity</span>
     </div>
     <p class="footer-meta">Persistent Cognitive Infrastructure for AI-Assisted Research<br>Patrick Killebrew · April 2026 · MIT License · ontinuity.org</p>
   </div>
@@ -1168,6 +1252,42 @@ const obs = new IntersectionObserver(entries => {
 }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
 
 document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+<script>
+// hero feeders
+(function(){const cx=100,cy=100,R=82,ns='http://www.w3.org/2000/svg';
+  const verts=[];for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180;verts.push([cx+R*Math.cos(a),cy+R*Math.sin(a)]);}
+  const g=document.getElementById('heroFeeders'); if(!g)return;
+  verts.forEach((v,i)=>{const opp=verts[(i+3)%6];
+    const c=document.createElementNS(ns,'circle');c.setAttribute('r','2.3');c.setAttribute('fill','var(--gold-bright)');
+    const am=document.createElementNS(ns,'animateMotion');am.setAttribute('dur','3.8s');am.setAttribute('repeatCount','indefinite');am.setAttribute('begin',(i*0.63)+'s');
+    am.setAttribute('calcMode','spline');am.setAttribute('keyPoints','0;0.5;1');am.setAttribute('keyTimes','0;0.5;1');am.setAttribute('keySplines','0.4 0 0.6 1;0.4 0 0.6 1');
+    am.setAttribute('path',`M ${v[0]} ${v[1]} L ${cx} ${cy} L ${opp[0]} ${opp[1]}`);
+    const op=document.createElementNS(ns,'animate');op.setAttribute('attributeName','opacity');op.setAttribute('values','0;1;0.9;0');op.setAttribute('keyTimes','0;0.4;0.6;1');op.setAttribute('dur','3.8s');op.setAttribute('repeatCount','indefinite');op.setAttribute('begin',(i*0.63)+'s');
+    c.appendChild(am);c.appendChild(op);g.appendChild(c);});
+})();
+// hero lensed grid (phase-aligned to page grid, warps toward mark, sinks behind, pulses)
+(function(){
+  const cv=document.querySelector('.hero-markbox .lenscanvas'); if(!cv)return;
+  const ctx=cv.getContext('2d'); const SP=48;
+  let DPR,w,h,rect,markCx,markCy; const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function size(){DPR=Math.min(2,window.devicePixelRatio||1);rect=cv.getBoundingClientRect();
+    w=Math.max(1,Math.round(rect.width));h=Math.max(1,Math.round(rect.height));
+    cv.width=w*DPR;cv.height=h*DPR;cv.style.width=w+'px';cv.style.height=h+'px';ctx.setTransform(DPR,0,0,DPR,0,0);
+    const sc=document.querySelector('.hero-markbox .scene'); if(sc){const sr=sc.getBoundingClientRect();
+      markCx=(sr.left+sr.width*0.53)-rect.left;markCy=(sr.top+sr.height*0.50)-rect.top;}else{markCx=w*0.6;markCy=h*0.5;}}
+  function off(){return [((-rect.left)%SP+SP)%SP, ((-rect.top)%SP+SP)%SP];}
+  const BASE_MASS=10500,SOFT=120,SINK=120;
+  function warp(x,y,m){const dx=x-markCx,dy=y-markCy,r=Math.hypot(dx,dy)+SOFT,p=m/r;return[x-(dx/r)*p,y-(dy/r)*p,r];}
+  function draw(t){ctx.clearRect(0,0,w,h);
+    const pulse=reduce?1:(1+0.18*Math.sin(t*0.0009)); const mass=BASE_MASS*pulse; const [ox,oy]=off(); ctx.lineWidth=1;
+    function seg(x1,y1,x2,y2,rr){const near=Math.max(0,1-rr/360);let a=0.055+near*0.22;if(rr<SINK){a*=(rr/SINK)*(rr/SINK);}if(a<=0.004)return;
+      ctx.strokeStyle=`rgba(201,168,76,${a.toFixed(3)})`;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();}
+    for(let gx=ox-SP;gx<=w+SP;gx+=SP){let px=null,py=null,pr=null;for(let y=-SP;y<=h+SP;y+=8){const[wx,wy,rr]=warp(gx,y,mass);if(px!==null)seg(px,py,wx,wy,(pr+rr)/2);px=wx;py=wy;pr=rr;}}
+    for(let gy=oy-SP;gy<=h+SP;gy+=SP){let px=null,py=null,pr=null;for(let x=-SP;x<=w+SP;x+=8){const[wx,wy,rr]=warp(x,gy,mass);if(px!==null)seg(px,py,wx,wy,(pr+rr)/2);px=wx;py=wy;pr=rr;}}
+    requestAnimationFrame(draw);}
+  size();addEventListener('resize',size);requestAnimationFrame(draw);
+})();
 </script>
 </body>
 </html>
