@@ -133,7 +133,7 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border-subtle);mar
 .hero-copy .read{max-width:none;margin:0}
 .markbox{position:relative;width:100%;max-width:360px;aspect-ratio:1;justify-self:end}
 /* the lensed field + haze are SCOPED to .markbox, not fixed full-screen */
-.markbox .field{position:absolute;inset:-26% -40% -10% -10%;z-index:0;pointer-events:none}
+.markbox .lenscanvas{position:absolute;top:50%;left:50%;width:780px;height:620px;transform:translate(-46%,-50%);z-index:0;pointer-events:none}
 .markbox .field svg{width:100%;height:100%}
 
 
@@ -160,7 +160,8 @@ footer{position:relative;z-index:1;border-top:1px solid var(--border-subtle);mar
 }
 body{background:var(--plane-body)}
 nav{background:rgba(7,7,8,0.92)!important}
-.hero{background:linear-gradient(180deg, var(--plane-hero) 0%, var(--plane-body) 100%)}
+.hero{background:linear-gradient(180deg, var(--plane-hero) 0%, var(--plane-body) 100%);position:relative;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:0;background:var(--plane-hero);opacity:0.0;z-index:-1}
 .corpus-strip{background:var(--plane-strip)!important}
 .paper{background:var(--plane-body)}
 /* a faint cool vignette top to give the header plane separation */
@@ -228,7 +229,7 @@ nav{background:rgba(7,7,8,0.92)!important}
       </div>
     </div>
     <div class="markbox rv d2" aria-hidden="true">
-      <div class="field"><svg id="grid" viewBox="0 0 1000 700" preserveAspectRatio="xMidYMid slice"></svg></div>
+      <canvas class="lenscanvas" aria-hidden="true"></canvas>
       <div class="haze"></div>
       <div class="haze2"></div>
       <div class="scene">
@@ -365,52 +366,12 @@ nav{background:rgba(7,7,8,0.92)!important}
   </div>
 </footer>
 
-<script>
 
-// ── gravitational-lens grid: draw straight grid, then displace each point toward/around center by 1/r falloff ──
-(function(){
-  const W=1000,H=700, cx=520, cy=300;
-  const spacing=48;
-  const strength=4200;       // lens mass
-  const soft=130;            // core radius where bending is strongest/!singular
-  const svg=document.getElementById('grid');
-  const NS='http://www.w3.org/2000/svg';
-  function warp(x,y){
-    const dx=x-cx, dy=y-cy;
-    const r=Math.hypot(dx,dy)+soft;
-    const pull=strength/r;               // lines bend INWARD toward the mass
-    const ux=dx/r, uy=dy/r;
-    return [x - ux*pull, y - uy*pull];
-  }
-  function lineBright(x,y){
-    // brighter the closer to the mark — mirrors the logo's glow onto the grid
-    const r=Math.hypot(x-cx,y-cy);
-    const t=Math.max(0, 1 - r/420);
-    return 0.03 + t*0.16;                // base 0.03 -> up to ~0.19 near the mark
-  }
-  function poly(points){
-    const p=document.createElementNS(NS,'polyline');
-    p.setAttribute('points', points.map(q=>q[0].toFixed(1)+','+q[1].toFixed(1)).join(' '));
-    p.setAttribute('fill','none'); p.setAttribute('stroke','#c9a84c');
-    // brightness from the midpoint of the line
-    const mid=points[Math.floor(points.length/2)];
-    p.setAttribute('stroke-width','1');
-    p.setAttribute('opacity', lineBright(mid[0],mid[1]).toFixed(3));
-    svg.appendChild(p);
-  }
-  // vertical lines
-  for(let x=-spacing; x<=W+spacing; x+=spacing){
-    const pts=[]; for(let y=-40;y<=H+40;y+=14) pts.push(warp(x,y)); poly(pts);
-  }
-  // horizontal lines
-  for(let y=-spacing; y<=H+spacing; y+=spacing){
-    const pts=[]; for(let x=-40;x<=W+40;x+=14) pts.push(warp(x,y)); poly(pts);
-  }
-})();
-// feeders
+<script>
+// ── FEEDERS: the self-feeding loop particles on the mark's front face ──
 (function(){const cx=100,cy=100,R=82,ns='http://www.w3.org/2000/svg';
   const verts=[];for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180;verts.push([cx+R*Math.cos(a),cy+R*Math.sin(a)]);}
-  const g=document.getElementById('feeders');
+  const g=document.getElementById('feeders'); if(!g) return;
   verts.forEach((v,i)=>{const opp=verts[(i+3)%6];
     const c=document.createElementNS(ns,'circle');c.setAttribute('r','2.3');c.setAttribute('fill','var(--gold-bright)');
     const am=document.createElementNS(ns,'animateMotion');am.setAttribute('dur','3.8s');am.setAttribute('repeatCount','indefinite');am.setAttribute('begin',(i*0.63)+'s');
@@ -420,6 +381,80 @@ nav{background:rgba(7,7,8,0.92)!important}
     c.appendChild(am);c.appendChild(op);g.appendChild(c);});
 })();
 
+// ── LENSED HERO GRID: ONE grid, matched to the page's 48px grid phase, gravitationally warped toward the mark,
+//    sinking behind it, pulsing in/out. Draws the SAME grid as body::before so they read continuous. ──
+(function(){
+  const cv=document.querySelector('.markbox .lenscanvas'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const SP=48;                       // matches page grid 48px
+  let DPR, w, h, rect, markCx, markCy, reduce;
+  reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function size(){
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    rect=cv.getBoundingClientRect();
+    w=Math.max(1,Math.round(rect.width)); h=Math.max(1,Math.round(rect.height));
+    cv.width=w*DPR; cv.height=h*DPR;
+    cv.style.width=w+'px'; cv.style.height=h+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    // mark center: the .scene core sits at ~ right portion of the canvas (canvas extends left of markbox).
+    const scene=document.querySelector('.markbox .scene');
+    if(scene){const sr=scene.getBoundingClientRect();
+      markCx = (sr.left+sr.width*0.53) - rect.left;
+      markCy = (sr.top +sr.height*0.50) - rect.top;
+    } else { markCx=w*0.7; markCy=h*0.5; }
+  }
+  // phase-align to the FIXED page grid so lines are continuous with body::before.
+  function gridOffset(){
+    // body::before is position:fixed at viewport 0,0 with 48px cells (+ drift). Align canvas lines to that.
+    const ox = ((-rect.left) % SP + SP) % SP;
+    const oy = ((-rect.top)  % SP + SP) % SP;
+    return [ox, oy];
+  }
+  const BASE_MASS=10500, SOFT=120, SINK=120; // stronger, more substantial lensing + a sink radius
+  function warp(x,y,mass){
+    const dx=x-markCx, dy=y-markCy, r=Math.hypot(dx,dy)+SOFT;
+    const pull=mass/r;
+    return [x-(dx/r)*pull, y-(dy/r)*pull, r];
+  }
+  function draw(t){
+    ctx.clearRect(0,0,w,h);
+    // pulse the lens mass in/out slowly (breathing gravity)
+    const pulse = reduce?1:(1 + 0.18*Math.sin(t*0.0009));
+    const mass = BASE_MASS*pulse;
+    const [ox,oy]=gridOffset();
+    ctx.lineWidth=1;
+    // draw vertical then horizontal grid lines, warped, brightening near the mark, sinking under it
+    function strokeSeg(x1,y1,x2,y2,rr){
+      // brightness: base faint (match page 0.03), brighter as it nears the mark, then SINK (fade) under it
+      const near=Math.max(0,1-rr/(360));
+      let a = 0.055 + near*0.22;
+      if(rr < SINK){ a *= (rr/SINK)*(rr/SINK); }      // sink: fade to nothing right behind the logo
+      if(a<=0.004) return;
+      ctx.strokeStyle=`rgba(201,168,76,${a.toFixed(3)})`;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    }
+    for(let gx=ox-SP; gx<=w+SP; gx+=SP){
+      let px=null,py=null,pr=null;
+      for(let y=-SP; y<=h+SP; y+=8){
+        const [wx,wy,rr]=warp(gx,y,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    for(let gy=oy-SP; gy<=h+SP; gy+=SP){
+      let px=null,py=null,pr=null;
+      for(let x=-SP; x<=w+SP; x+=8){
+        const [wx,wy,rr]=warp(x,gy,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  size(); addEventListener('resize',size);
+  requestAnimationFrame(draw);
+})();
 </script>
+
 </body>
 </html>
