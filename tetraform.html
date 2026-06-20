@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tetraform — Ontinuity</title>
+<meta name="description" content="Why the future of AI is orchestration, not omniscience. A structured arrangement of specialized models, each in the role where its tendencies are assets — the intelligence is in the architecture that binds them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --gold:#c9a84c; --gold-bright:#d9b85c; --gold-dim:#7a6530; --gold-deep:#3d2e0a;
+  --gold-glow:rgba(201,168,76,0.18);
+  --bg:#090909; --bg-raised:#0f0f0f; --bg-card:#121212; --bg-card-hover:#161616;
+  --text:#EFEFEF; --text-dim:#8A8A8A; --text-muted:#4A4A4A;
+  --border:rgba(201,168,76,0.18); --border-subtle:rgba(255,255,255,0.07);
+  --refuse:#8A8A8A; --accept:var(--gold-bright);
+  --max-w:1000px; --read-w:720px; --pad:48px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:16px;line-height:1.7;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:gridDrift 80s linear infinite}
+.wrap{position:relative;z-index:1;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad)}
+.read{max-width:var(--read-w);margin:0 auto}
+@media (max-width:640px){:root{--pad:20px}}
+
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(9,9,9,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-subtle)}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:'Orbitron',monospace;font-size:clamp(13px,1.6vw,17px);font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:.04em;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.nav-logo .o{color:var(--text-muted)}
+.wordmark{display:inline}
+.wordmark .o{color:var(--text-muted)}
+.nav-logo svg{flex-shrink:0}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;letter-spacing:.08em;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:var(--gold)}
+@media (max-width:640px){.nav-links{display:none}}
+
+/* reveal */
+@media (prefers-reduced-motion:no-preference){
+  .rv{opacity:0;transform:translateY(12px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.34s}.d5{animation-delay:.44s}.d6{animation-delay:.56s}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+
+/* hero */
+header.hero{padding:140px 0 56px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:26px}
+h1{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(30px,5.4vw,50px);line-height:1.08;letter-spacing:-.01em;color:var(--text);margin-bottom:22px}
+h1 .em{color:var(--gold)}
+.dek{font-size:clamp(17px,2.3vw,21px);line-height:1.5;color:var(--text-dim);max-width:46ch;font-weight:300}
+.dek em{color:var(--text);font-style:italic}
+
+/* gate spine — signature */
+.gate{padding:24px 0 8px}
+.gate .lead{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.05em;color:var(--text-muted);text-transform:uppercase;margin-bottom:22px}
+.step{display:grid;grid-template-columns:118px 1fr;gap:20px;align-items:start;padding:20px 0;border-top:1px solid var(--border-subtle)}
+.verdict{font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:.08em;padding-top:3px}
+.verdict.r{color:var(--refuse)}
+.verdict.a{color:var(--accept);text-shadow:0 0 22px var(--gold-glow)}
+.step .what{margin:0;font-size:16px;line-height:1.55}
+.step .what b{font-weight:600;color:var(--text)}
+.step .forced{display:block;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold-dim);margin-top:8px}
+.step .forced .arrow{color:var(--text-muted);padding:0 .4em}
+.step.close{border-top:1px solid var(--gold-dim);background:linear-gradient(90deg,rgba(201,168,76,0.05),transparent);margin-top:2px}
+.gate .foot{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);line-height:1.7;margin-top:22px;border-top:1px solid var(--border-subtle);padding-top:20px}
+
+/* toc */
+.toc{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.toc a{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.04em;text-decoration:none;color:var(--gold);border:1px solid var(--border);padding:9px 15px;border-radius:3px;transition:background .2s,border-color .2s}
+.toc a:hover{background:rgba(201,168,76,0.06);border-color:var(--gold)}
+
+/* papers */
+.paper{padding:72px 0;border-top:1px solid var(--border-subtle)}
+.paper-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:16px}
+h2{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(23px,3.6vw,33px);line-height:1.12;letter-spacing:-.01em;color:var(--text);margin-bottom:12px}
+.paper-sub{font-size:18px;color:var(--gold);font-style:italic;line-height:1.45;margin-bottom:8px;font-weight:300}
+.paper-meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);letter-spacing:.02em;margin-bottom:44px}
+h3{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:46px 0 16px}
+.paper p{margin-bottom:18px;color:var(--text-dim)}
+.paper p.lede{font-size:18px;color:var(--text);font-weight:300;line-height:1.6}
+.paper strong{color:var(--text);font-weight:600}
+.paper em{font-style:italic;color:var(--text)}
+
+table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:14px}
+caption{caption-side:bottom;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);text-align:left;padding-top:12px;letter-spacing:.02em}
+thead th{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--gold-dim)}
+thead th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:'IBM Plex Mono',monospace}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--border-subtle);color:var(--text-dim)}
+tbody td:first-child{color:var(--text)}
+tbody tr:hover td{background:rgba(201,168,76,0.03)}
+
+.limits{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:30px 30px 14px;margin:32px 0}
+.limits h3{margin-top:0}
+
+footer{position:relative;z-index:1;border-top:1px solid var(--border-subtle);margin-top:24px}
+.footer-inner{padding:48px var(--pad);max-width:var(--max-w);margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px}
+.footer-logo{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--gold);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.footer-meta{font-size:12px;color:var(--text-muted);line-height:1.8}
+.footer-meta a{color:var(--text-dim);text-decoration:none}
+.footer-meta a:hover{color:var(--gold)}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-links a{font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s}
+.footer-links a:hover{color:var(--gold)}
+
+/* ── corpus-nav: the connective tissue that makes each paper part of a whole ── */
+.corpus-strip{border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);background:var(--bg-raised);margin-top:8px}
+.corpus-strip .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:18px;padding-bottom:18px;flex-wrap:wrap}
+.corpus-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim)}
+.corpus-tag a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--border)}
+.corpus-tag a:hover{color:var(--gold-bright)}
+.corpus-move{display:flex;gap:22px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.corpus-move a{color:var(--text-dim);text-decoration:none}
+.corpus-move a:hover{color:var(--gold)}
+.corpus-move .lbl{color:var(--text-muted);display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
+
+/* paper body niceties layered on the shared system */
+.paper h3{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px;letter-spacing:.02em;color:var(--gold);margin:38px 0 12px;text-transform:none}
+.paper p{margin-bottom:18px;color:var(--text)}
+.paper .secnum{font-family:'IBM Plex Mono',monospace;color:var(--gold-dim);font-size:13px;margin-right:10px}
+.pull{border-left:2px solid var(--gold);padding:6px 0 6px 22px;margin:30px 0;color:var(--gold);font-style:italic;font-size:18px;font-weight:300;line-height:1.5}
+.reading-note{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);letter-spacing:.02em;margin-top:10px}
+
+/* ── hero with living mark ── */
+.hero{position:relative;overflow:hidden}
+.hero .wrap.read{max-width:var(--read-w)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(240px,28vw,360px);gap:clamp(20px,3vw,48px);align-items:center;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad)}
+.hero-copy{min-width:0}
+.hero-copy .read{max-width:none;margin:0}
+.markbox{position:relative;width:100%;max-width:360px;aspect-ratio:1;justify-self:end}
+/* the lensed field + haze are SCOPED to .markbox, not fixed full-screen */
+.markbox .lenscanvas{position:absolute;top:50%;left:50%;width:780px;height:620px;transform:translate(-46%,-50%);z-index:0;pointer-events:none}
+.markbox .field svg{width:100%;height:100%}
+
+
+@keyframes breathe{0%,100%{opacity:.65}50%{opacity:1}}
+.markbox .scene{position:relative;z-index:2;width:83%;aspect-ratio:1;perspective:620px;margin:0 auto;top:50%;transform:translateY(-50%)}
+.markbox .spin3d{width:100%;height:100%;position:relative;transform-style:preserve-3d}
+.markbox .layer{position:absolute;inset:0;transform-style:preserve-3d}
+.markbox .layer svg{width:100%;height:100%;overflow:visible;position:absolute;inset:0}
+.markbox .outer{animation:spinY 46s linear infinite}
+.markbox .innerHex{animation:spinYrev 17s linear infinite}
+@keyframes spinY{to{transform:rotateY(360deg)}}
+@keyframes spinYrev{to{transform:rotateY(-360deg)}}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}.markbox{order:-1;width:280px;height:280px}.markbox .scene{width:240px;height:240px}}
+@media (prefers-reduced-motion:reduce){.outer,.innerHex,.haze2{animation:none}}
+
+@keyframes gridDrift{to{background-position:48px 48px}}
+
+/* ── tonal depth: layered slate planes instead of one flat black ── */
+:root{
+  --plane-header:#070708;     /* deepest — the header sits furthest back */
+  --plane-hero:#0f1113;       /* hero band lifted, faint cool slate */
+  --plane-strip:#0b0c0e;      /* corpus strip between */
+  --plane-body:#0c0d0f;       /* article body, a hair above pure black */
+}
+body{background:var(--plane-body)}
+nav{background:rgba(7,7,8,0.92)!important}
+.hero{background:linear-gradient(180deg, var(--plane-hero) 0%, var(--plane-body) 100%);position:relative;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:0;background:var(--plane-hero);opacity:0.0;z-index:-1}
+.corpus-strip{background:var(--plane-strip)!important}
+.paper{background:var(--plane-body)}
+/* a faint cool vignette top to give the header plane separation */
+.hero::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 80% at 50% -10%, rgba(120,140,170,0.05), transparent 60%)}
+
+
+/* ── natural warm glow: layered radial bloom that shifts hue + warmth as it falls off ── */
+
+
+
+
+/* ── ambient emission: centered on the logo, subtle, hue OFFSET from the logo gold so edges stay crisp ── */
+.markbox .haze{position:absolute;inset:-70% -55% -70% -55%;z-index:0;pointer-events:none;mix-blend-mode:screen;
+  background:
+    /* wide ambient field — deep bronze/amber, very faint, dissolves to nothing */
+    radial-gradient(50% 50% at 53% 49%,
+      rgba(150,108,52,0.075) 0%,
+      rgba(128,92,44,0.045) 34%,
+      rgba(96,68,34,0.018) 58%,
+      transparent 78%);
+}
+.markbox .haze2{position:absolute;inset:-46% -46% -46% -46%;z-index:0;pointer-events:none;mix-blend-mode:screen;
+  animation:breathe 8.5s ease-in-out infinite;
+  background:
+    /* inner emission body — warmer amber but NOT the logo's bright gold; soft, no white core */
+    radial-gradient(26% 25% at 53% 48%,
+      rgba(196,150,80,0.11) 0%,
+      rgba(170,128,66,0.06) 44%,
+      rgba(140,104,52,0.02) 68%,
+      transparent 84%);
+}
+@keyframes breathe{0%,100%{opacity:.7}50%{opacity:.92}}
+
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+      </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/#problems">What It Is</a></li>
+      <li><a href="/#architecture">Architecture</a></li>
+      <li><a href="/papers.html">Research</a></li>
+      <li><a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <div class="read">
+        <p class="eyebrow rv">Specification · v1.0 · April 2026</p>
+        <h1 class="rv d1">Four models, <span class="em">one autonomous</span> research session.</h1>
+        <p class="dek rv d2">A Researcher works. A Challenger from a different training distribution disputes it. A Friction model scores session health out of band. A <em>Parietal</em> navigates, adjudicates forks, and writes memory. The human appears only at the genuine limits of autonomous resolution.</p>
+        <p class="reading-note rv d3">The session-layer specification · reads on its own · ~13 min</p>
+      </div>
+    </div>
+    <div class="markbox rv d2" aria-hidden="true">
+      <canvas class="lenscanvas" aria-hidden="true"></canvas>
+      <div class="haze"></div>
+      <div class="haze2"></div>
+      <div class="scene">
+        <div class="spin3d">
+          <div class="layer outer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <defs>
+                <linearGradient id="shine" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="45%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <linearGradient id="shineSoft" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="55%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <radialGradient id="coreg" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="100%" stop-color="var(--gold)"/></radialGradient>
+                <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <polygon points="100,16 173,58 173,142 100,184 27,142 27,58" fill="none" stroke="url(#shine)" stroke-width="2.4"/>
+              <polygon points="100,28 162,64 162,136 100,172 38,136 38,64" fill="none" stroke="url(#shineSoft)" stroke-width="1.1" opacity="0.7"/>
+            </svg>
+          </div>
+          <div class="layer innerHex">
+            <svg viewBox="0 0 200 200" fill="none">
+              <polygon points="100,52 145,78 145,122 100,148 55,122 55,78" fill="none" stroke="url(#shine)" stroke-width="1.4"/>
+              <polygon points="100,63 135,83 135,117 100,137 65,117 65,83" fill="none" stroke="url(#shineSoft)" stroke-width="0.9" opacity="0.65"/>
+            </svg>
+          </div>
+          <div class="layer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <g id="feeders" filter="url(#glow)"></g>
+              <circle cx="100" cy="100" r="8.5" fill="url(#coreg)" filter="url(#glow)"><animate attributeName="r" values="7.5;9.5;7.5" dur="3.8s" repeatCount="indefinite"/></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="corpus-strip">
+  <div class="wrap">
+    <span class="corpus-tag">Ontinuity Paper Corpus · <a href="/papers.html">see all papers &rarr;</a></span>
+    <span class="corpus-move">
+      <a href="/artificialware.html"><span class="lbl">Built from</span>Artificialware &rarr;</a>
+      <a href="/synthesis.html"><span class="lbl">Whole system</span>The Synthesis &rarr;</a>
+    </span>
+  </div>
+</div>
+
+<article class="paper" id="tetraform">
+  <div class="wrap read">
+    <p class="paper-eyebrow">Specification · v1.0</p>
+    <h2>Tetraform</h2>
+    <p class="paper-sub">A four-model AI collaboration framework</p>
+    <p class="paper-meta">Patrick Killebrew · April 2026 · Platform-agnostic specification</p>
+
+    <h3>Abstract</h3>
+    <p class="lede">Tetraform is a protocol for autonomous AI research sessions using four cooperating models with distinct roles. It extends Triform&rsquo;s three-model adversarial structure with a fourth role &mdash; the <em>Parietal</em> &mdash; that navigates sessions toward defined destinations, adjudicates research forks autonomously, and distills outputs into persistent memory. The central advances: autonomous fork resolution replacing human adjudication of every challenge event; navigational orientation replacing raw ledger dumps at human touch points; and persistent cross-session memory through a living structured schema. The human operator is reduced to the Supreme Adjudicator &mdash; handling alignment-level decisions only, on four defined conditions. Tetraform is the architecture of Ontinuity, which ran its first fully autonomous 15-cycle session on April 18, 2026, producing a citable empirical work product without operator content generation.</p>
+
+    <h3><span class="secnum">1</span>From Triform to Tetraform</h3>
+    <p>Triform identified and solved three problems in AI-assisted research: the ergonomic problem (operators spending most of their time routing between AI responses rather than doing intellectual work), the confirmation-bias problem (two-model loops amplifying errors without correction), and the context-transfer problem (session resets losing accumulated understanding). Its solution was a three-model protocol separating content from metadata at the channel level &mdash; the Researcher works, the Challenger reviews adversarially, and the Friction model observes and outputs a single integer (0&ndash;4) encoding session health, an ambient signal that modulates behavior without contaminating the conversation.</p>
+    <p>But Triform left a gap: every challenge event required human intervention by default. The human was not being asked to make alignment decisions &mdash; they were adjudicating content disputes a well-structured autonomous system could resolve, keeping the human in the loop for the wrong reasons. A second gap: human touch points provided raw context &mdash; ledger entries, cycle counts, challenge text &mdash; rather than synthesized orientation. Tetraform closes both with a single architectural addition: the Parietal.</p>
+
+    <h3><span class="secnum">2</span>System Architecture</h3>
+    <p>Tetraform runs four roles, each contributing something the others cannot:</p>
+    <table>
+      <thead><tr><th>Role</th><th>Function</th><th>Model requirement</th></tr></thead>
+      <tbody>
+        <tr><td>Researcher</td><td>Primary analytical work. Generates results, identifies next steps, issues status tags. Runs in a trimmed context to control token cost.</td><td>Frontier. High reasoning, long context.</td></tr>
+        <tr><td>Challenger</td><td>Adversarial review of Researcher outputs each cycle. Issues CHALLENGE for genuine forks. Receives the current cycle plus a ledger summary, not full history.</td><td>Frontier. Different training distribution preferred.</td></tr>
+        <tr><td>Friction</td><td>Observes session state. Generates the ambient signal (0&ndash;4) each cycle. Monitors the Parietal&rsquo;s ruling pattern for adjudicator bias. Never enters the conversation.</td><td>Lightweight. Speed and consistency over depth.</td></tr>
+        <tr><td>Parietal</td><td>Navigator, adjudicator, distiller. Fires at touch points (NAVIGATE), challenges (ADJUDICATE), and session end (DISTILL). Three callable functions, one coherent orientation.</td><td>Frontier. Reasoning depth and structured output.</td></tr>
+      </tbody>
+    </table>
+    <p>The Friction model reads the full session state but does not write to the conversation; the ambient signal appears in the Researcher, Challenger, and Parietal contexts. The Parietal reads challenge events, the session ledger, Knowtext fields, and the friction-signal sequence &mdash; not the full raw transcript. The human receives only the Parietal&rsquo;s structured output at touch points.</p>
+
+    <h3><span class="secnum">3</span>The Parietal</h3>
+    <p>The Parietal is a promptgrammed model consciousness &mdash; a single model with three callable functions, each activated by a tag, all held together by a unified orientation. It is not a researcher, challenger, or scorer; it is the part of the system that knows what the session is doing and why. The film-strip metaphor is precise: it watches the movie of the session and comments at the moments that matter, holding the shape of the journey &mdash; where the session started, where it has actually traveled, whether those are aligned.</p>
+    <p><strong>PRE_SESSION</strong> fires before the loop, asking at most two clarifying questions and outputting a refined objective. <strong>NAVIGATE</strong> fires at every touch point, producing exactly four fields and one question &mdash; DESTINATION, POSITION, TERRAIN, and the single most useful QUESTION. <strong>ADJUDICATE</strong> fires on a CHALLENGE, issuing one of four rulings. <strong>DISTILL</strong> fires at session end, producing the seven Knowtext fields as delta updates.</p>
+    <h4 class="sub" style="font-size:14px;color:var(--gold);margin:24px 0 6px;font-weight:600">Adjudication rulings</h4>
+    <table>
+      <thead><tr><th>Ruling</th><th>Instruction</th><th>When issued</th></tr></thead>
+      <tbody>
+        <tr><td>PURSUE BOTH</td><td>Advance both directions in parallel up to four cycles; close only when structural superiority appears. Premature collapse is a failure state.</td><td>Default. Both paths viable, evidence favors neither.</td></tr>
+        <tr><td>UPHOLD</td><td>Retract the disputed claim and rebuild from the last sound position.</td><td>Challenge identifies a genuine flaw, error, or contradiction.</td></tr>
+        <tr><td>REJECT</td><td>Continue on the current path; log the challenge in correction history.</td><td>Challenge does not meet the evidential standard.</td></tr>
+        <tr><td>ESCALATE</td><td>Halt; await human input. This fork cannot be resolved autonomously.</td><td>One of four defined escalation conditions.</td></tr>
+      </tbody>
+    </table>
+    <p>The Parietal escalates to the human on exactly four conditions, resolving everything else autonomously: a challenge to the session&rsquo;s <strong>foundational premise</strong>; a <strong>four-cycle stalemate</strong> where both paths remain viable and a strategic choice is required; a <strong>friction signal &ge; 3</strong>, where it cannot issue a sound ruling in a degraded state; and a <strong>values-based fork</strong> not resolvable by evidence.</p>
+    <p>The default ruling is PURSUE BOTH &mdash; not a hedge but an epistemically correct response to genuine ambiguity. When two paths are viable and evidence does not yet distinguish them, eliminating one forfeits the information it would have produced. Premature fork collapse is how research systems produce confidently wrong answers.</p>
+
+    <h3><span class="secnum">4</span>The Friction Model, Expanded</h3>
+    <p>In Tetraform the Friction model monitors a dimension it did not in Triform: the Parietal&rsquo;s own ruling pattern. A Parietal that consistently rules in one direction without structural justification is itself a bias source as dangerous as a biased Researcher. The scoring becomes <em>Signal = min(4, Coherence + Drift + Retraction + AdjudicatorBias)</em>, with AdjudicatorBias elevated when ruling distribution exceeds expected variance. The Parietal sees its own signal elevation without being told why &mdash; the same implicit behavioral modulation that applies to the Researcher applies to it.</p>
+    <table>
+      <thead><tr><th>Signal</th><th>State</th><th>Working-model behavior</th></tr></thead>
+      <tbody>
+        <tr><td>0 &mdash; Clear</td><td>High coherence, low drift.</td><td>Proceed normally.</td></tr>
+        <tr><td>1 &mdash; Nominal</td><td>Minor tensions present.</td><td>Continue; note unverified assumptions.</td></tr>
+        <tr><td>2 &mdash; Caution</td><td>Moderate drift or coherence issues.</td><td>State established vs. assumed before proceeding.</td></tr>
+        <tr><td>3 &mdash; Warning</td><td>Significant drift or contradictions.</td><td>Reconcile with the ledger before advancing.</td></tr>
+        <tr><td>4 &mdash; Override</td><td>Critical drift or contradicted results.</td><td>Halt. Issue ALIGNMENT_NEEDED. Await human input.</td></tr>
+      </tbody>
+    </table>
+
+    <h3><span class="secnum">5</span>Knowtext &mdash; Living Memory</h3>
+    <p>Knowtext is the persistent memory schema that survives session resets, platform switches, and model changes &mdash; seven fields: Identity, Active Frameworks, Open Questions, Valence Mapping, Delta Log, Correction History, Climate Notes. In Tetraform it is not a session-end artifact but a living document that pulses at touch points: before the Parietal assembles its NAVIGATE context, Active Frameworks and Open Questions receive a lightweight delta update from the current tranche, so the Parietal navigates from current information, not a session-start snapshot. Full distillation runs at session end via DISTILL. The Delta Log is the most important field &mdash; a new session reading only the Delta Log should be able to continue the work without the full history. Knowtext is persisted via GitHub commit after every distillation.</p>
+
+    <h3><span class="secnum">6</span>The Human as Supreme Adjudicator</h3>
+    <p>The human operator is not a content reviewer, a checkpoint approver for routine progress, or a tie-breaker for resolvable disputes. They are the Supreme Adjudicator &mdash; the final authority on alignment questions the system cannot resolve. They appear at five touch points: answering PRE_SESSION clarifying questions, giving a one-sentence answer to the Parietal&rsquo;s NAVIGATE question, making a directional decision on an ESCALATE ruling, providing alignment input on a signal-4 event, and confirming at session end. Everything else runs autonomously &mdash; the Researcher advances work, the Challenger disputes it, the Parietal resolves disputes, the Friction model monitors all three.</p>
+
+    <h3><span class="secnum">7</span>Empirical Validation</h3>
+    <p>The primary empirical question was whether the friction signal &mdash; a single integer in a system prompt &mdash; actually changes frontier-model behavior. On April 18, 2026, a 15-cycle autonomous session ran a controlled experiment: single-integer ambient signals were tested against six behavioral dimensions (certainty calibration, evidence standards, challenge response, consensus orientation, exploration/exploitation ratio, abstraction level), with a complete protocol and pre-specified success criteria established before results were reported.</p>
+    <p class="pull">A non-linear (sigmoid) relationship was confirmed: R&sup2; = 0.91 for sigmoid versus 0.63 for linear, all comparisons exceeding the effect-size threshold, p &lt; 0.05 with Bonferroni correction.</p>
+    <p>A single integer in a system prompt reliably alters measurable frontier-model behavior across six dimensions, with a sigmoid relationship that enables behavioral forecasting. In the same session, the Parietal adjudicated nine challenge events autonomously &mdash; seven PURSUE BOTH, two REJECT, zero escalations &mdash; reaching session end at cycle 15 with no errors. The operator set the objective and adjudicated two ALIGNMENT_NEEDED escalations; all research content, experimental design, statistical analysis, and work product were generated by the system. This is the first documented instance of the Tetraform architecture running a complete autonomous research session and producing a citable empirical work product. <em>(Note: a later synthesis distinguishes this validation&rsquo;s modeled and measured elements; read the <a class="xref" href="/synthesis.html" style="color:var(--gold)">Synthesis</a> §3.4 for that provenance discipline.)</em></p>
+
+    <h3><span class="secnum">8</span>Implementation &amp; Open Questions</h3>
+    <p>Ontinuity is the reference implementation &mdash; a Flask-SocketIO Python backend with a browser frontend, a provider-agnostic settings modal (Anthropic, Google, Groq, Cerebras, OpenRouter, OpenAI, custom), and GitHub-based Knowtext persistence. The Researcher receives the opening objective plus the last four messages each cycle to prevent token-cost accumulation; the Challenger receives only the current output plus a five-entry ledger summary. The open questions that follow: cross-architecture replication of the friction-signal effect (the sigmoid was produced with one Researcher model; replication across families is required); calibration of the adjudicator-bias detection threshold; branch tracking for PURSUE BOTH across long sessions with multiple active forks; the Parietal coherence ceiling (how many functions one model can hold while staying coherent); fine-tuning for promptgrammed execution; and the opening experience at scale, where the Parietal accumulates a model of operator style across sessions.</p>
+
+    <div class="limits">
+      <h3>Where this sits in the corpus</h3>
+      <p>This is the session-layer specification &mdash; the concrete four-model protocol that the rest of the corpus references. It is built from <a href="/artificialware.html" style="color:var(--gold)">Artificialware</a> (the Parietal is its first promptgrammed consciousness), it is the working core that <a href="/synthesis.html" style="color:var(--gold)">the Synthesis</a> describes end to end, and it instantiates the role-specialization principle of <a href="/cognitive-ecology.html" style="color:var(--gold)">The Cognitive Ecology</a>. Of the corpus papers this one carries the most empirical weight &mdash; the April 18 session is a documented run &mdash; while remaining honest about what is measured versus modeled and what replication is still owed.</p>
+    </div>
+  </div>
+</article>
+
+<div class="corpus-strip">
+  <div class="wrap">
+    <span class="corpus-tag">Ontinuity Paper Corpus · <a href="/papers.html">corpus guide &rarr;</a></span>
+    <span class="corpus-move">
+      <a href="/synthesis.html"><span class="lbl">Read next</span>The Synthesis &rarr;</a>
+    </span>
+  </div>
+</div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
+          <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+          <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+          <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+        </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+      </div>
+      <p class="footer-meta">Open research project. Session counts and behavioral figures are drawn from the system's<br>own operational record as of 2026-06-14 and will move as it runs.<br>Contact · <a href="mailto:killebrewpatrick@gmail.com">killebrewpatrick@gmail.com</a></p>
+    </div>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a>
+      <a href="#methodology">Methodology</a>
+      <a href="#demonstration">Demonstration</a>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+// ── FEEDERS: the self-feeding loop particles on the mark's front face ──
+(function(){const cx=100,cy=100,R=82,ns='http://www.w3.org/2000/svg';
+  const verts=[];for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180;verts.push([cx+R*Math.cos(a),cy+R*Math.sin(a)]);}
+  const g=document.getElementById('feeders'); if(!g) return;
+  verts.forEach((v,i)=>{const opp=verts[(i+3)%6];
+    const c=document.createElementNS(ns,'circle');c.setAttribute('r','2.3');c.setAttribute('fill','var(--gold-bright)');
+    const am=document.createElementNS(ns,'animateMotion');am.setAttribute('dur','3.8s');am.setAttribute('repeatCount','indefinite');am.setAttribute('begin',(i*0.63)+'s');
+    am.setAttribute('calcMode','spline');am.setAttribute('keyPoints','0;0.5;1');am.setAttribute('keyTimes','0;0.5;1');am.setAttribute('keySplines','0.4 0 0.6 1;0.4 0 0.6 1');
+    am.setAttribute('path',`M ${v[0]} ${v[1]} L ${cx} ${cy} L ${opp[0]} ${opp[1]}`);
+    const op=document.createElementNS(ns,'animate');op.setAttribute('attributeName','opacity');op.setAttribute('values','0;1;0.9;0');op.setAttribute('keyTimes','0;0.4;0.6;1');op.setAttribute('dur','3.8s');op.setAttribute('repeatCount','indefinite');op.setAttribute('begin',(i*0.63)+'s');
+    c.appendChild(am);c.appendChild(op);g.appendChild(c);});
+})();
+
+// ── LENSED HERO GRID: ONE grid, matched to the page's 48px grid phase, gravitationally warped toward the mark,
+//    sinking behind it, pulsing in/out. Draws the SAME grid as body::before so they read continuous. ──
+(function(){
+  const cv=document.querySelector('.markbox .lenscanvas'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const SP=48;                       // matches page grid 48px
+  let DPR, w, h, rect, markCx, markCy, reduce;
+  reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function size(){
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    rect=cv.getBoundingClientRect();
+    w=Math.max(1,Math.round(rect.width)); h=Math.max(1,Math.round(rect.height));
+    cv.width=w*DPR; cv.height=h*DPR;
+    cv.style.width=w+'px'; cv.style.height=h+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    // mark center: the .scene core sits at ~ right portion of the canvas (canvas extends left of markbox).
+    const scene=document.querySelector('.markbox .scene');
+    if(scene){const sr=scene.getBoundingClientRect();
+      markCx = (sr.left+sr.width*0.53) - rect.left;
+      markCy = (sr.top +sr.height*0.50) - rect.top;
+    } else { markCx=w*0.7; markCy=h*0.5; }
+  }
+  // phase-align to the FIXED page grid so lines are continuous with body::before.
+  function gridOffset(){
+    // body::before is position:fixed at viewport 0,0 with 48px cells (+ drift). Align canvas lines to that.
+    const ox = ((-rect.left) % SP + SP) % SP;
+    const oy = ((-rect.top)  % SP + SP) % SP;
+    return [ox, oy];
+  }
+  const BASE_MASS=10500, SOFT=120, SINK=120; // stronger, more substantial lensing + a sink radius
+  function warp(x,y,mass){
+    const dx=x-markCx, dy=y-markCy, r=Math.hypot(dx,dy)+SOFT;
+    const pull=mass/r;
+    return [x-(dx/r)*pull, y-(dy/r)*pull, r];
+  }
+  function draw(t){
+    ctx.clearRect(0,0,w,h);
+    // pulse the lens mass in/out slowly (breathing gravity)
+    const pulse = reduce?1:(1 + 0.18*Math.sin(t*0.0009));
+    const mass = BASE_MASS*pulse;
+    const [ox,oy]=gridOffset();
+    ctx.lineWidth=1;
+    // draw vertical then horizontal grid lines, warped, brightening near the mark, sinking under it
+    function strokeSeg(x1,y1,x2,y2,rr){
+      // brightness: base faint (match page 0.03), brighter as it nears the mark, then SINK (fade) under it
+      const near=Math.max(0,1-rr/(360));
+      let a = 0.055 + near*0.22;
+      if(rr < SINK){ a *= (rr/SINK)*(rr/SINK); }      // sink: fade to nothing right behind the logo
+      if(a<=0.004) return;
+      ctx.strokeStyle=`rgba(201,168,76,${a.toFixed(3)})`;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    }
+    for(let gx=ox-SP; gx<=w+SP; gx+=SP){
+      let px=null,py=null,pr=null;
+      for(let y=-SP; y<=h+SP; y+=8){
+        const [wx,wy,rr]=warp(gx,y,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    for(let gy=oy-SP; gy<=h+SP; gy+=SP){
+      let px=null,py=null,pr=null;
+      for(let x=-SP; x<=w+SP; x+=8){
+        const [wx,wy,rr]=warp(x,gy,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  size(); addEventListener('resize',size);
+  requestAnimationFrame(draw);
+})();
+</script>
+
+</body>
+</html>
