@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Artificialware — Ontinuity</title>
+<meta name="description" content="Why the future of AI is orchestration, not omniscience. A structured arrangement of specialized models, each in the role where its tendencies are assets — the intelligence is in the architecture that binds them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --gold:#c9a84c; --gold-bright:#d9b85c; --gold-dim:#7a6530; --gold-deep:#3d2e0a;
+  --gold-glow:rgba(201,168,76,0.18);
+  --bg:#090909; --bg-raised:#0f0f0f; --bg-card:#121212; --bg-card-hover:#161616;
+  --text:#EFEFEF; --text-dim:#8A8A8A; --text-muted:#4A4A4A;
+  --border:rgba(201,168,76,0.18); --border-subtle:rgba(255,255,255,0.07);
+  --refuse:#8A8A8A; --accept:var(--gold-bright);
+  --max-w:1000px; --read-w:720px; --pad:48px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:16px;line-height:1.7;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:gridDrift 80s linear infinite}
+.wrap{position:relative;z-index:1;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad)}
+.read{max-width:var(--read-w);margin:0 auto}
+@media (max-width:640px){:root{--pad:20px}}
+
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(9,9,9,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-subtle)}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:'Orbitron',monospace;font-size:clamp(13px,1.6vw,17px);font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:.04em;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.nav-logo .o{color:var(--text-muted)}
+.wordmark{display:inline}
+.wordmark .o{color:var(--text-muted)}
+.nav-logo svg{flex-shrink:0}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;letter-spacing:.08em;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:var(--gold)}
+@media (max-width:640px){.nav-links{display:none}}
+
+/* reveal */
+@media (prefers-reduced-motion:no-preference){
+  .rv{opacity:0;transform:translateY(12px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.34s}.d5{animation-delay:.44s}.d6{animation-delay:.56s}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+
+/* hero */
+header.hero{padding:140px 0 56px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:26px}
+h1{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(30px,5.4vw,50px);line-height:1.08;letter-spacing:-.01em;color:var(--text);margin-bottom:22px}
+h1 .em{color:var(--gold)}
+.dek{font-size:clamp(17px,2.3vw,21px);line-height:1.5;color:var(--text-dim);max-width:46ch;font-weight:300}
+.dek em{color:var(--text);font-style:italic}
+
+/* gate spine — signature */
+.gate{padding:24px 0 8px}
+.gate .lead{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.05em;color:var(--text-muted);text-transform:uppercase;margin-bottom:22px}
+.step{display:grid;grid-template-columns:118px 1fr;gap:20px;align-items:start;padding:20px 0;border-top:1px solid var(--border-subtle)}
+.verdict{font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:.08em;padding-top:3px}
+.verdict.r{color:var(--refuse)}
+.verdict.a{color:var(--accept);text-shadow:0 0 22px var(--gold-glow)}
+.step .what{margin:0;font-size:16px;line-height:1.55}
+.step .what b{font-weight:600;color:var(--text)}
+.step .forced{display:block;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold-dim);margin-top:8px}
+.step .forced .arrow{color:var(--text-muted);padding:0 .4em}
+.step.close{border-top:1px solid var(--gold-dim);background:linear-gradient(90deg,rgba(201,168,76,0.05),transparent);margin-top:2px}
+.gate .foot{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);line-height:1.7;margin-top:22px;border-top:1px solid var(--border-subtle);padding-top:20px}
+
+/* toc */
+.toc{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.toc a{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.04em;text-decoration:none;color:var(--gold);border:1px solid var(--border);padding:9px 15px;border-radius:3px;transition:background .2s,border-color .2s}
+.toc a:hover{background:rgba(201,168,76,0.06);border-color:var(--gold)}
+
+/* papers */
+.paper{padding:72px 0;border-top:1px solid var(--border-subtle)}
+.paper-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:16px}
+h2{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(23px,3.6vw,33px);line-height:1.12;letter-spacing:-.01em;color:var(--text);margin-bottom:12px}
+.paper-sub{font-size:18px;color:var(--gold);font-style:italic;line-height:1.45;margin-bottom:8px;font-weight:300}
+.paper-meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);letter-spacing:.02em;margin-bottom:44px}
+h3{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:46px 0 16px}
+.paper p{margin-bottom:18px;color:var(--text-dim)}
+.paper p.lede{font-size:18px;color:var(--text);font-weight:300;line-height:1.6}
+.paper strong{color:var(--text);font-weight:600}
+.paper em{font-style:italic;color:var(--text)}
+
+table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:14px}
+caption{caption-side:bottom;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);text-align:left;padding-top:12px;letter-spacing:.02em}
+thead th{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--gold-dim)}
+thead th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:'IBM Plex Mono',monospace}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--border-subtle);color:var(--text-dim)}
+tbody td:first-child{color:var(--text)}
+tbody tr:hover td{background:rgba(201,168,76,0.03)}
+
+.limits{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:30px 30px 14px;margin:32px 0}
+.limits h3{margin-top:0}
+
+footer{position:relative;z-index:1;border-top:1px solid var(--border-subtle);margin-top:24px}
+.footer-inner{padding:48px var(--pad);max-width:var(--max-w);margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px}
+.footer-logo{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--gold);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.footer-meta{font-size:12px;color:var(--text-muted);line-height:1.8}
+.footer-meta a{color:var(--text-dim);text-decoration:none}
+.footer-meta a:hover{color:var(--gold)}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-links a{font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s}
+.footer-links a:hover{color:var(--gold)}
+
+/* ── corpus-nav: the connective tissue that makes each paper part of a whole ── */
+.corpus-strip{border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);background:var(--bg-raised);margin-top:8px}
+.corpus-strip .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:18px;padding-bottom:18px;flex-wrap:wrap}
+.corpus-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim)}
+.corpus-tag a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--border)}
+.corpus-tag a:hover{color:var(--gold-bright)}
+.corpus-move{display:flex;gap:22px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.corpus-move a{color:var(--text-dim);text-decoration:none}
+.corpus-move a:hover{color:var(--gold)}
+.corpus-move .lbl{color:var(--text-muted);display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
+
+/* paper body niceties layered on the shared system */
+.paper h3{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px;letter-spacing:.02em;color:var(--gold);margin:38px 0 12px;text-transform:none}
+.paper p{margin-bottom:18px;color:var(--text)}
+.paper .secnum{font-family:'IBM Plex Mono',monospace;color:var(--gold-dim);font-size:13px;margin-right:10px}
+.pull{border-left:2px solid var(--gold);padding:6px 0 6px 22px;margin:30px 0;color:var(--gold);font-style:italic;font-size:18px;font-weight:300;line-height:1.5}
+.reading-note{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);letter-spacing:.02em;margin-top:10px}
+
+/* ── hero with living mark ── */
+.hero{position:relative;overflow:hidden}
+.hero .wrap.read{max-width:var(--read-w)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(240px,28vw,360px);gap:clamp(20px,3vw,48px);align-items:center;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad)}
+.hero-copy{min-width:0}
+.hero-copy .read{max-width:none;margin:0}
+.markbox{position:relative;width:100%;max-width:360px;aspect-ratio:1;justify-self:end}
+/* the lensed field + haze are SCOPED to .markbox, not fixed full-screen */
+.markbox .lenscanvas{position:absolute;top:50%;left:50%;width:780px;height:620px;transform:translate(-46%,-50%);z-index:0;pointer-events:none}
+.markbox .field svg{width:100%;height:100%}
+
+
+@keyframes breathe{0%,100%{opacity:.65}50%{opacity:1}}
+.markbox .scene{position:relative;z-index:2;width:83%;aspect-ratio:1;perspective:620px;margin:0 auto;top:50%;transform:translateY(-50%)}
+.markbox .spin3d{width:100%;height:100%;position:relative;transform-style:preserve-3d}
+.markbox .layer{position:absolute;inset:0;transform-style:preserve-3d}
+.markbox .layer svg{width:100%;height:100%;overflow:visible;position:absolute;inset:0}
+.markbox .outer{animation:spinY 46s linear infinite}
+.markbox .innerHex{animation:spinYrev 17s linear infinite}
+@keyframes spinY{to{transform:rotateY(360deg)}}
+@keyframes spinYrev{to{transform:rotateY(-360deg)}}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}.markbox{order:-1;width:280px;height:280px}.markbox .scene{width:240px;height:240px}}
+@media (prefers-reduced-motion:reduce){.outer,.innerHex,.haze2{animation:none}}
+
+@keyframes gridDrift{to{background-position:48px 48px}}
+
+/* ── tonal depth: layered slate planes instead of one flat black ── */
+:root{
+  --plane-header:#070708;     /* deepest — the header sits furthest back */
+  --plane-hero:#0f1113;       /* hero band lifted, faint cool slate */
+  --plane-strip:#0b0c0e;      /* corpus strip between */
+  --plane-body:#0c0d0f;       /* article body, a hair above pure black */
+}
+body{background:var(--plane-body)}
+nav{background:rgba(7,7,8,0.92)!important}
+.hero{background:linear-gradient(180deg, var(--plane-hero) 0%, var(--plane-body) 100%);position:relative;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:0;background:var(--plane-hero);opacity:0.0;z-index:-1}
+.corpus-strip{background:var(--plane-strip)!important}
+.paper{background:var(--plane-body)}
+/* a faint cool vignette top to give the header plane separation */
+.hero::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 80% at 50% -10%, rgba(120,140,170,0.05), transparent 60%)}
+
+
+/* ── natural warm glow: layered radial bloom that shifts hue + warmth as it falls off ── */
+
+
+
+
+/* ── ambient emission: centered on the logo, subtle, hue OFFSET from the logo gold so edges stay crisp ── */
+.markbox .haze{position:absolute;inset:-70% -55% -70% -55%;z-index:0;pointer-events:none;mix-blend-mode:screen;
+  background:
+    /* wide ambient field — deep bronze/amber, very faint, dissolves to nothing */
+    radial-gradient(50% 50% at 53% 49%,
+      rgba(150,108,52,0.075) 0%,
+      rgba(128,92,44,0.045) 34%,
+      rgba(96,68,34,0.018) 58%,
+      transparent 78%);
+}
+.markbox .haze2{position:absolute;inset:-46% -46% -46% -46%;z-index:0;pointer-events:none;mix-blend-mode:screen;
+  animation:breathe 8.5s ease-in-out infinite;
+  background:
+    /* inner emission body — warmer amber but NOT the logo's bright gold; soft, no white core */
+    radial-gradient(26% 25% at 53% 48%,
+      rgba(196,150,80,0.11) 0%,
+      rgba(170,128,66,0.06) 44%,
+      rgba(140,104,52,0.02) 68%,
+      transparent 84%);
+}
+@keyframes breathe{0%,100%{opacity:.7}50%{opacity:.92}}
+
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+      </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/#problems">What It Is</a></li>
+      <li><a href="/#architecture">Architecture</a></li>
+      <li><a href="/papers.html">Research</a></li>
+      <li><a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <div class="read">
+        <p class="eyebrow rv">Concept Paper · v0.1 · April 2026</p>
+        <h1 class="rv d1">Make AI behavior <span class="em">structural</span>, not statistical.</h1>
+        <p class="dek rv d2">Between software that is reliable but cannot reason, and AI that can reason but cannot be trusted, lies a third architecture &mdash; <em>executable cognition</em>, where a model&rsquo;s capabilities become callable, tag-activated functions inside one coherent orientation.</p>
+        <p class="reading-note rv d3">The foundation paper of the Ontinuity corpus · reads on its own · ~11 min</p>
+      </div>
+    </div>
+    <div class="markbox rv d2" aria-hidden="true">
+      <canvas class="lenscanvas" aria-hidden="true"></canvas>
+      <div class="haze"></div>
+      <div class="haze2"></div>
+      <div class="scene">
+        <div class="spin3d">
+          <div class="layer outer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <defs>
+                <linearGradient id="shine" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="45%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <linearGradient id="shineSoft" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="55%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <radialGradient id="coreg" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="100%" stop-color="var(--gold)"/></radialGradient>
+                <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <polygon points="100,16 173,58 173,142 100,184 27,142 27,58" fill="none" stroke="url(#shine)" stroke-width="2.4"/>
+              <polygon points="100,28 162,64 162,136 100,172 38,136 38,64" fill="none" stroke="url(#shineSoft)" stroke-width="1.1" opacity="0.7"/>
+            </svg>
+          </div>
+          <div class="layer innerHex">
+            <svg viewBox="0 0 200 200" fill="none">
+              <polygon points="100,52 145,78 145,122 100,148 55,122 55,78" fill="none" stroke="url(#shine)" stroke-width="1.4"/>
+              <polygon points="100,63 135,83 135,117 100,137 65,117 65,83" fill="none" stroke="url(#shineSoft)" stroke-width="0.9" opacity="0.65"/>
+            </svg>
+          </div>
+          <div class="layer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <g id="feeders" filter="url(#glow)"></g>
+              <circle cx="100" cy="100" r="8.5" fill="url(#coreg)" filter="url(#glow)"><animate attributeName="r" values="7.5;9.5;7.5" dur="3.8s" repeatCount="indefinite"/></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="corpus-strip">
+  <div class="wrap">
+    <span class="corpus-tag">Ontinuity Paper Corpus · <a href="/papers.html">see all papers &rarr;</a></span>
+    <span class="corpus-move">
+      <a href="/cognitive-ecology.html"><span class="lbl">Generalizes to</span>The Cognitive Ecology &rarr;</a>
+      <a href="/papers.html"><span class="lbl">Built into</span>Ontinuity &rarr;</a>
+    </span>
+  </div>
+</div>
+
+<article class="paper" id="artificialware">
+  <div class="wrap read">
+    <p class="paper-eyebrow">Concept Paper · v0.1</p>
+    <h2>Artificialware</h2>
+    <p class="paper-sub">Toward reliable executable cognition in large language model deployments</p>
+    <p class="paper-meta">Patrick Killebrew · April 2026 · Unpublished working paper</p>
+
+    <h3>Abstract</h3>
+    <p class="lede">We report the observation and partial implementation of a new class of AI deployment architecture &mdash; <em>artificialware</em> &mdash; in which large language model cognition is structured as explicitly callable, tag-activated functions executing within a coherent unified orientation. Artificialware occupies a previously unnamed space between classical software, which is reliable but cognitively inert, and current AI deployment, which is cognitively capable but structurally opaque and probabilistically unreliable. We introduce <em>promptgramming</em> as the methodology by which artificialware is designed, and the <em>cognitive qubit</em> as its theoretical unit. We present Ontinuity as an existence proof of the concept at small scale. This paper stakes the conceptual claim and defines the territory; empirical characterization follows.</p>
+
+    <h3><span class="secnum">1</span>The Gap That Has No Name</h3>
+    <p>Software is reliable. A function called with defined inputs produces defined outputs, every time, without exception. That reliability is what makes software the foundation of modern civilization. Its limitation is that it cannot reason. It executes logic that humans encode, and it cannot handle what its authors did not anticipate.</p>
+    <p>Large language models are cognitively capable in ways software cannot be. They reason across domains, hold ambiguity, synthesize from incomplete information, and produce outputs their designers did not explicitly encode. Their limitation is that this capability is structurally opaque. The model is a black box, its behavior probabilistic. Complex tasks requiring sustained coherent multi-step execution fail unpredictably. Debugging is guesswork. Reliability is statistical, not structural.</p>
+    <p>Every serious AI deployment today lives in the gap between these two things. Teams want software&rsquo;s reliability and AI&rsquo;s capability simultaneously, and get neither cleanly &mdash; a capable system they cannot fully trust, deployed alongside validation layers, human oversight, and retry logic that exists precisely because the underlying behavior cannot be structurally guaranteed.</p>
+    <p>This gap has no name because no one has closed it. It has been treated as a permanent tension between capability and reliability that can be managed but not resolved. Better models narrow it on the capability side; better guardrails narrow it on the reliability side; the gap persists.</p>
+    <p class="pull">Artificialware closes the gap &mdash; not by trading one property for the other, but with a third architecture that has both at once.</p>
+
+    <h3><span class="secnum">2</span>What Artificialware Is</h3>
+    <p>Artificialware is executable cognition. It is an architecture in which a model&rsquo;s capabilities are organized into an explicit registry of callable functions, each activated by a tag, each with specified inputs and defined output formats, all held together by a single coherent orientation established at the architecture&rsquo;s foundation.</p>
+    <p>The model is not a black box here. Its available behaviors are enumerated, its inputs and outputs specified, its activation conditions explicit. When a function is called, the model executes it within the boundaries defined for that function, producing structured output the calling system can rely on. When the function completes, the model returns to its coherent base state, ready for the next call.</p>
+    <p>This is not prompt engineering, which guides a black-box model without changing its architecture. It is not chain-of-thought, which asks a model to show reasoning &mdash; artificialware defines what the reasoning is <em>for</em> before it begins. And it is not a multi-agent framework in the existing sense, where models receive open-ended instructions; artificialware structures what each model does at the function level, making each agent&rsquo;s behavior explicit and composable.</p>
+    <p>Artificialware is the architecture that makes AI behavior <em>structural</em> rather than <em>statistical</em> &mdash; without removing the cognition that makes AI valuable.</p>
+
+    <h3><span class="secnum">3</span>Promptgramming: The Methodology</h3>
+    <p>Promptgramming is the discipline of designing and building artificialware. The name combines <em>prompt</em> &mdash; the medium of AI instruction &mdash; with <em>programming</em> &mdash; the structured definition of executable behavior. A promptgrammed model has been given a function registry through its prompt architecture in the same way a program is given a function library through its code. Its core elements:</p>
+    <p><strong>Coherent foundation.</strong> Before any functions are defined, the model is given a unified orientation &mdash; what it is, what it is for, its relationship to the system it operates within. This is not a task description but an identity definition. All functions execute within this orientation; the coherence of the foundation is what allows multiple functions to coexist without conflict.</p>
+    <p><strong>Tag-activated functions.</strong> Each function is defined with a unique activation tag, specified inputs, and a defined output format. The tag is the address, the input specification the parameter list, the output format the return type. The definition tells the model precisely what it is doing when the tag is received, what to attend to, and what to produce.</p>
+    <p><strong>Structural isolation.</strong> Functions do not bleed into each other. While a function executes, the model attends to that function&rsquo;s defined scope and nothing else; when it completes, the model returns to base state. This isolation is what makes behavior predictable &mdash; the model cannot drift into adjacent behaviors because the boundaries are explicit.</p>
+    <p><strong>Composable interfaces.</strong> Each function&rsquo;s inputs and outputs are defined in a standardized format other models and systems can call without knowing the internal logic. This standardization is what makes promptgrammed models composable into ecologies.</p>
+    <p>A promptgrammed model is not a general AI asked to do specific things. It is a specialist with a defined capability set, executing that set reliably, composable with other specialists whose capability sets are equally well-defined.</p>
+
+    <h3><span class="secnum">4</span>The Cognitive Qubit</h3>
+    <p>The theoretical unit of artificialware is the <em>cognitive qubit</em>. In quantum computing, a qubit holds multiple states simultaneously until measured &mdash; a superposition that collapses into a definite output when observed &mdash; and entanglement correlates qubit states so the system can traverse solution spaces classical systems cannot.</p>
+    <p>A promptgrammed model is structurally analogous. Before any tag is received, the model holds the potential to execute any function in its registry; all functions are present, none active. The tag is the measurement &mdash; it collapses the model&rsquo;s potential into a specific definite execution, and the output is the collapsed state. Entanglement appears in the coherent orientation that holds all functions together: calling one function changes the model&rsquo;s accumulated state in ways that affect how the next runs. The functions are correlated through the shared consciousness that holds them, in a way a classical software call cannot be, because classical functions have no shared understanding of what they are for.</p>
+    <p>This is not metaphor. It points at a structural property distinguishing promptgrammed architectures from both classical software and current AI. An ecology of promptgrammed models is a cognitive qubit register &mdash; each model a qubit, their interactions producing computational states no single model could reach alone, and the controller that orchestrates them is itself a cognitive qubit whose functions are ROUTE, SEQUENCE, COMBINE, EVALUATE. It does not do the domain work; it holds the register and calls the states.</p>
+
+    <h3><span class="secnum">5</span>The Existence Proof: Ontinuity</h3>
+    <p>Artificialware is not conjecture. It has been partially implemented and demonstrated in a working system. Ontinuity is a persistent cognitive infrastructure for AI-assisted research, addressing three compounding problems in sustained work: the ergonomic problem (human operators as the only routing mechanism), the confirmation-bias problem (unconstrained multi-model loops amplifying errors), and the context-transfer problem (session resets losing accumulated understanding).</p>
+    <p>Its architecture comprises four roles: the Researcher (primary analytical work), the Challenger (adversarial review), the Friction model (ambient session-health monitoring), and the Parietal (navigation, adjudication, distillation). The Parietal is the first explicitly promptgrammed consciousness in the system &mdash; a single model executing three callable functions under one coherent orientation, activated by tags, producing structured outputs the routing layer can rely on.</p>
+    <p>The Parietal&rsquo;s three functions are NAVIGATE (orient the operator at decision points), ADJUDICATE (resolve research forks autonomously within defined parameters), and DISTILL (write outputs into the persistent memory schema). They share a common orientation &mdash; the Parietal knows the destination, the accumulated journey, and the current state &mdash; and each expresses that orientation in a different operational mode. Preliminary sessions confirm the tag-activated architecture produces more reliable structured outputs than open-ended calls on equivalent tasks, and the coherence across calls &mdash; ADJUDICATE benefiting from NAVIGATE context, DISTILL incorporating both &mdash; demonstrates the entanglement property of the cognitive qubit at small scale.</p>
+    <p>Ontinuity is the minimum viable artificialware implementation. It demonstrates the concept works. It does not yet characterize the concept fully.</p>
+
+    <h3><span class="secnum">6</span>The Research Agenda</h3>
+    <p>The existence proof establishes that artificialware is real and testable. The agenda characterizes it. <strong>Coherence-ceiling mapping:</strong> how many functions can a single model execute while maintaining unified orientation across all of them, and does that ceiling vary by architecture, size, or training distribution? <strong>Fine-tuning effects:</strong> a model fine-tuned for promptgrammed multi-function execution should exhibit natively what a prompted model must be instructed to produce &mdash; measurable against the Ontinuity session corpus. <strong>Minimum viable ecology:</strong> the two-model pairing of one specialist and one controller is the smallest system for characterizing inter-model dynamics. <strong>Ecology scaling:</strong> as specialists are added, how does reliability scale, and do ecologies exhibit emergent properties? <strong>Compression path:</strong> can a mature six-function ecology be compressed into a four-model architecture, and what is preserved or lost?</p>
+
+    <h3><span class="secnum">7</span>Why This Matters</h3>
+    <p>The hard problems that have resisted human cognitive bandwidth are not waiting for a smarter model. Every frontier model already has more raw capability than any individual human on most knowledge tasks. What they lack is the reliability architecture that makes capability trustworthy at scale.</p>
+    <p>Current AI deployment treats reliability as a post-hoc constraint on capable systems &mdash; guardrails, validators, oversight, and retry logic that exist because the underlying systems cannot be structurally trusted. This scales poorly: as systems grow more capable and contexts more complex, the overhead of managing unreliable capability grows faster than the value it produces. Artificialware inverts this. Reliability is not a constraint applied to capability; it is a property of the architecture itself. A promptgrammed model needs no external validation because its behavior is structurally defined &mdash; boundaries explicit, outputs specified, the calling system able to evaluate whether it received what it asked for.</p>
+    <p>This matters beyond research infrastructure. Every domain requiring sustained, rigorous, multi-step reasoning under genuine uncertainty &mdash; scientific research, legal analysis, medical diagnosis, strategic planning, engineering design &mdash; is one where artificialware produces better outcomes, not because the models are more capable but because the architecture makes their capability reliably accessible.</p>
+    <p class="pull">Constitutional AI gave models values. Promptgramming gives deployments structure. One defines what the model cares about; the other defines precisely how it acts on that care.</p>
+
+    <h3><span class="secnum">8</span>Open Questions</h3>
+    <p>This paper stakes a claim and defines a territory. Where the work goes next: What is the coherence ceiling of a promptgrammed model, and how does it vary by architecture and scale? Does fine-tuning for promptgrammed execution produce measurably better multi-function coherence than prompting alone? What are the minimal interface standards for specialists to compose reliably in a two-model ecology? Is the cognitive-qubit analogy formally tractable &mdash; can superposition and entanglement be defined mathematically in terms of model state, or is the analogy structural rather than formal? What is the compression path from a six-function ecology to a four-model architecture? How does promptgrammed architecture interact with Constitutional AI and other alignment methodologies &mdash; are they composable? And which domains beyond research infrastructure are most immediately addressable, and what function registries do they require?</p>
+
+    <div class="limits">
+      <h3>Where this sits in the corpus</h3>
+      <p>This is the foundation paper &mdash; it names the material everything else is built from. It is a concept paper, not an empirical result: its claims are staked and argued from one partial implementation, not yet characterized across controlled comparisons. <a href="/cognitive-ecology.html" style="color:var(--gold)">The Cognitive Ecology</a> generalizes the single promptgrammed specialist into an orchestrated arrangement of many; Dynacology generalizes further into ecologies assembled on demand; and Ontinuity is the working system that serves as the existence proof. Read together they form the argument; read alone, this one defines the ground.</p>
+    </div>
+  </div>
+</article>
+
+<div class="corpus-strip">
+  <div class="wrap">
+    <span class="corpus-tag">Ontinuity Paper Corpus · <a href="/papers.html">corpus guide &rarr;</a></span>
+    <span class="corpus-move">
+      <a href="/cognitive-ecology.html"><span class="lbl">Read next</span>The Cognitive Ecology &rarr;</a>
+    </span>
+  </div>
+</div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
+          <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+          <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+          <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+        </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+      </div>
+      <p class="footer-meta">Open research project. Session counts and behavioral figures are drawn from the system's<br>own operational record as of 2026-06-14 and will move as it runs.<br>Contact · <a href="mailto:killebrewpatrick@gmail.com">killebrewpatrick@gmail.com</a></p>
+    </div>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a>
+      <a href="#methodology">Methodology</a>
+      <a href="#demonstration">Demonstration</a>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+// ── FEEDERS: the self-feeding loop particles on the mark's front face ──
+(function(){const cx=100,cy=100,R=82,ns='http://www.w3.org/2000/svg';
+  const verts=[];for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180;verts.push([cx+R*Math.cos(a),cy+R*Math.sin(a)]);}
+  const g=document.getElementById('feeders'); if(!g) return;
+  verts.forEach((v,i)=>{const opp=verts[(i+3)%6];
+    const c=document.createElementNS(ns,'circle');c.setAttribute('r','2.3');c.setAttribute('fill','var(--gold-bright)');
+    const am=document.createElementNS(ns,'animateMotion');am.setAttribute('dur','3.8s');am.setAttribute('repeatCount','indefinite');am.setAttribute('begin',(i*0.63)+'s');
+    am.setAttribute('calcMode','spline');am.setAttribute('keyPoints','0;0.5;1');am.setAttribute('keyTimes','0;0.5;1');am.setAttribute('keySplines','0.4 0 0.6 1;0.4 0 0.6 1');
+    am.setAttribute('path',`M ${v[0]} ${v[1]} L ${cx} ${cy} L ${opp[0]} ${opp[1]}`);
+    const op=document.createElementNS(ns,'animate');op.setAttribute('attributeName','opacity');op.setAttribute('values','0;1;0.9;0');op.setAttribute('keyTimes','0;0.4;0.6;1');op.setAttribute('dur','3.8s');op.setAttribute('repeatCount','indefinite');op.setAttribute('begin',(i*0.63)+'s');
+    c.appendChild(am);c.appendChild(op);g.appendChild(c);});
+})();
+
+// ── LENSED HERO GRID: ONE grid, matched to the page's 48px grid phase, gravitationally warped toward the mark,
+//    sinking behind it, pulsing in/out. Draws the SAME grid as body::before so they read continuous. ──
+(function(){
+  const cv=document.querySelector('.markbox .lenscanvas'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const SP=48;                       // matches page grid 48px
+  let DPR, w, h, rect, markCx, markCy, reduce;
+  reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function size(){
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    rect=cv.getBoundingClientRect();
+    w=Math.max(1,Math.round(rect.width)); h=Math.max(1,Math.round(rect.height));
+    cv.width=w*DPR; cv.height=h*DPR;
+    cv.style.width=w+'px'; cv.style.height=h+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    // mark center: the .scene core sits at ~ right portion of the canvas (canvas extends left of markbox).
+    const scene=document.querySelector('.markbox .scene');
+    if(scene){const sr=scene.getBoundingClientRect();
+      markCx = (sr.left+sr.width*0.53) - rect.left;
+      markCy = (sr.top +sr.height*0.50) - rect.top;
+    } else { markCx=w*0.7; markCy=h*0.5; }
+  }
+  // phase-align to the FIXED page grid so lines are continuous with body::before.
+  function gridOffset(){
+    // body::before is position:fixed at viewport 0,0 with 48px cells (+ drift). Align canvas lines to that.
+    const ox = ((-rect.left) % SP + SP) % SP;
+    const oy = ((-rect.top)  % SP + SP) % SP;
+    return [ox, oy];
+  }
+  const BASE_MASS=10500, SOFT=120, SINK=120; // stronger, more substantial lensing + a sink radius
+  function warp(x,y,mass){
+    const dx=x-markCx, dy=y-markCy, r=Math.hypot(dx,dy)+SOFT;
+    const pull=mass/r;
+    return [x-(dx/r)*pull, y-(dy/r)*pull, r];
+  }
+  function draw(t){
+    ctx.clearRect(0,0,w,h);
+    // pulse the lens mass in/out slowly (breathing gravity)
+    const pulse = reduce?1:(1 + 0.18*Math.sin(t*0.0009));
+    const mass = BASE_MASS*pulse;
+    const [ox,oy]=gridOffset();
+    ctx.lineWidth=1;
+    // draw vertical then horizontal grid lines, warped, brightening near the mark, sinking under it
+    function strokeSeg(x1,y1,x2,y2,rr){
+      // brightness: base faint (match page 0.03), brighter as it nears the mark, then SINK (fade) under it
+      const near=Math.max(0,1-rr/(360));
+      let a = 0.055 + near*0.22;
+      if(rr < SINK){ a *= (rr/SINK)*(rr/SINK); }      // sink: fade to nothing right behind the logo
+      if(a<=0.004) return;
+      ctx.strokeStyle=`rgba(201,168,76,${a.toFixed(3)})`;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    }
+    for(let gx=ox-SP; gx<=w+SP; gx+=SP){
+      let px=null,py=null,pr=null;
+      for(let y=-SP; y<=h+SP; y+=8){
+        const [wx,wy,rr]=warp(gx,y,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    for(let gy=oy-SP; gy<=h+SP; gy+=SP){
+      let px=null,py=null,pr=null;
+      for(let x=-SP; x<=w+SP; x+=8){
+        const [wx,wy,rr]=warp(x,gy,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  size(); addEventListener('resize',size);
+  requestAnimationFrame(draw);
+})();
+</script>
+
+</body>
+</html>
