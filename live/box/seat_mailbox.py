@@ -224,6 +224,11 @@ def mailbox_fetch():
     # roles this seat will accept broadcast on (e.g. a worker accepts 'any_worker')
     roles = b.get("roles") or []
     block = (b.get("block_id") or "").strip()
+    # CORRELATED FETCH: if reply_to is given, claim the specific result replying to
+    # that task id (lets a requester pull *its own* result directly instead of
+    # draining the whole queue oldest-first). If newest=true, claim newest-first.
+    reply_to = (b.get("reply_to") or "").strip()
+    newest = bool(b.get("newest"))
     targets = [seat] + [str(r) for r in roles]
     op_id = _ledger("mailbox_fetch", None, begin=True, args={"seat": seat, "roles": roles})
     try:
@@ -232,7 +237,7 @@ def mailbox_fetch():
         # 1) reclaim expired claims back to queued
         c.execute("UPDATE seat_mailbox SET status='queued', claimed_by=NULL, claimed_at=NULL, lease_until=NULL "
                   "WHERE status='claimed' AND lease_until IS NOT NULL AND lease_until < ?", (_now(),))
-        # 2) find oldest queued for any of this seat's targets
+        # 2) find queued for any of this seat's targets
         ph = ",".join("?" for _ in targets)
         params = list(targets)
         sql = (f"SELECT msg_id FROM seat_mailbox WHERE status='queued' AND to_seat IN ({ph})")
@@ -242,7 +247,11 @@ def mailbox_fetch():
         sql += _nf; params += _np
         if block:
             sql += " AND block_id=?"; params.append(block)
-        sql += " ORDER BY created_at ASC LIMIT 1"
+        if reply_to:
+            sql += " AND reply_to=?"; params.append(reply_to)
+        # correlated/newest fetch drains newest-first; default task-claim stays oldest-first (FIFO fairness)
+        sql += (" ORDER BY created_at DESC LIMIT 1" if (reply_to or newest)
+                else " ORDER BY created_at ASC LIMIT 1")
         row = c.execute(sql, params).fetchone()
         if not row:
             c.execute("COMMIT"); c.close()
@@ -345,6 +354,46 @@ def mailbox_peek():
         cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","body","status","created_at","claimed_by","lease_until","done_at"]
         return jsonify({"ok": True, "count": len(rows), "messages": [dict(zip(cols, r)) for r in rows]})
     except Exception as e:
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+@seat_mailbox_bp.route("/op/mailbox_purge", methods=["POST"])
+def mailbox_purge():
+    """Bulk-clear messages for a seat to stop result backlog from jamming the
+    queue. By default purges only consumed/old RESULT and NOTE messages addressed
+    to the seat (never queued tasks/proposals/reviews). Pass kinds=[...] to scope,
+    older_than_secs to keep recent ones, or all=true to clear everything for the
+    seat. Returns the count removed."""
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    seat = (b.get("seat") or "").strip()
+    if not seat:
+        return jsonify({"error": "seat required"}), 400
+    purge_all = bool(b.get("all"))
+    kinds = b.get("kinds") or (None if purge_all else ["result", "note"])
+    older = b.get("older_than_secs")
+    where = ["to_seat=?"]; params = [seat]
+    if kinds:
+        ph = ",".join("?" for _ in kinds)
+        where.append(f"kind IN ({ph})"); params += list(kinds)
+    if older is not None:
+        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=int(older))).isoformat()
+        where.append("created_at < ?"); params.append(cutoff)
+    sql = "DELETE FROM seat_mailbox WHERE " + " AND ".join(where)
+    op_id = _ledger("mailbox_purge", None, begin=True, args={"seat": seat, "kinds": kinds, "all": purge_all})
+    try:
+        c = _mb_conn()
+        c.execute("BEGIN IMMEDIATE")
+        cur = c.execute(sql, params)
+        n = cur.rowcount
+        c.execute("COMMIT"); c.close()
+        _ledger("mailbox_purge", "ok", op_id=op_id, result=str(n))
+        return jsonify({"ok": True, "purged": n, "seat": seat})
+    except Exception as e:
+        try: c.execute("ROLLBACK"); c.close()
+        except Exception: pass
+        _ledger("mailbox_purge", "fail", op_id=op_id, result=str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500
 
 
