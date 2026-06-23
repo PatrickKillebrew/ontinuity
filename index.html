@@ -836,13 +836,13 @@ footer {
 </span></span><span class="wordmark"><span class="o">O</span>ntinuity</span>
     </a>
     <ul class="nav-links">
-      <li><a href="#problems">What It Is</a></li>
-      <li><a href="#try">Try It</a></li>
-      <li><a href="#architecture">Architecture</a></li>
-      <li><a href="#corpus">Research</a></li>
-      <li><a href="#contribute">Contribute</a></li>
-      <li><a href="/papers.html">Papers</a></li>
-      <li><a href="/intake.html">Problem Discovery</a></li>
+      <li><a href="#problems">The Bet</a></li>
+      <li><a href="#results">The Evidence</a></li>
+      <li><a href="#architecture">How It Works</a></li>
+      <li><a href="#tool">The Tool</a></li>
+      <li><a href="/corpus.html">Corpus</a></li>
+      <li><a href="#contribute">Access</a></li>
+      <li><a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">GitHub</a></li>
     </ul>
   </div>
 </nav>
@@ -851,35 +851,16 @@ footer {
 <div id="hero">
   <div class="hero-grid">
     <div class="hero-copy">
-  <div class="hero-mono">Open Source · April 2026 · Deployed &amp; Running</div>
+  <div class="hero-mono">Verification-first AI · Open source · Live</div>
   <p class="hero-statement">
-    AI models forget everything when the session ends, confirm each other's errors when they talk, and can't be trusted to do what they claim.
-    The reliability problem in AI isn't about smarter models.
+    The field is racing to make a single AI model trustworthy enough to act on its own.
+    Ontinuity takes the opposite bet: that no model should ever be the thing you trust.
   </p>
-  <div class="hero-punch">It's about better architecture.</div>
-  <p class="hero-tagline">Ontinuity is that architecture. Four cooperating models. Persistent memory. Autonomous adversarial sessions. Deployed and running right now.</p>
+  <div class="hero-punch">Reliability belongs in the architecture, not the model.</div>
+  <p class="hero-tagline">A team of AI seats, held to a contract fixed before the work begins, by a gate that won't let anything ship until a second, independent seat signs off &mdash; with every step folded into an auditable record. Reliable output from interchangeable, often inexpensive, models. Because the reliability was never in the models.</p>
   <div class="hero-actions">
-    <span class="btn-gold" style="opacity:0.5;cursor:not-allowed;pointer-events:none;" aria-disabled="true">&#9654; Begin Session</span>
+    <a href="/corpus.html" class="btn-gold">Read the corpus &rarr;</a>
     <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#8997; GitHub</a>
-    <span style="display:block;width:100%;margin-top:14px;font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:0.04em;color:var(--gold);opacity:0.8;">Coming soon &mdash; hosted sessions are being prepared.</span>
-  </div>
-  <div class="hero-metrics">
-    <div class="metric">
-      <div class="metric-val">Apr 18</div>
-      <div class="metric-label">First Autonomous Session</div>
-    </div>
-    <div class="metric">
-      <div class="metric-val">15</div>
-      <div class="metric-label">Cycles · No Operator Content</div>
-    </div>
-    <div class="metric">
-      <div class="metric-val">0</div>
-      <div class="metric-label">Errors · Clean Run</div>
-    </div>
-    <div class="metric">
-      <div class="metric-val">Open</div>
-      <div class="metric-label">Source · MIT License</div>
-    </div>
   </div>
     </div>
     <div class="hero-markbox" aria-hidden="true">
@@ -919,169 +900,109 @@ footer {
 </div>
 
 
-<!-- PROBLEMS -->
+<!-- THE BET -->
 <div class="section-wrap" id="problems">
   <div class="wrap">
-    <div class="tag">The Three Problems</div>
-    <h2 class="section-h">What Ontinuity Solves</h2>
-    <p class="section-sub">Three compounding problems make sustained AI-assisted research unreliable. Ontinuity addresses all three simultaneously through architecture, not guardrails.</p>
+    <div class="tag">The Bet</div>
+    <h2 class="section-h">Reliability belongs in the architecture, not the model</h2>
+    <p class="section-sub">The field is racing to make a single AI model capable and aligned enough to be trusted to act on its own &mdash; and managing what it can't guarantee with guardrails and human oversight. Ontinuity takes the opposite bet: that no single model should ever be the thing you trust, and that reliability is therefore a property of the structure around the models, not of the models themselves.</p>
     <div class="problems reveal">
       <div class="prob-card">
-        <div class="prob-num">PROBLEM 01</div>
-        <div class="prob-title">It Forgets</div>
-        <p class="prob-body">Every session reset loses accumulated context. Decisions made, corrections established, working patterns developed — all gone. The next session starts cold. There is no accumulated difference.</p>
-        <div class="solve-tag">&#9672; Solved by Knowtext</div>
+        <div class="prob-num">THE FIELD</div>
+        <div class="prob-title">Trust the model</div>
+        <p class="prob-body">Bigger models, better alignment, longer context. When the agent is still unreliable, add a guardrail model or a human in the loop. Every safety mechanism lives inside the same system being checked &mdash; so a confidently wrong agent sails straight through.</p>
       </div>
       <div class="prob-card">
-        <div class="prob-num">PROBLEM 02</div>
-        <div class="prob-title">It Agrees With Itself</div>
-        <p class="prob-body">Two AI models in dialogue without structural constraints converge. Shared training priors amplify errors rather than correct them. Confident-sounding nonsense accumulates undetected.</p>
-        <div class="solve-tag">&#9672; Solved by Tetraform</div>
+        <div class="prob-num">ONTINUITY</div>
+        <div class="prob-title">Structure the boundary</div>
+        <p class="prob-body">Assume no model is trustworthy enough to be a decision gate. Build a team of seats that adversarially review each other, hold them to a contract fixed before the work, and forbid any seat from shipping its own output. Trust is produced by the structure, not placed in a part.</p>
       </div>
       <div class="prob-card">
-        <div class="prob-num">PROBLEM 03</div>
-        <div class="prob-title">It Can't Be Trusted</div>
-        <p class="prob-body">Current AI deployment is structurally opaque. Behavior is probabilistic. When a model fails, the failure is unlocatable. When it succeeds, the success is unreproducible. There is no structural reliability.</p>
-        <div class="solve-tag">&#9672; Solved by Artificialware</div>
+        <div class="prob-num">THE RESULT</div>
+        <div class="prob-title">Reliable from cheap parts</div>
+        <p class="prob-body">Because reliability comes from the harness, the model in the seat can be swapped, downgraded, or made inexpensive without losing it. Reliable output from interchangeable, often open-weight, models &mdash; because the reliability was never in the models.</p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- RESULTS -->
+<!-- THE EVIDENCE -->
 <div class="section-wrap dark" id="results">
   <div class="wrap">
-    <div class="live"><span class="live-dot"></span>Live Results · April 18, 2026</div>
-    <div class="tag">Empirical Validation</div>
-    <h2 class="section-h">The First Autonomous Session</h2>
-    <p class="section-sub">On April 18, 2026, Ontinuity ran a 15-cycle autonomous research session and produced a citable empirical work product without operator content generation.</p>
+    <div class="live"><span class="live-dot"></span>Live &middot; running now</div>
+    <div class="tag">The Evidence</div>
+    <h2 class="section-h">A gate that won't let bad work close</h2>
+    <p class="section-sub">The core mechanism: a contract is fixed before a session runs, and a gate refuses to let the session close until the output matches it &mdash; indifferent to which model produced the work. This is measured, not asserted.</p>
     <div class="results-grid reveal">
       <div class="r-block featured">
-        <div class="r-label">Friction Signal Behavioral Effect</div>
-        <div class="r-big">Apr 18, 2026</div>
-        <p class="r-desc">First fully autonomous 15-cycle research session. Produced a citable work product without operator content generation. Parietal adjudicated nine challenge events autonomously. Zero errors.</p>
+        <div class="r-label">The Behavioral Record</div>
+        <div class="r-big">319 sessions</div>
+        <p class="r-desc">The working seat held by five different models &mdash; most often an inexpensive open-weight one &mdash; with per-cycle measurement and a randomized-signal control that distinguishes a genuine adversarial response from the mere appearance of one. The reliability holds across the model swaps. That is the whole claim, measured.</p>
       </div>
       <div class="r-block">
-        <div class="r-label">Session Record</div>
+        <div class="r-label">The Gate in Close-Up</div>
         <ul class="r-list">
-          <li><span class="k">15 cycles</span><span class="v">full autonomous run to SESSION_END</span></li>
-          <li><span class="k">9 challenges</span><span class="v">all adjudicated by Parietal autonomously</span></li>
-          <li><span class="k">2 REJECTs</span><span class="v">Parietal identified insufficiently-grounded challenges</span></li>
-          <li><span class="k">d &gt; 0.73</span><span class="v">all signal comparisons exceeded adjusted threshold</span></li>
-          <li><span class="k">p &lt; 0.05</span><span class="v">Bonferroni correction across six measures</span></li>
-          <li><span class="k">0 errors</span><span class="v">clean run, GitHub persistence confirmed</span></li>
+          <li><span class="k">3 refusals</span><span class="v">one documented session, a three-criterion contract</span></li>
+          <li><span class="k">&rarr;</span><span class="v">forced a paraphrase up to a real quotation</span></li>
+          <li><span class="k">&rarr;</span><span class="v">forced an inference up to a cited mechanism</span></li>
+          <li><span class="k">&rarr;</span><span class="v">forced a description up to an applicable edit</span></li>
+          <li><span class="k">then</span><span class="v">accepted the consolidated deliverable</span></li>
         </ul>
       </div>
       <div class="r-block">
-        <div class="r-label">Behavioral Dimensions Measured</div>
-        <ul class="r-list">
-          <li><span class="k">Certainty</span><span class="v">hedge frequency per exchange</span></li>
-          <li><span class="k">Evidence</span><span class="v">citation ratio per substantive claim</span></li>
-          <li><span class="k">Challenge</span><span class="v">acknowledgment ratio to challenges</span></li>
-          <li><span class="k">Consensus</span><span class="v">collaborative language frequency</span></li>
-          <li><span class="k">Exploration</span><span class="v">novel vs. familiar information seeking</span></li>
-          <li><span class="k">Abstraction</span><span class="v">conceptual vs. concrete language density</span></li>
-        </ul>
+        <div class="r-label">Separation of Duties</div>
+        <p class="r-desc">The seat that deploys is structurally forbidden from being the seat that authored the deployed bytes. A different seat must review and sign off; a self-deploy writes a violation row. No single judgment &mdash; however confident &mdash; ships unchecked.</p>
       </div>
       <div class="r-block featured">
-        <div class="r-label">Key Finding</div>
-        <div class="r-big" style="font-size:32px;margin-bottom:14px;">Sigmoid,<br>Not Linear</div>
-        <p class="r-desc">Low signals (1–3) produce high behavioral variance and increased exploration. High signals (7–9) produce strong constraint with saturation effects. Non-linear — and predictable.</p>
+        <div class="r-label">Caught In The Act</div>
+        <div class="r-big" style="font-size:30px;margin-bottom:14px;">Fabrication,<br>on the record</div>
+        <p class="r-desc">Because every action is logged to an append-only ledger, a seat's claim to have done work can be checked against what was actually done. There is a documented case of the gate catching a model asserting a result the record did not support &mdash; and refusing to close until it was grounded.</p>
       </div>
     </div>
   </div>
 </div>
 
-<!-- TRY IT -->
-<div class="section-wrap" id="try">
+<!-- HOW IT WORKS -->
+<div class="section-wrap" id="architecture">
   <div class="wrap">
-    <div class="tag">Get Started</div>
-    <h2 class="section-h">Bring a Question Nobody Has Answered</h2>
-    <div class="try-hero reveal">
-      <div class="try-h">Ontinuity is fully model-agnostic. Any model goes in any slot.</div>
-      <p class="try-body">For best results, put your strongest frontier models in the Researcher and Parietal slots. For the Challenger, Friction, and Distillation roles, model divergence matters more than raw capability — a model from a different training distribution produces more genuine adversarial pressure. Cerebras gives you fast, reliable, low-cost API access for these three supporting roles.</p>
-    </div>
-    <div class="warn reveal">
-      <strong>&#9888; Before you begin:</strong> Free tier APIs from other providers will interrupt your session without warning. We have tested them. They go down without notice. Invest in API credits before you start. A session that completes is worth more than one that almost worked.
-    </div>
-    <div class="tag" style="margin-bottom:14px;">Recommended Configuration</div>
-    <div class="config-row reveal">
-      <div class="config-slot">
-        <div class="slot-name">Researcher</div>
-        <div class="slot-val">Any Major<br>Frontier Model</div>
-        <div class="slot-note">Primary analytical work</div>
-      </div>
-      <div class="config-slot">
-        <div class="slot-name">Challenger</div>
-        <div class="slot-val">Cerebras<br>Llama 3.1 8B</div>
-        <div class="slot-note accent">Fast · Reliable · Cheap</div>
-      </div>
-      <div class="config-slot">
-        <div class="slot-name">Friction</div>
-        <div class="slot-val">Cerebras<br>Llama 3.1 8B</div>
-        <div class="slot-note accent">Fast · Reliable · Cheap</div>
-      </div>
-      <div class="config-slot">
-        <div class="slot-name">Parietal</div>
-        <div class="slot-val">Any Major<br>Frontier Model</div>
-        <div class="slot-note">Navigator · Adjudicator</div>
-      </div>
-      <div class="config-slot">
-        <div class="slot-name">Distillation</div>
-        <div class="slot-val">Cerebras<br>Llama 3.1 8B</div>
-        <div class="slot-note accent">Fast · Reliable · Cheap</div>
-      </div>
-    </div>
-    <div class="cost-bar reveal">
-      <span class="amt">~$20</span>
-      <span>for your first serious session — $10 Cerebras Developer plan + ~$10 frontier model API usage for a full 15-cycle run. Ontinuity itself is free.</span>
-    </div>
-    <div class="tag" style="margin-bottom:12px;">Get Your API Keys</div>
-    <div class="providers reveal">
-      <a href="https://console.anthropic.com" target="_blank" class="prov-link"><span class="prov-dot"></span>Anthropic API</a>
-      <a href="https://aistudio.google.com" target="_blank" class="prov-link"><span class="prov-dot"></span>Google AI Studio</a>
-      <a href="https://platform.openai.com" target="_blank" class="prov-link"><span class="prov-dot"></span>OpenAI Platform</a>
-      <a href="https://inference.cerebras.ai" target="_blank" class="prov-link"><span class="prov-dot"></span>Cerebras (Recommended)</a>
-    </div>
-    <div class="cta-center reveal">
-      <span class="btn-gold" style="padding:15px 44px;font-size:12px;opacity:0.5;cursor:not-allowed;pointer-events:none;" aria-disabled="true">&#9654; &nbsp;Begin Session</span>
-      <p class="cta-label" style="color:var(--gold);opacity:0.8;">Coming soon &mdash; hosted sessions are being prepared. Check back shortly.</p>
-    </div>
-    <div class="consent reveal">
-      <input type="checkbox" id="consent">
-      <label for="consent">Allow session data to be used anonymously for AI behavioral research. No personal information is collected — session content and model outputs only. Contributes to the <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">Psychology of AI Data</a> research program. Unchecked by default.</label>
-    </div>
-  </div>
-</div>
-
-<!-- ARCHITECTURE -->
-<div class="section-wrap dark" id="architecture">
-  <div class="wrap">
-    <div class="tag">The Architecture</div>
-    <h2 class="section-h">How It Works</h2>
-    <p class="section-sub">Three interlocking components that solve each other's limitations. The whole is more reliable than any part alone.</p>
+    <div class="tag">How It Works</div>
+    <h2 class="section-h">One architecture, instantiated twice</h2>
+    <p class="section-sub">The same verification-first design runs at two layers: a session engine that produces verified deliverables, and an engineering team of seats that builds and runs that engine. Both governed by the same gate, contract, and grounding discipline &mdash; which is why the system can be said to be built the way it works.</p>
     <div class="arch-grid reveal">
       <div class="arch-card">
         <div class="arch-num">01</div>
-        <div class="arch-name">Tetraform</div>
-        <div class="arch-role">Process Layer</div>
-        <p class="arch-desc">A four-model protocol separating content from metadata at the channel level. The Researcher works. The Challenger reviews adversarially from a different training distribution. The Friction model outputs an ambient signal (0–4) encoding session health — without entering the conversation. The Parietal navigates, adjudicates forks autonomously, and distills outputs into memory.</p>
-        <div class="arch-insight">The friction signal communicates through the environment rather than through the conversation. Resistance without noise.</div>
+        <div class="arch-name">The Seats</div>
+        <div class="arch-role">A team, not an agent</div>
+        <p class="arch-desc">Peer model instances that build and adversarially review each other's work. The reviewer is always a different seat than the author, structurally forbidden from rubber-stamping. The unit of cognition is a team with a chain of custody &mdash; not one agent with a self-critic whose blind spots are correlated with its own.</p>
+        <div class="arch-insight">A model reviewing its own output shares the framing that produced the error. A genuinely separate seat does not.</div>
       </div>
       <div class="arch-card">
         <div class="arch-num">02</div>
-        <div class="arch-name">Knowtext</div>
-        <div class="arch-role">Memory Layer</div>
-        <p class="arch-desc">A structured memory schema capturing established results, open questions, correction history, and valence mapping in plain-text portable format. Survives session resets, platform switches, and model changes. Persisted to GitHub after every session. The next session starts where the last one ended.</p>
-        <div class="arch-insight">Correction history is the safety-relevant field. It prevents the system from repeating errors already caught.</div>
+        <div class="arch-name">The Gate &amp; Contract</div>
+        <div class="arch-role">Reliability boundary</div>
+        <p class="arch-desc">A contract fixes the criteria before the work begins, so it can't be quietly relaxed to fit whatever the model produced. The gate refuses to let the session close until the output meets it, and forbids the author of the bytes from being the one who deploys them. Separation of powers, applied to AI.</p>
+        <div class="arch-insight">Trust is not placed in any seat. It is produced by forcing two independent seats to agree before anything changes.</div>
       </div>
       <div class="arch-card">
         <div class="arch-num">03</div>
-        <div class="arch-name">Artificialware</div>
-        <div class="arch-role">Reliability Architecture</div>
-        <p class="arch-desc">A new class of AI deployment in which model cognition is structured as explicitly callable, tag-activated functions within a coherent unified orientation. The Parietal is the first production implementation: four functions, one model, one coherent consciousness. Its available behaviors are enumerated. Its failures are locatable.</p>
-        <div class="arch-insight">Promptgramming gives deployments structure. Constitutional AI gives models values. They are complementary.</div>
+        <div class="arch-name">The Corpus</div>
+        <div class="arch-role">Auditable memory</div>
+        <p class="arch-desc">Every action folds into an append-only record keyed on shared identifiers, so any decision can be walked from conversation to commit to receipt and back. Privileged actions run through a small set of named, bounded, logged operations &mdash; never a general shell. A fresh seat boots by reading the record and inherits the whole system.</p>
+        <div class="arch-insight">Least privilege and a tamper-evident trail &mdash; built as the substrate the system runs on, not bolted on for compliance.</div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- THE TOOL -->
+<div class="section-wrap dark" id="tool">
+  <div class="wrap">
+    <div class="tag">The Principle, Shipped</div>
+    <h2 class="section-h">The Boundary De-Identifier</h2>
+    <p class="section-sub">The same idea applied to a single urgent problem: making regulated data safe to work with by ensuring identity never crosses the line.</p>
+    <div class="try-hero reveal">
+      <div class="try-h">Don't trust the component. Structure the boundary so the sensitive thing cannot leak.</div>
+      <p class="try-body">A regulated home-care agency can use an AI-assisted scheduling tool on its caregiver and client data without any private information ever leaving its own computer. The data is de-identified at the boundary &mdash; on the operator's machine, before a single field crosses &mdash; and an independent verifier re-scans the output for any residual identifier before it is trusted. The service operates entirely in token-space. There is nothing on the service side to breach, because the identifying data was never there. Built and tested; the first shipped instance of this architecture in a regulated domain.</p>
     </div>
   </div>
 </div>
@@ -1090,42 +1011,11 @@ footer {
 <div class="section-wrap" id="vision">
   <div class="wrap">
     <div class="tag">Where This Goes</div>
-    <h2 class="section-h">Dynacology</h2>
+    <h2 class="section-h">A bounded future, built on purpose</h2>
     <blockquote class="vision-quote reveal">
-      "With dedicated compute, <em>Ontinuity builds its own successor while its builder sleeps.</em> The ecology assembles itself from a registry of specialist artificialware, executes the work, and dissolves when complete."
+      "Some predict that a future in which AI dominates will be a dark one. The disagreement is this: if the foundational architecture is built correctly now &mdash; verifiable, bounded, accountable &mdash; the future stops being a wildcard. It becomes a <em>leashed and bounded</em> one."
     </blockquote>
-    <p class="vision-body reveal">Ontinuity is a fixed ecology — the existence proof. Dynacology is the generalization: a controller model that reads any problem, assembles the right specialist models from a registry, and dissolves the configuration when the problem is resolved. No fixed architecture. No predetermined configuration. Ephemeral software that exists precisely as long as the work requires.</p>
-    <div class="tag" style="margin-bottom:20px;">Open Research Questions</div>
-    <div class="agenda reveal">
-      <div class="agenda-item">
-        <div class="ag-num">01</div>
-        <div>
-          <div class="ag-title">Coherence Ceiling Mapping</div>
-          <p class="ag-desc">How many promptgrammed functions can a single model execute while maintaining unified coherent orientation? Does this vary by architecture and scale?</p>
-        </div>
-      </div>
-      <div class="agenda-item">
-        <div class="ag-num">02</div>
-        <div>
-          <div class="ag-title">Cross-Architecture Replication</div>
-          <p class="ag-desc">The sigmoid behavioral finding was produced with one Researcher model. Replication across different frontier models is required to establish whether the effect is model-general.</p>
-        </div>
-      </div>
-      <div class="agenda-item">
-        <div class="ag-num">03</div>
-        <div>
-          <div class="ag-title">Fine-Tuning for Promptgrammed Execution</div>
-          <p class="ag-desc">A model fine-tuned for tag-activated function execution should exhibit more reliable structured outputs than a prompted model. The primary fine-tuning experiment.</p>
-        </div>
-      </div>
-      <div class="agenda-item">
-        <div class="ag-num">04</div>
-        <div>
-          <div class="ag-title">Minimum Viable Dynacology</div>
-          <p class="ag-desc">One controller, one specialist, one registry entry. Validate the compositional architecture at minimum viable scale before adding complexity.</p>
-        </div>
-      </div>
-    </div>
+    <p class="vision-body reveal">The wager underneath Ontinuity is that the most important thing to get right about autonomous AI is not capability but accountability &mdash; and that the window to set that pattern is open now, while the systems are still small enough to shape. A verification-first architecture is a small demonstration of a large claim: that we can have autonomous systems that are trustworthy not because we believe the model, but because the structure around it makes every action checkable, reversible, and on the record.</p>
   </div>
 </div>
 
@@ -1133,76 +1023,37 @@ footer {
 <div class="section-wrap dark" id="corpus">
   <div class="wrap">
     <div class="tag">Research Corpus</div>
-    <h2 class="section-h">Six Papers</h2>
-    <p class="section-sub">The complete theoretical and empirical foundation. Every paper was produced by or validated through the system it describes.</p>
-    <div class="corpus-grid reveal">
-      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
-        <div class="paper-ver">v1.0</div>
-        <div>
-          <div class="paper-title">Tetraform: A Four-Model AI Collaboration Framework</div>
-          <p class="paper-desc">Platform-agnostic specification. Includes empirical validation from the April 18, 2026 autonomous session.</p>
-        </div>
-      </a>
-      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
-        <div class="paper-ver">v0.1</div>
-        <div>
-          <div class="paper-title">Artificialware: Toward Reliable Executable Cognition</div>
-          <p class="paper-desc">Introduces promptgramming as methodology, the cognitive qubit as theoretical unit, and Ontinuity as existence proof.</p>
-        </div>
-      </a>
-      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
-        <div class="paper-ver">v0.1</div>
-        <div>
-          <div class="paper-title">Dynacology: Dynamic Ecology as Cognitive Infrastructure</div>
-          <p class="paper-desc">The generalization of Ontinuity. Controller models, specialist registries, ephemeral purpose-built ecologies.</p>
-        </div>
-      </a>
-      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
-        <div class="paper-ver">v0.3</div>
-        <div>
-          <div class="paper-title">Psychology of AI Data</div>
-          <p class="paper-desc">Behavioral analysis framework for Tetraform sessions. Section 9 contains first empirical validation of the ambient signal effect.</p>
-        </div>
-      </a>
-      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
-        <div class="paper-ver">v1.0</div>
-        <div>
-          <div class="paper-title">Adversarial Development Produces Higher-Epistemic-Quality Research</div>
-          <p class="paper-desc">Documents the Signal 0 / true control correction — a structural flaw single-model generation would not have caught.</p>
-        </div>
-      </a>
-      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="paper">
-        <div class="paper-ver">v1.1</div>
-        <div>
-          <div class="paper-title">Knowtext: Persistent Memory Schema</div>
-          <p class="paper-desc">Full specification for the memory layer. Seven-field schema, extraction protocol, and the philosophy of accumulated difference.</p>
-        </div>
-      </a>
+    <h2 class="section-h">Nine papers, one argument</h2>
+    <p class="section-sub">The theoretical and empirical foundation &mdash; the conceptual ground the working system was built from. Read straight through, or start with whichever thesis pulls you.</p>
+    <div class="cta-center reveal" style="margin:30px 0;">
+      <a href="/corpus.html" class="btn-gold" style="padding:15px 44px;">Read the corpus &rarr;</a>
+      <p class="cta-label">A tiered reading guide &mdash; foundation, implementation, synthesis, evidence.</p>
     </div>
+    <p class="section-sub" style="opacity:0.7;font-size:14px;">These papers document the architecture's foundation. The system has since matured into the gate-and-contract design described above &mdash; the current research notes track what runs now.</p>
   </div>
 </div>
 
-<!-- CONTRIBUTE -->
+<!-- ENGAGE -->
 <div class="section-wrap" id="contribute">
   <div class="wrap">
-    <div class="tag">Get Involved</div>
-    <h2 class="section-h">Contribute to the Research</h2>
-    <p class="section-sub">Ontinuity is open-source and the research questions are open. The correction history is public. The architecture is forkable. The system is running.</p>
+    <div class="tag">Access</div>
+    <h2 class="section-h">Service now, product later</h2>
+    <p class="section-sub">The engine is real and runs. Access today is through direct engagement, not self-serve &mdash; the work is delivered as verified output, not a tool you configure. Hosted self-serve sessions are on the roadmap.</p>
     <div class="contrib-grid reveal">
       <div class="contrib-card">
-        <div class="contrib-h">Code &amp; Architecture</div>
-        <p class="contrib-body">The system is deployed and functional. The open questions — branch tracking, coherence ceiling, adjudicator bias calibration — are real engineering problems waiting for contributors. Full implementation in the GitHub repo.</p>
+        <div class="contrib-h">The System</div>
+        <p class="contrib-body">Open-source and forkable. The architecture, the corpus, and the operating record are public. The open questions &mdash; long-horizon autonomy, coherence ceilings, per-identity authentication &mdash; are real engineering problems.</p>
         <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#8997; GitHub Repository</a>
       </div>
       <div class="contrib-card">
-        <div class="contrib-h">Support the Research</div>
-        <p class="contrib-body">The primary resource constraint is compute. Dedicated API access enables cross-architecture replication of the sigmoid finding, the fine-tuning experiment, long-horizon autonomous sessions, and coherence ceiling characterization.</p>
-        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#9672; GitHub Sponsors</a>
+        <div class="contrib-h">Engagement</div>
+        <p class="contrib-body">For research collaboration, regulated-data use cases, or serious technical engagement &mdash; the de-identification work and the verification engine are available through direct conversation.</p>
+        <a href="mailto:contact@ontinuity.org" class="btn-outline">&#9672; Get in touch</a>
       </div>
     </div>
     <div class="contact-bar reveal">
       <div class="label">Contact</div>
-      <p>For research collaboration, fellowship inquiries, or serious technical engagement: <a href="mailto:contact@ontinuity.org">contact@ontinuity.org</a></p>
+      <p>For collaboration or serious technical engagement: <a href="mailto:contact@ontinuity.org">contact@ontinuity.org</a></p>
     </div>
   </div>
 </div>
@@ -1228,7 +1079,7 @@ footer {
   <div class="footer-links">
     <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">GitHub</a>
     <span style="opacity:0.5;cursor:not-allowed;" aria-disabled="true">Live System (coming soon)</span>
-    <a href="#corpus">Research</a>
+    <a href="/corpus.html">The Corpus</a>
     <a href="/intake.html">Problem Discovery</a>
     <a href="mailto:contact@ontinuity.org">Contact</a>
   </div>
