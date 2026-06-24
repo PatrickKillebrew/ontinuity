@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reliability Without Trust — Ontinuity</title>
+<meta name="description" content="Why the future of AI is orchestration, not omniscience. A structured arrangement of specialized models, each in the role where its tendencies are assets — the intelligence is in the architecture that binds them.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+
+:root{
+  --gold:#c9a84c; --gold-bright:#d9b85c; --gold-dim:#7a6530; --gold-deep:#3d2e0a;
+  --gold-glow:rgba(201,168,76,0.18);
+  --bg:#090909; --bg-raised:#0f0f0f; --bg-card:#121212; --bg-card-hover:#161616;
+  --text:#EFEFEF; --text-dim:#8A8A8A; --text-muted:#4A4A4A;
+  --border:rgba(201,168,76,0.18); --border-subtle:rgba(255,255,255,0.07);
+  --refuse:#8A8A8A; --accept:var(--gold-bright);
+  --max-w:1000px; --read-w:720px; --pad:48px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:16px;line-height:1.7;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:gridDrift 80s linear infinite}
+.wrap{position:relative;z-index:1;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad)}
+.read{max-width:var(--read-w);margin:0 auto}
+@media (max-width:640px){:root{--pad:20px}}
+
+/* nav */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(9,9,9,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-subtle)}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);height:56px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:'Orbitron',monospace;font-size:clamp(13px,1.6vw,17px);font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:.04em;white-space:nowrap;display:flex;align-items:center;gap:9px}
+.nav-logo .o{color:var(--text-muted)}
+.wordmark{display:inline}
+.wordmark .o{color:var(--text-muted)}
+.nav-logo svg{flex-shrink:0}
+.nav-links{display:flex;gap:28px;list-style:none}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;letter-spacing:.08em;text-transform:uppercase;transition:color .2s}
+.nav-links a:hover{color:var(--gold)}
+@media (max-width:640px){.nav-links{display:none}}
+
+/* reveal */
+@media (prefers-reduced-motion:no-preference){
+  .rv{opacity:0;transform:translateY(12px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .d1{animation-delay:.08s}.d2{animation-delay:.16s}.d3{animation-delay:.24s}.d4{animation-delay:.34s}.d5{animation-delay:.44s}.d6{animation-delay:.56s}
+  @keyframes rise{to{opacity:1;transform:none}}
+}
+
+/* hero */
+header.hero{padding:140px 0 56px}
+.eyebrow{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:26px}
+h1{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(30px,5.4vw,50px);line-height:1.08;letter-spacing:-.01em;color:var(--text);margin-bottom:22px}
+h1 .em{color:var(--gold)}
+.dek{font-size:clamp(17px,2.3vw,21px);line-height:1.5;color:var(--text-dim);max-width:46ch;font-weight:300}
+.dek em{color:var(--text);font-style:italic}
+
+/* gate spine — signature */
+.gate{padding:24px 0 8px}
+.gate .lead{font-family:'IBM Plex Mono',monospace;font-size:12.5px;letter-spacing:.05em;color:var(--text-muted);text-transform:uppercase;margin-bottom:22px}
+.step{display:grid;grid-template-columns:118px 1fr;gap:20px;align-items:start;padding:20px 0;border-top:1px solid var(--border-subtle)}
+.verdict{font-family:'Orbitron',monospace;font-weight:700;font-size:13px;letter-spacing:.08em;padding-top:3px}
+.verdict.r{color:var(--refuse)}
+.verdict.a{color:var(--accept);text-shadow:0 0 22px var(--gold-glow)}
+.step .what{margin:0;font-size:16px;line-height:1.55}
+.step .what b{font-weight:600;color:var(--text)}
+.step .forced{display:block;font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold-dim);margin-top:8px}
+.step .forced .arrow{color:var(--text-muted);padding:0 .4em}
+.step.close{border-top:1px solid var(--gold-dim);background:linear-gradient(90deg,rgba(201,168,76,0.05),transparent);margin-top:2px}
+.gate .foot{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);line-height:1.7;margin-top:22px;border-top:1px solid var(--border-subtle);padding-top:20px}
+
+/* toc */
+.toc{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+.toc a{font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.04em;text-decoration:none;color:var(--gold);border:1px solid var(--border);padding:9px 15px;border-radius:3px;transition:background .2s,border-color .2s}
+.toc a:hover{background:rgba(201,168,76,0.06);border-color:var(--gold)}
+
+/* papers */
+.paper{padding:72px 0;border-top:1px solid var(--border-subtle)}
+.paper-eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim);margin-bottom:16px}
+h2{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(23px,3.6vw,33px);line-height:1.12;letter-spacing:-.01em;color:var(--text);margin-bottom:12px}
+.paper-sub{font-size:18px;color:var(--gold);font-style:italic;line-height:1.45;margin-bottom:8px;font-weight:300}
+.paper-meta{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);letter-spacing:.02em;margin-bottom:44px}
+h3{font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:46px 0 16px}
+.paper p{margin-bottom:18px;color:var(--text-dim)}
+.paper p.lede{font-size:18px;color:var(--text);font-weight:300;line-height:1.6}
+.paper strong{color:var(--text);font-weight:600}
+.paper em{font-style:italic;color:var(--text)}
+
+table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:14px}
+caption{caption-side:bottom;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);text-align:left;padding-top:12px;letter-spacing:.02em}
+thead th{font-family:'IBM Plex Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--gold-dim)}
+thead th.num,td.num{text-align:right;font-variant-numeric:tabular-nums;font-family:'IBM Plex Mono',monospace}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--border-subtle);color:var(--text-dim)}
+tbody td:first-child{color:var(--text)}
+tbody tr:hover td{background:rgba(201,168,76,0.03)}
+
+.limits{background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:30px 30px 14px;margin:32px 0}
+.limits h3{margin-top:0}
+
+footer{position:relative;z-index:1;border-top:1px solid var(--border-subtle);margin-top:24px}
+.footer-inner{padding:48px var(--pad);max-width:var(--max-w);margin:0 auto;display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:24px}
+.footer-logo{font-family:'Orbitron',monospace;font-size:16px;font-weight:700;color:var(--gold);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.footer-meta{font-size:12px;color:var(--text-muted);line-height:1.8}
+.footer-meta a{color:var(--text-dim);text-decoration:none}
+.footer-meta a:hover{color:var(--gold)}
+.footer-links{display:flex;gap:20px;flex-wrap:wrap}
+.footer-links a{font-size:11px;color:var(--text-muted);text-decoration:none;letter-spacing:.1em;text-transform:uppercase;transition:color .2s}
+.footer-links a:hover{color:var(--gold)}
+
+/* ── corpus-nav: the connective tissue that makes each paper part of a whole ── */
+.corpus-strip{border-top:1px solid var(--border-subtle);border-bottom:1px solid var(--border-subtle);background:var(--bg-raised);margin-top:8px}
+.corpus-strip .wrap{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:18px;padding-bottom:18px;flex-wrap:wrap}
+.corpus-tag{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold-dim)}
+.corpus-tag a{color:var(--gold);text-decoration:none;border-bottom:1px solid var(--border)}
+.corpus-tag a:hover{color:var(--gold-bright)}
+.corpus-move{display:flex;gap:22px;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.corpus-move a{color:var(--text-dim);text-decoration:none}
+.corpus-move a:hover{color:var(--gold)}
+.corpus-move .lbl{color:var(--text-muted);display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px}
+
+/* paper body niceties layered on the shared system */
+.paper h3{font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:15px;letter-spacing:.02em;color:var(--gold);margin:38px 0 12px;text-transform:none}
+.paper p{margin-bottom:18px;color:var(--text)}
+.paper .secnum{font-family:'IBM Plex Mono',monospace;color:var(--gold-dim);font-size:13px;margin-right:10px}
+.pull{border-left:2px solid var(--gold);padding:6px 0 6px 22px;margin:30px 0;color:var(--gold);font-style:italic;font-size:18px;font-weight:300;line-height:1.5}
+.reading-note{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-muted);letter-spacing:.02em;margin-top:10px}
+
+/* ── hero with living mark ── */
+.hero{position:relative;overflow:hidden}
+.hero .wrap.read{max-width:var(--read-w)}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1fr) clamp(240px,28vw,360px);gap:clamp(20px,3vw,48px);align-items:center;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad)}
+.hero-copy{min-width:0}
+.hero-copy .read{max-width:none;margin:0}
+.markbox{position:relative;width:100%;max-width:360px;aspect-ratio:1;justify-self:end}
+/* the lensed field + haze are SCOPED to .markbox, not fixed full-screen */
+.markbox .lenscanvas{position:absolute;top:50%;left:50%;width:780px;height:620px;transform:translate(-46%,-50%);z-index:0;pointer-events:none}
+.markbox .field svg{width:100%;height:100%}
+
+
+@keyframes breathe{0%,100%{opacity:.65}50%{opacity:1}}
+.markbox .scene{position:relative;z-index:2;width:83%;aspect-ratio:1;perspective:620px;margin:0 auto;top:50%;transform:translateY(-50%)}
+.markbox .spin3d{width:100%;height:100%;position:relative;transform-style:preserve-3d}
+.markbox .layer{position:absolute;inset:0;transform-style:preserve-3d}
+.markbox .layer svg{width:100%;height:100%;overflow:visible;position:absolute;inset:0}
+.markbox .outer{animation:spinY 46s linear infinite}
+.markbox .innerHex{animation:spinYrev 17s linear infinite}
+@keyframes spinY{to{transform:rotateY(360deg)}}
+@keyframes spinYrev{to{transform:rotateY(-360deg)}}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}.markbox{order:-1;width:280px;height:280px}.markbox .scene{width:240px;height:240px}}
+@media (prefers-reduced-motion:reduce){.outer,.innerHex,.haze2{animation:none}}
+
+@keyframes gridDrift{to{background-position:48px 48px}}
+
+/* ── tonal depth: layered slate planes instead of one flat black ── */
+:root{
+  --plane-header:#070708;     /* deepest — the header sits furthest back */
+  --plane-hero:#0f1113;       /* hero band lifted, faint cool slate */
+  --plane-strip:#0b0c0e;      /* corpus strip between */
+  --plane-body:#0c0d0f;       /* article body, a hair above pure black */
+}
+body{background:var(--plane-body)}
+nav{background:rgba(7,7,8,0.92)!important}
+.hero{background:linear-gradient(180deg, var(--plane-hero) 0%, var(--plane-body) 100%);position:relative;isolation:isolate}
+.hero::before{content:"";position:absolute;inset:0;background:var(--plane-hero);opacity:0.0;z-index:-1}
+.corpus-strip{background:var(--plane-strip)!important}
+.paper{background:var(--plane-body)}
+/* a faint cool vignette top to give the header plane separation */
+.hero::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(120% 80% at 50% -10%, rgba(120,140,170,0.05), transparent 60%)}
+
+
+/* ── natural warm glow: layered radial bloom that shifts hue + warmth as it falls off ── */
+
+
+
+
+/* ── ambient emission: centered on the logo, subtle, hue OFFSET from the logo gold so edges stay crisp ── */
+.markbox .haze{position:absolute;inset:-70% -55% -70% -55%;z-index:0;pointer-events:none;mix-blend-mode:screen;
+  background:
+    /* wide ambient field — deep bronze/amber, very faint, dissolves to nothing */
+    radial-gradient(50% 50% at 53% 49%,
+      rgba(150,108,52,0.075) 0%,
+      rgba(128,92,44,0.045) 34%,
+      rgba(96,68,34,0.018) 58%,
+      transparent 78%);
+}
+.markbox .haze2{position:absolute;inset:-46% -46% -46% -46%;z-index:0;pointer-events:none;mix-blend-mode:screen;
+  animation:breathe 8.5s ease-in-out infinite;
+  background:
+    /* inner emission body — warmer amber but NOT the logo's bright gold; soft, no white core */
+    radial-gradient(26% 25% at 53% 48%,
+      rgba(196,150,80,0.11) 0%,
+      rgba(170,128,66,0.06) 44%,
+      rgba(140,104,52,0.02) 68%,
+      transparent 84%);
+}
+@keyframes breathe{0%,100%{opacity:.7}50%{opacity:.92}}
+
+.gate-invariant{border-left:3px solid var(--gold);background:rgba(201,168,76,0.04);padding:18px 22px;margin:18px 0;font-size:17px;color:var(--text);font-style:normal;border-radius:0 6px 6px 0}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+        <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+        <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+        <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+      </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+    </a>
+    <ul class="nav-links">
+      <li><a href="/#problems">What It Is</a></li>
+      <li><a href="/#architecture">Architecture</a></li>
+      <li><a href="/papers.html">Research</a></li>
+      <li><a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <div class="read">
+        <p class="eyebrow rv">The Current System · June 2026</p>
+        <h1 class="rv d1">Reliability <span class="em">without trust</span>.</h1>
+        <p class="dek rv d2">The field is racing to make a single AI model trustworthy enough to act on its own. Ontinuity takes the opposite bet: that no model should ever be the thing you trust &mdash; and builds the reliability into the architecture around it instead. One design, running at two layers, <em>built the way it works</em>.</p>
+        <p class="reading-note rv d3">The synthesis &mdash; what runs today · the foundational corpus sits beneath it · ~18 min</p>
+      </div>
+    </div>
+    <div class="markbox rv d2" aria-hidden="true">
+      <canvas class="lenscanvas" aria-hidden="true"></canvas>
+      <div class="haze"></div>
+      <div class="haze2"></div>
+      <div class="scene">
+        <div class="spin3d">
+          <div class="layer outer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <defs>
+                <linearGradient id="shine" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="45%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <linearGradient id="shineSoft" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="55%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
+                <radialGradient id="coreg" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="100%" stop-color="var(--gold)"/></radialGradient>
+                <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              </defs>
+              <polygon points="100,16 173,58 173,142 100,184 27,142 27,58" fill="none" stroke="url(#shine)" stroke-width="2.4"/>
+              <polygon points="100,28 162,64 162,136 100,172 38,136 38,64" fill="none" stroke="url(#shineSoft)" stroke-width="1.1" opacity="0.7"/>
+            </svg>
+          </div>
+          <div class="layer innerHex">
+            <svg viewBox="0 0 200 200" fill="none">
+              <polygon points="100,52 145,78 145,122 100,148 55,122 55,78" fill="none" stroke="url(#shine)" stroke-width="1.4"/>
+              <polygon points="100,63 135,83 135,117 100,137 65,117 65,83" fill="none" stroke="url(#shineSoft)" stroke-width="0.9" opacity="0.65"/>
+            </svg>
+          </div>
+          <div class="layer">
+            <svg viewBox="0 0 200 200" fill="none">
+              <g id="feeders" filter="url(#glow)"></g>
+              <circle cx="100" cy="100" r="8.5" fill="url(#coreg)" filter="url(#glow)"><animate attributeName="r" values="7.5;9.5;7.5" dur="3.8s" repeatCount="indefinite"/></circle>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="corpus-strip">
+  <div class="wrap">
+    <span class="corpus-tag">Ontinuity · <a href="/">home</a> · the current-system synthesis</span>
+    <span class="corpus-move">
+      <a href="/corpus.html"><span class="lbl">Beneath this</span>The foundational corpus &rarr;</a>
+    </span>
+  </div>
+</div>
+
+<article class="paper" id="reliability">
+  <div class="wrap read">
+    <p class="paper-eyebrow">The Current System &middot; Synthesis</p>
+    <h2>Reliability Without Trust</h2>
+    <p class="paper-sub">A verification-first architecture for autonomous AI &mdash; instantiated twice, and built the way it works</p>
+    <p class="paper-meta">Ontinuity &middot; grounded from the live system &middot; June 2026</p>
+
+    <h3>Executive summary</h3>
+    <p>The dominant bet in AI right now is to make a single model capable and aligned enough to be trusted to act on its own, and to manage what it cannot guarantee with guardrails and human oversight. Ontinuity is built on the opposite bet: that <strong>no single model should ever be the thing you trust</strong>, and that reliability is therefore a property of the architecture surrounding the models, not of the models themselves.</p>
+    <p>That principle is realized as one architecture running at two layers. The first is a <strong>session engine</strong> that produces verified deliverables &mdash; a model seated in one role of an adversarial loop, held to a contract fixed before the work begins by a gate that refuses to let the session close until the output matches it. The second is an <strong>operations team</strong> of AI seats &mdash; separate working instances that build, review, and deploy in a chain where no seat ever ships its own unreviewed work &mdash; and <em>that team is what builds and runs the engine.</em> The same gate, the same contract discipline, the same grounding rule govern both. The engine produces deliverables; the team produces the engine.</p>
+    <p>The consequence is the strongest claim the system makes, and it is structural rather than rhetorical: <strong>the system is built the way the system works.</strong> A verification-first product was produced by a verification-first process. The proof that the architecture functions is not only a benchmark &mdash; it is that the architecture was used, end to end, to construct and maintain itself, under the same gate it imposes on its own output.</p>
+    <p>The reliability is indifferent to which model occupies a seat. Across a behavioral record of <strong>319 sessions</strong> the working seat has been held by <strong>5 different models, most often an inexpensive open-weight one</strong>, and the output quality holds &mdash; because it was never coming from the model. Three properties make this legible to anyone who evaluates systems for a living: <strong>separation of duties</strong> (the seat that deploys is structurally forbidden from being the seat that authored the deployed bytes), <strong>least privilege</strong> (privileged actions run through a small set of named, bounded, logged operations &mdash; never a general shell), and <strong>tamper-evident auditability</strong> (the entire operating history is an append-only record the system grounds from and checks its own claims against, including a documented case of the gate catching a model fabricating a result). These are normally the hardest properties for an early system to demonstrate. Here they are the substrate, because the system was built around verifiability from the first principle outward.</p>
+    <p>What follows is the architecture in full, with the contrast against how the field builds agentic AI made explicit, because the contrast is where the design's value lives. A companion document, <em>The Boundary De-Identifier</em>, shows the same principle applied to a single regulated-data problem &mdash; the first shipped instance of this philosophy in the field, and a concrete worked example of the abstract claim made here.</p>
+    <h3>Part I &mdash; Two systems, one architecture</h3>
+    <p>Before the components, the frame &mdash; because without it the rest reads as one undifferentiated thing, and it is not. Ontinuity is a single architecture instantiated at two layers that do different jobs.</p>
+    <p><strong>The session engine</strong> is the deliverable-producer. A model is seated in a defined role inside an adversarial multi-model loop; a contract specifies what the output must satisfy; a gate enforces it. What comes out is a verified research artifact &mdash; an answer, a specification, an analysis that provably meets criteria set before the work began. This is the layer the 319-session behavioral record measures. It runs as an API-driven engine, and it is the thing a user would eventually bring a question to.</p>
+    <p><strong>The operations team</strong> is the engine-producer. It is a set of AI seats &mdash; a planning seat and worker seats &mdash; running as separate working instances that coordinate through a shared mailbox. They decompose a task into small scoped blocks, build, review <em>each other's</em> proposals, and deploy only through a two-party gate. What this layer produces is not a research answer; it is <strong>Ontinuity itself</strong> &mdash; the engine's code, its deployments, its operating record, its documentation, this site. The team is the workshop; the engine is one of the things the workshop builds and maintains.</p>
+    <p>The two share their DNA completely. Both ground every action from the written record rather than from a model's training priors. Both hold work to a contract. Both forbid any single seat from being the sole, unchecked authority over what ships. That shared discipline is why they can blur together when described &mdash; but they are not the same system, and the difference is the point: <strong>one produces deliverables; the other produces the system that produces deliverables, using the same rules.</strong></p>
+    <p>This is the deepest evidence the architecture offers. A claim that "verification-first design produces reliable autonomous work" is just a claim. A verification-first <em>engine that was itself built by a verification-first team</em>, under the same gate, is the claim demonstrated on itself. The system eats its own cooking &mdash; and an architecture that can be trusted to build itself is a stronger statement than any single output it produces.</p>
+    <p>A note on honesty, because the maturity of the two layers differs and the paper will not paper over it. The engine is live and has the measured record. The team's fully self-driving form &mdash; seats that wake and poll themselves without a human prompting each conversation &mdash; is still being built; today the operations team is driven in part by a human advancing each seat's turn. Why, and why that is a deliberate choice rather than a deficiency, is addressed in Part VIII. The architecture is identical across both layers; the autonomy is further along in the engine than in the team, and the paper says so wherever it matters.</p>
+    <h3>Part II &mdash; The core move: ground from the record, not from priors</h3>
+    <p><strong>What it is.</strong> Every seat in Ontinuity &mdash; in either layer &mdash; is an instance of a language model. Left to itself, a model answers from its training distribution: the statistical priors in its weights. Ontinuity calls this "artificial imagination" and treats it as the primary failure source. The countering discipline is a hard rule: <strong>use the model's training for capability &mdash; writing code, reasoning, language &mdash; but never for Ontinuity-facts.</strong> How this system works, what is deployed, what was decided, what the current state is &mdash; those facts live only in the written record, never in any model's weights. Where a prior and the record disagree about the system, the record wins, every time. Every seat re-derives its operating reality from the record before acting.</p>
+    <p><strong>Why it matters.</strong> This is the root the whole architecture grows from, and it is where legacy agentic systems are weakest. The dominant pattern is to give a capable model a goal, tools, and a context window, and trust it to reason its way to correct action &mdash; treating the model's confidence as a proxy for correctness. But confidence is a property of the training distribution, not of the live world being acted on, and the gap between them is exactly where agentic systems hallucinate a file that doesn't exist or report a task done that never ran. The legacy mitigation is a better-trained model, hoping the gap shrinks. Ontinuity's position is that the gap never closes &mdash; the world is always larger and newer than any training run &mdash; so the answer is a discipline that forecloses the substitution: when a fact matters, the seat <em>retrieves</em> it from the record rather than <em>recalling</em> it from weights.</p>
+    <p><strong>How it works.</strong> Ambiguity is named as the front door for substitution &mdash; an underspecified instruction leaves a gap, and the model fills it from priors. So precision is treated as prevention and the gate as the catch. The operating documents are written to be retrieved, not memorized; a seat boots by reading them and reporting a real current-state line from each &mdash; a test that it actually retrieved, not a recitation of what it expected. The distinction &mdash; <em>training for capability, record for system-facts</em> &mdash; is the load-bearing line of the entire system.</p>
+    <h3>Part III &mdash; The seats: a team, not an agent</h3>
+    <p><strong>What it is.</strong> The operations team runs three kinds of seat under a human operator who holds direction and final authority. A <strong>planning seat</strong> is the one the operator talks to; it holds the credentials and the bounded operations, commits work, dispatches tasks, reviews proposals, and keeps the record current &mdash; as a participant in a gated chain, never an unchecked deployer. <strong>Worker seats</strong> are peer instances that claim scoped blocks, build, and review <em>each other's</em> proposals; at their working budget they park and hand off rather than fabricate. And the <strong>chain</strong> itself is the emergent fourth element: task → build → peer review → sign-off → deploy → fold, with no single seat's judgment shipping unchecked.</p>
+    <p><strong>Why it matters.</strong> This is the sharpest divergence from how the field builds. The industry's center of gravity is the <em>agent</em> &mdash; one model, given memory and tools, looped on itself, sometimes with a second "critic" that is the same model wearing a different hat. The structural flaw is that a single agent's blind spots are correlated with themselves; a model reviewing its own output shares the framing that produced the error, so the review confirms rather than catches. The field reaches for "multi-agent frameworks," but most are cooperative &mdash; agents passing work along, optimizing for completion, every incentive to validate the upstream agent rather than dispute it. Ontinuity's seats are adversarial by construction and separated by routing: the reviewing seat is a different instance than the building seat, structurally forbidden from rubber-stamping, and its job is to find the flaw. The unit of cognition is a team with a chain of custody, not an agent with a critic.</p>
+    <p><strong>How it works.</strong> Worker scope is per-block &mdash; small, bounded, reviewable. The artifact flow is asymmetric on purpose: a worker writes its proposal, the planning seat lands it only after an independent review, and the worker holds no deploy authority. Building and shipping are different hands, by design.</p>
+    <h3>Part IV &mdash; The deploy gate: the reliability boundary</h3>
+    <p><strong>What it is.</strong> One invariant carries the system's reliability claim:</p>
+    <blockquote class="gate-invariant"><strong>The seat that deploys must never be the seat that authored the exact bytes being deployed.</strong> Deployer ≠ author-of-deployed-bytes.</blockquote>
+    <p>The flow that enforces it: the author places a proposal in the mailbox; a <em>different</em> seat reviews it; on a clean sign-off the reviewer deploys, with two independent parties now satisfied; on a reject-and-correct, the corrector becomes the new author and the item returns for <em>another</em> different seat to sign off before deploy. The corrector never deploys their own correction. A sign-off token makes the gate structural: a self-deploy or a tokenless deploy writes a violation row, and routing never hands a seat its own item to review &mdash; if the only reviewable item is its own, it parks.</p>
+    <p><strong>Why it matters.</strong> This is the heart of the system and the cleanest contrast with the field. Legacy autonomous agents deploy their own work: the agent decides, acts, and reports success, with every safety mechanism internal to the agent &mdash; a confidence threshold, a self-check, a reflection step &mdash; which means a confidently-wrong agent sails straight through, because the thing being fooled and the thing checking are the same thing. The common mitigations are a human in the loop on every action (which doesn't scale) or a guardrail model (still one model's judgment gating another's). Ontinuity's gate is different in kind: it is separation of powers, borrowed from how durable human institutions are built. No single actor &mdash; however capable, however confident &mdash; can both author and ship. Trust is not placed in any seat; it is produced by forcing two independent seats to agree before anything changes. And because the gate evaluates output against the contract, it is indifferent to which model produced the work &mdash; which is why the seats can run cheap, interchangeable models and the reliability holds.</p>
+    <p><strong>How it works &mdash; and the honesty that proves it.</strong> The operating record notes, openly, that the gate has been jumped at least once (a batch deploy that bypassed the chain), and that this was logged rather than hidden. That is the control working, not failing: a discipline that detects and records its own violations is real; a gate that had never registered one would be more suspicious, not less.</p>
+    <h3>Part V &mdash; The frozen contract and the harness</h3>
+    <p><strong>What it is.</strong> Before a session runs, a contract fixes the criteria the output must satisfy. A gate then refuses to let the session close until the output matches &mdash; evaluating against criteria set <em>before</em> the work, so they cannot be quietly relaxed to fit whatever the model produced. This is the engine's published thesis: reliability from the harness, not the model. The evidence sits at two resolutions. In aggregate: <strong>319 sessions</strong>, the working seat held by <strong>5 different models</strong> (most often an inexpensive open-weight one), measured per-cycle, including a <strong>randomized-signal control</strong> that distinguishes a genuine adversarial response from the mere appearance of one. In close-up: a single documented session where a frontier model in the working seat faced a three-criterion contract and the gate <strong>refused to close three times</strong> &mdash; forcing a paraphrase up to a real quotation, an unsupported inference up to a cited mechanism, and a prose description up to an applicable edit &mdash; before accepting the consolidated deliverable.</p>
+    <p><strong>Why it matters.</strong> The field measures agent reliability by benchmark scores and task success rates &mdash; metrics that conflate the model's capability with the system's reliability and can't say <em>why</em> something worked or whether it will again. The frozen contract separates them: the model supplies capability; the harness supplies the guarantee that capability was delivered against fixed criteria. The randomized-signal control is an unusual move for an applied system &mdash; it is the methodology of a controlled experiment, included so the system can tell a model that is genuinely responding to adversarial pressure from one that merely looks like it. And the fact that the seat can be held by five different models, frequently a cheap one, while reliability holds, is the empirical payoff: if reliability came from the model, a weaker model would degrade it. It doesn't, because it comes from the harness.</p>
+    <h3>Part VI &mdash; Box hands: bounded operations, not a shell</h3>
+    <p><strong>What it is.</strong> When a seat acts on live infrastructure &mdash; write a file, restart a service, back up the database &mdash; it does so through named, bounded operation endpoints, never a shell and never an arbitrary command. Each operation does exactly one thing; adding capability means adding a new named operation, never widening an existing one. Every operation is gated and logged to an append-only operations ledger at both ends &mdash; intent on invocation, result on completion &mdash; and tiered by risk using the same sign-off tiers as the deploy gate. Because a sandboxed seat cannot reach the infrastructure directly (the box accepts only an authenticated relay, by design), the seat reaches its hands through a relay-courier: it requests a named operation, the relay forwards it, and the box enforces the full contract.</p>
+    <p><strong>Why it matters.</strong> This is a deliberate, contrarian answer to the question every agentic platform faces: how much access do you give the autonomous thing? The industry trend is toward the shell &mdash; a terminal, broad tool access, an MCP layer &mdash; trusting the model plus a guardrail not to misuse it. Ontinuity goes the other way: the smallest possible set of explicit capabilities, each bounded, each logged, each one a thing you can name and reason about. The reason is the system's own security posture &mdash; seat identity is currently self-asserted and a shared key is the soft spot &mdash; so the bounded operation set is the firebreak: a leaked key can only do the specific, logged things the named operations permit, not arbitrary harm. A single shell operation would collapse that firebreak. The dual-end ledger means every privileged action has a before and an after on the record, so "what did the autonomous system actually do" always has a complete, queryable answer &mdash; which most agentic systems cannot match, because their actions pass through a general-purpose tool layer never built to be the audit substrate.</p>
+    <h3>Part VII &mdash; The corpus, auditability, and emergent capability</h3>
+    <p><strong>What it is.</strong> Everything either layer does folds into a written record keyed on shared identifiers &mdash; commit hashes and operation receipts. An open ritual orients a seat before it acts; a close ritual &mdash; a checklist worked literally at the end of every session &mdash; reconciles the work, writes the conversation record, folds the queue, brings the documentation current, sweeps for secrets, and hands off the next action. The binding property is that all records key on the same identifiers, so a stranger can walk the chain in either direction: from a line of dialogue, to the decision it produced, to the commit that enacted it, to the receipt that confirms it, and back.</p>
+    <p><strong>Why it matters.</strong> The legacy frame treats logging as observability &mdash; a debugging aid, a compliance artifact consulted when something breaks. Ontinuity treats the record as the substrate the system runs on, and three capabilities emerge from that inversion that a stateless agent cannot have. <strong>A new seat inherits the whole system</strong> &mdash; because operating reality lives in the record rather than any seat's weights, a fresh seat boots by reading the corpus and is immediately current, inheriting every decision and correction; competence accrues in the record and is re-acquired on every boot, so it is not lost when a seat's context ends. <strong>The gate can catch fabrication</strong> &mdash; because every operation is on the ledger, a seat's claim to have done work can be checked against what was actually done; there is a documented case of exactly this, a claim challenged and the session's close refused until it was grounded. And <strong>auditability becomes the precondition for safe autonomy</strong> rather than a byproduct of it &mdash; because the whole chain is walkable, more autonomy is survivable precisely because every autonomous action stays accountable after the fact.</p>
+    <p><strong>How it works.</strong> Currency discipline binds it: the operating documents are updated when the thing changes, in the same commit &mdash; a drifted document is treated as a defect, not a stale note. That is what keeps the record trustworthy enough to ground from. The corpus is not a description of the system kept alongside it; the corpus is the system's memory, and the running seats are its momentary, replaceable embodiment.</p>
+    <h3>Part VIII &mdash; The frontier and the honest ceilings</h3>
+    <p>A synthesis that only stated strengths would be the kind of artifact this system is built to distrust. The current edges, stated plainly:</p>
+    <p><strong>The autonomy gap between the two layers is real, and the way it is currently bridged is a deliberate choice, not a deficiency.</strong> The engine runs autonomously; the operations team, today, is advanced in part by a human prompting each seat's turn, because chat-based seats do not wake themselves. Running those seats instead as self-polling API instances is technically straightforward &mdash; the engine substrate for it exists. The reason it is not yet the default is economical, and it is worth stating directly because it demonstrates the system's own thesis. Driving the operations team manually, through subscription-based working instances, makes it possible to run a full team of frontier-quality seats at a flat cost rather than the very large metered cost that fully-autonomous frontier API seats would incur. The manual step is the price of running a frontier-grade engineering team cheaply enough to bootstrap a system on a small budget &mdash; and it is the same move the architecture makes everywhere else: <strong>reliable, high-quality output from deliberately inexpensive means, because the reliability lives in the harness, not the budget.</strong> The fully self-driving team is a funded build step, not a missing capability.</p>
+    <p><strong>The remaining frontier.</strong> Routing the planning seat itself through the engine, so it grounds from the record every cycle, would permanently close the priors-leak that seat drift represents; the centerpiece of that work is a bootstrap gate that makes boot-from-record structural &mdash; a seat must reproduce the operating invariants from the record before it is allowed to act. Model tiering is the organizing principle: frontier models where judgment is load-bearing (planning, and review/sign-off), inexpensive models for high-volume low-judgment cycles. "Everything runs through Ontinuity" means everything runs through the gated, documented system &mdash; not that everything runs on the most expensive model.</p>
+    <p><strong>The honest ceilings.</strong> Seat identity is currently self-asserted rather than cryptographically authenticated; a shared key is the known soft spot, and per-identity authentication is owed. Grounding-from-record <em>reduces</em> model imagination but does not <em>eliminate</em> it &mdash; which is the entire reason the gate exists. The system's stance is three words it returns to: <strong>architecture over trust.</strong> It does not ask you to believe the model is reliable. It builds a structure in which the model does not have to be.</p>
+    <h3>Closing: what sets this apart</h3>
+    <p>The field is building more capable agents &mdash; bigger models, longer context, broader tools, better alignment &mdash; and managing their unreliability with human oversight and guardrail models, on the bet that a sufficiently good single agent can be trusted to act. Ontinuity makes the opposite bet: that no single model should ever be a decision gate, however capable, and that reliability is therefore not trained into a model but built into the architecture around it.</p>
+    <p>Everything follows from that one inversion. Ground from the record, because a model's memory is not trustworthy for system-facts. Run a team of adversarial seats, because one agent's self-review is correlated with its own blind spots. Separate the deployer from the author, because no actor should both decide and ship. Freeze the contract before the work, so the criteria can't be relaxed to fit the output. Bound every operation, so a leak is a firebreak rather than a catastrophe. Fold everything into an auditable record, so the system's competence outlives any seat and every autonomous action stays accountable.</p>
+    <p>And then &mdash; the part that turns the architecture from a description into a demonstration &mdash; build the system itself the same way. The engine that produces verified deliverables was produced by a team that runs under the same gate, the same contract, the same record. The result is a research operating system that produces reliable output from unreliable, interchangeable, deliberately inexpensive parts &mdash; at both layers &mdash; because the reliability was never in the parts. It is in the harness. That is the whole claim, and it is the thing the field, still building toward the trustworthy single agent, has not yet built.</p>
+
+    <div class="limits">
+      <h3>The foundation beneath this</h3>
+      <p>This synthesis describes the system as it runs today &mdash; the gate, the contract, the team of seats, the auditable record. The conceptual and empirical groundwork it grew from is the nine-paper Ontinuity corpus: the cognitive-ecology framework, the Tetraform session protocol, the Knowtext memory schema, the Teaching Leash safety argument, and the rest. Those papers are the foundation; this is what the foundation became. <a href="/corpus.html" style="color:var(--gold)">Read the foundational corpus &rarr;</a></p>
+    </div>
+  </div>
+</article>
+
+<div class="corpus-strip">
+  <div class="wrap">
+    <span class="corpus-tag">Ontinuity · <a href="/">home</a></span>
+    <span class="corpus-move">
+      <a href="/corpus.html"><span class="lbl">Go deeper</span>The foundational corpus &rarr;</a>
+    </span>
+  </div>
+</div>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">
+        <svg width="16" height="16" viewBox="0 0 36 36" fill="none">
+          <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.6"/>
+          <polygon points="18,7 27,12 27,24 18,29 9,24 9,12" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.4"/>
+          <circle cx="18" cy="18" r="3" fill="currentColor" opacity="0.8"/>
+        </svg><span class="wordmark"><span class="o">O</span>ntinuity</span>
+      </div>
+      <p class="footer-meta">Open research project. Session counts and behavioral figures are drawn from the system's<br>own operational record as of 2026-06-14 and will move as it runs.<br>Contact · <a href="mailto:killebrewpatrick@gmail.com">killebrewpatrick@gmail.com</a></p>
+    </div>
+    <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" rel="noopener">GitHub</a>
+      <a href="#methodology">Methodology</a>
+      <a href="#demonstration">Demonstration</a>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+// ── FEEDERS: the self-feeding loop particles on the mark's front face ──
+(function(){const cx=100,cy=100,R=82,ns='http://www.w3.org/2000/svg';
+  const verts=[];for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180;verts.push([cx+R*Math.cos(a),cy+R*Math.sin(a)]);}
+  const g=document.getElementById('feeders'); if(!g) return;
+  verts.forEach((v,i)=>{const opp=verts[(i+3)%6];
+    const c=document.createElementNS(ns,'circle');c.setAttribute('r','2.3');c.setAttribute('fill','var(--gold-bright)');
+    const am=document.createElementNS(ns,'animateMotion');am.setAttribute('dur','3.8s');am.setAttribute('repeatCount','indefinite');am.setAttribute('begin',(i*0.63)+'s');
+    am.setAttribute('calcMode','spline');am.setAttribute('keyPoints','0;0.5;1');am.setAttribute('keyTimes','0;0.5;1');am.setAttribute('keySplines','0.4 0 0.6 1;0.4 0 0.6 1');
+    am.setAttribute('path',`M ${v[0]} ${v[1]} L ${cx} ${cy} L ${opp[0]} ${opp[1]}`);
+    const op=document.createElementNS(ns,'animate');op.setAttribute('attributeName','opacity');op.setAttribute('values','0;1;0.9;0');op.setAttribute('keyTimes','0;0.4;0.6;1');op.setAttribute('dur','3.8s');op.setAttribute('repeatCount','indefinite');op.setAttribute('begin',(i*0.63)+'s');
+    c.appendChild(am);c.appendChild(op);g.appendChild(c);});
+})();
+
+// ── LENSED HERO GRID: ONE grid, matched to the page's 48px grid phase, gravitationally warped toward the mark,
+//    sinking behind it, pulsing in/out. Draws the SAME grid as body::before so they read continuous. ──
+(function(){
+  const cv=document.querySelector('.markbox .lenscanvas'); if(!cv) return;
+  const ctx=cv.getContext('2d');
+  const SP=48;                       // matches page grid 48px
+  let DPR, w, h, rect, markCx, markCy, reduce;
+  reduce = matchMedia('(prefers-reduced-motion:reduce)').matches;
+  function size(){
+    DPR=Math.min(2,window.devicePixelRatio||1);
+    rect=cv.getBoundingClientRect();
+    w=Math.max(1,Math.round(rect.width)); h=Math.max(1,Math.round(rect.height));
+    cv.width=w*DPR; cv.height=h*DPR;
+    cv.style.width=w+'px'; cv.style.height=h+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    // mark center: the .scene core sits at ~ right portion of the canvas (canvas extends left of markbox).
+    const scene=document.querySelector('.markbox .scene');
+    if(scene){const sr=scene.getBoundingClientRect();
+      markCx = (sr.left+sr.width*0.53) - rect.left;
+      markCy = (sr.top +sr.height*0.50) - rect.top;
+    } else { markCx=w*0.7; markCy=h*0.5; }
+  }
+  // phase-align to the FIXED page grid so lines are continuous with body::before.
+  function gridOffset(){
+    // body::before is position:fixed at viewport 0,0 with 48px cells (+ drift). Align canvas lines to that.
+    const ox = ((-rect.left) % SP + SP) % SP;
+    const oy = ((-rect.top)  % SP + SP) % SP;
+    return [ox, oy];
+  }
+  const BASE_MASS=10500, SOFT=120, SINK=120; // stronger, more substantial lensing + a sink radius
+  function warp(x,y,mass){
+    const dx=x-markCx, dy=y-markCy, r=Math.hypot(dx,dy)+SOFT;
+    const pull=mass/r;
+    return [x-(dx/r)*pull, y-(dy/r)*pull, r];
+  }
+  function draw(t){
+    ctx.clearRect(0,0,w,h);
+    // pulse the lens mass in/out slowly (breathing gravity)
+    const pulse = reduce?1:(1 + 0.18*Math.sin(t*0.0009));
+    const mass = BASE_MASS*pulse;
+    const [ox,oy]=gridOffset();
+    ctx.lineWidth=1;
+    // draw vertical then horizontal grid lines, warped, brightening near the mark, sinking under it
+    function strokeSeg(x1,y1,x2,y2,rr){
+      // brightness: base faint (match page 0.03), brighter as it nears the mark, then SINK (fade) under it
+      const near=Math.max(0,1-rr/(360));
+      let a = 0.055 + near*0.22;
+      if(rr < SINK){ a *= (rr/SINK)*(rr/SINK); }      // sink: fade to nothing right behind the logo
+      if(a<=0.004) return;
+      ctx.strokeStyle=`rgba(201,168,76,${a.toFixed(3)})`;
+      ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    }
+    for(let gx=ox-SP; gx<=w+SP; gx+=SP){
+      let px=null,py=null,pr=null;
+      for(let y=-SP; y<=h+SP; y+=8){
+        const [wx,wy,rr]=warp(gx,y,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    for(let gy=oy-SP; gy<=h+SP; gy+=SP){
+      let px=null,py=null,pr=null;
+      for(let x=-SP; x<=w+SP; x+=8){
+        const [wx,wy,rr]=warp(x,gy,mass);
+        if(px!==null) strokeSeg(px,py,wx,wy,(pr+rr)/2);
+        px=wx;py=wy;pr=rr;
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  size(); addEventListener('resize',size);
+  requestAnimationFrame(draw);
+})();
+</script>
+
+</body>
+</html>
