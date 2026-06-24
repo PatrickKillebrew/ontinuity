@@ -1006,7 +1006,7 @@ footer {
     <p class="section-sub">The same idea applied to a single urgent problem: making regulated data safe to work with by ensuring identity never crosses the line.</p>
     <div class="try-hero reveal">
       <div class="try-h">Don't trust the component. Structure the boundary so the sensitive thing cannot leak.</div>
-      <p class="try-body">A regulated home-care agency can use an AI-assisted scheduling tool on its caregiver and client data without any private information ever leaving its own computer. The data is de-identified at the boundary &mdash; on the operator's machine, before a single field crosses &mdash; and an independent verifier re-scans the output for any residual identifier before it is trusted. The service operates entirely in token-space. There is nothing on the service side to breach, because the identifying data was never there. Built and tested; the first shipped instance of this architecture in a regulated domain.</p>
+      <p class="try-body">A regulated home-care agency can use an AI-assisted scheduling tool on its caregiver and client data without any private information ever leaving its own computer. The data is de-identified at the boundary &mdash; on the operator's machine, before a single field crosses &mdash; and an independent verifier re-scans the output for any residual identifier before it is trusted. The service operates entirely in token-space &mdash; nothing identifiable from that dataset is sent, so there is nothing in it for the service to breach. Built and tested; the first shipped instance of this architecture in a regulated domain.</p>
       <div class="cta-center" style="margin-top:28px;">
         <a href="/deidentifier.html" class="btn-gold" style="padding:14px 40px;">Read the de-identifier &rarr;</a>
       </div>
@@ -1087,7 +1087,6 @@ footer {
     <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">GitHub</a>
     <span style="opacity:0.5;cursor:not-allowed;" aria-disabled="true">Live System (coming soon)</span>
     <a href="/corpus.html">The Corpus</a>
-    <a href="/intake.html">Problem Discovery</a>
     <a href="mailto:contact@ontinuity.org">Contact</a>
   </div>
 </footer>
