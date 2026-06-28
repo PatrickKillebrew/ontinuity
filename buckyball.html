@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Buckyball Edge Automaton — Ontinuity</title>
+<meta name="description" content="An interactive C60 cellular automaton, and an honest field-notes walk from a buckyball to holonomy, gauge freedom, and the formal mechanism behind the Meteorology of Information Propagation.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#c9a84c; --gold-bright:#d9b85c; --gold-dim:#7a6530; --gold-deep:#3d2e0a;
+  --gold-glow:rgba(201,168,76,0.18);
+  --bg:#090909; --bg-raised:#0f0f0f; --bg-card:#121212; --bg-card-hover:#161616;
+  --text:#EFEFEF; --text-dim:#8A8A8A; --text-muted:#4A4A4A;
+  --border:rgba(201,168,76,0.18); --border-subtle:rgba(255,255,255,0.07);
+  --max-w:1000px; --pad:48px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.65;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(9,9,9,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-subtle);}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);height:56px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{font-family:'Orbitron',monospace;font-size:clamp(13px,1.6vw,17px);font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:0.04em;white-space:nowrap;display:flex;align-items:center;gap:9px;}
+.nav-logo .o{color:var(--text-muted);}
+.nav-links{display:flex;gap:28px;list-style:none;}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;transition:color 0.2s;}
+.nav-links a:hover{color:var(--gold);}
+.hero{position:relative;z-index:1;padding:120px var(--pad) 30px;max-width:var(--max-w);margin:0 auto;}
+.hero-mono{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold-dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+.hero-mono::before{content:'';width:28px;height:1px;background:var(--gold-dim);}
+h1.title{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(28px,4.5vw,44px);line-height:1.08;letter-spacing:-0.01em;margin-bottom:18px;}
+h1.title .accent{color:var(--gold);}
+.lede{font-size:17px;color:var(--text-dim);max-width:680px;line-height:1.6;}
+#bea-root{max-width:var(--max-w);margin:0 auto;padding:8px var(--pad) 0;}
+.essay{max-width:760px;margin:0 auto;padding:40px var(--pad) 110px;}
+.essay h2{font-family:'Orbitron',monospace;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:0.02em;margin:46px 0 14px;}
+.essay h3{font-size:15px;font-weight:600;color:var(--gold-bright);margin:28px 0 8px;letter-spacing:0.02em;}
+.essay p{margin-bottom:16px;color:var(--text);}
+.essay p.dim{color:var(--text-dim);}
+.essay .mono{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold-bright);}
+.essay em{color:var(--gold-bright);font-style:italic;}
+.rule{border:0;border-top:1px solid var(--border-subtle);margin:36px 0;}
+.callout{background:var(--bg-card);border:1px solid var(--border);border-left:2px solid var(--gold);border-radius:4px;padding:18px 20px;margin:22px 0;font-size:14.5px;color:var(--text-dim);line-height:1.6;}
+.callout strong{color:var(--gold-bright);font-weight:600;}
+.steps{list-style:none;counter-reset:s;margin:18px 0;}
+.steps li{counter-increment:s;position:relative;padding:10px 0 10px 40px;border-top:1px solid var(--border-subtle);color:var(--text-dim);}
+.steps li::before{content:counter(s);position:absolute;left:0;top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);border:1px solid var(--border);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
+.steps li b{color:var(--gold-bright);font-weight:600;}
+footer{border-top:1px solid var(--border-subtle);padding:30px var(--pad);text-align:center;color:var(--text-muted);font-size:12px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;}
+footer a{color:var(--gold-dim);text-decoration:none;}
+footer a:hover{color:var(--gold);}
+@media (max-width:640px){:root{--pad:24px;} .hero{padding-top:96px;}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html"><span class="o">◎</span> ONTINUITY</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="papers.html">Papers</a></li>
+      <li><a href="corpus.html">Corpus</a></li>
+      <li><a href="https://github.com/PatrickKillebrew/ontinuity">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-mono">Interactive · Field Notes · June 2026</div>
+  <h1 class="title">The Buckyball <span class="accent">Edge Automaton</span></h1>
+  <p class="lede">A cellular automaton on the exact C<sub>60</sub> truncated icosahedron — symbols on the faces, rules on the edges, twelve pentagons that curvature forces into being. Below the toy is an honest walk of where chasing it led: holonomy, gauge freedom, and the formal mechanism behind one of this corpus's own papers.</p>
+</header>
+
+<div id="bea-root"></div>
+
+<article class="essay">
+  <hr class="rule">
+  <h2>Field notes — what chasing this actually found</h2>
+  <p class="dim">This page is also a record of an exploration, kept honest about what was discovery and what was rediscovery. The toy above was the starting point. The thread below is where it went.</p>
+
+  <h3>The object</h3>
+  <p>The buckyball is a truncated icosahedron: exactly 60 vertices, 90 edges, 32 faces — 12 pentagons and 20 hexagons — with full icosahedral symmetry. Because every vertex looks identical (two hexagons and a pentagon meet at each), the edges fall into only <em>two</em> orbits: 60 pentagon–hexagon edges and 30 hexagon–hexagon edges. That is why the automaton needs only two rules. The twelve pentagons are not a design choice. Euler's formula forces exactly twelve of them onto any sphere built this way: they are <em>topological defects</em>, the only sites where the geometry cannot be locally flat.</p>
+
+  <h3>What the defects do</h3>
+  <p>Run the automaton and the natural question is whether activity collects on those twelve pentagons. It mostly does not — a careful per-face measurement shows the dynamics mildly <em>avoid</em> them. What the defects actually set is global: every vertex on a C<sub>60</sub> is identical, so every local plaquette carries the same holonomy, and the defects fix a global twist the sphere must close around. The honest version of the romantic claim ("curvature defects act as memory") is narrower and truer: <em>the defects set a global constraint, not a local preference.</em></p>
+
+  <div class="callout"><strong>The mechanism is not new.</strong> Following the thread upward — defects, braiding, holonomy that computes — leads straight into established mathematics: topological defect braiding (Kitaev, Teo–Roy–Chen, the genon literature), and the connection between holonomy structure and computational power that Krohn–Rhodes theory has carried for sixty years. The genuinely defensible seam is small and specific: <em>finite-order holonomy behaves like a finite-state machine, while faithful unbounded computation requires infinite-order holonomy.</em> A bridge between known results, not a new continent — and worth saying plainly rather than overselling.</p></div>
+
+  <h3>The transferable idea</h3>
+  <p>What survived the walk was not a theorem but a shape: a <em>plastic connection</em> — a medium where transport rewrites the medium, and the rewritten medium conditions later transport. Process and memory as one substance. Tested directly against neural networks, it ties a fixed baseline on regular meshes (free adaptability, no regression) and, on metric-free graphs with a curvature prior, recovers structure where the standard gauge-equivariant machinery has no metric to work from. It does not beat purpose-built methods in crowded subfields. It earns its keep where there is a gap rather than a baseline.</p>
+
+  <h3>Where it landed</h3>
+  <p>The clean home turned out to be one of this corpus's own papers. The <a href="papers.html" style="color:var(--gold);">Meteorology of Information Propagation</a> argues that narratives spread over a medium that is itself rewritten by what flows through it — sediment, salinity, terrain that shifts when a story sinks in — and named fluid dynamics and chaos theory as its toolkit. But those tools all assume a <em>fixed</em> medium. The plastic connection is the missing piece. Built as a minimal coupled model, it reproduces the paper's three signature claims, and all three vanish when the plasticity is switched off:</p>
+  <ol class="steps">
+    <li><b>Phase transition.</b> Under steadily rising counter-pressure the medium holds, then releases suddenly — a jump 2.5× sharper than the fixed null. The barometric "pressure builds then breaks."</li>
+    <li><b>Path-dependence.</b> The same narrative lands at full strength on terrain pre-soaked with its own pole and fails completely on opposing terrain. The fixed medium cannot tell the two histories apart. Sediment, made literal.</li>
+    <li><b>Recurrence.</b> An evaporated narrative recondenses from a trivial re-seed because the terrain remembers; the fixed medium must be re-driven from scratch. The water cycle.</li>
+  </ol>
+  <p>The right toolkit for that framework is smaller and more specific than the original paper's atmospheric-physics list: a graph Laplacian for the diffusion and the watershed structure, coupled slow–fast dynamics for the plasticity, and bifurcation theory with its early-warning signals for the forecast. The grand analogy is the dream; the minimal coupled system is the part that can be tested.</p>
+
+  <div class="callout"><strong>The honest ending.</strong> The buckyball did not become a theorem, a product, or a new architecture. It became the formal engine for a framework that already existed in metaphor and lacked the mathematics underneath it. That is a real landing — and a good argument for following an abstract thread all the way to its conclusion, even when the destination turns out to be rediscovery rather than invention. The understanding is worth having on its own.</p></div>
+</article>
+
+<footer>
+  ONTINUITY · <a href="index.html">ontinuity.org</a> · interactive + field notes
+</footer>
+
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useCallback } = React;
+const TOPO = {
+  vertices: [[-4.8541,0,-1],[-4.8541,0,1],[-4.23607,-1.61803,-2],[-4.23607,-1.61803,2],[-4.23607,1.61803,-2],[-4.23607,1.61803,2],[-3.61803,-3.23607,-1],[-3.61803,-3.23607,1],[-3.61803,3.23607,-1],[-3.61803,3.23607,1],[-3.23607,-1,-3.61803],[-3.23607,-1,3.61803],[-3.23607,1,-3.61803],[-3.23607,1,3.61803],[-2,-4.23607,-1.61803],[-2,-4.23607,1.61803],[-2,4.23607,-1.61803],[-2,4.23607,1.61803],[-1.61803,-2,-4.23607],[-1.61803,-2,4.23607],[-1.61803,2,-4.23607],[-1.61803,2,4.23607],[-1,-4.8541,0],[-1,-3.61803,-3.23607],[-1,-3.61803,3.23607],[-1,3.61803,-3.23607],[-1,3.61803,3.23607],[-1,4.8541,0],[0,-1,-4.8541],[0,-1,4.8541],[0,1,-4.8541],[0,1,4.8541],[1,-4.8541,0],[1,-3.61803,-3.23607],[1,-3.61803,3.23607],[1,3.61803,-3.23607],[1,3.61803,3.23607],[1,4.8541,0],[1.61803,-2,-4.23607],[1.61803,-2,4.23607],[1.61803,2,-4.23607],[1.61803,2,4.23607],[2,-4.23607,-1.61803],[2,-4.23607,1.61803],[2,4.23607,-1.61803],[2,4.23607,1.61803],[3.23607,-1,-3.61803],[3.23607,-1,3.61803],[3.23607,1,-3.61803],[3.23607,1,3.61803],[3.61803,-3.23607,-1],[3.61803,-3.23607,1],[3.61803,3.23607,-1],[3.61803,3.23607,1],[4.23607,-1.61803,-2],[4.23607,-1.61803,2],[4.23607,1.61803,-2],[4.23607,1.61803,2],[4.8541,0,-1],[4.8541,0,1]],
+  faces: [[12,10,2,0,4],[34,39,29,19,24],[17,27,16,8,9],[14,22,15,7,6],[50,51,43,32,42],[41,36,26,21,31],[56,58,54,46,48],[38,33,23,18,28],[35,40,30,20,25],[55,59,57,49,47],[53,52,44,37,45],[11,13,5,1,3],[30,28,18,10,12,20],[15,24,19,11,3,7],[32,43,34,24,15,22],[33,42,32,22,14,23],[37,44,35,25,16,27],[16,25,20,12,4,8],[18,23,14,6,2,10],[48,46,38,28,30,40],[46,54,50,42,33,38],[49,57,53,45,36,41],[36,45,37,27,17,26],[52,53,57,59,58,56],[52,56,48,40,35,44],[58,59,55,51,50,54],[1,0,2,6,7,3],[9,8,4,0,1,5],[29,31,21,13,11,19],[21,26,17,9,5,13],[47,49,41,31,29,39],[51,55,47,39,34,43]],
+  faceSizes: [5,5,5,5,5,5,5,5,5,5,5,5,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6,6],
+  edges: [{v:[0,1],faces:[26,27],type:"hh"},{v:[0,2],faces:[0,26],type:"ph"},{v:[0,4],faces:[0,27],type:"ph"},{v:[1,3],faces:[11,26],type:"ph"},{v:[1,5],faces:[11,27],type:"ph"},{v:[2,6],faces:[18,26],type:"hh"},{v:[2,10],faces:[0,18],type:"ph"},{v:[3,7],faces:[13,26],type:"hh"},{v:[3,11],faces:[11,13],type:"ph"},{v:[4,8],faces:[17,27],type:"hh"},{v:[4,12],faces:[0,17],type:"ph"},{v:[5,9],faces:[27,29],type:"hh"},{v:[5,13],faces:[11,29],type:"ph"},{v:[6,7],faces:[3,26],type:"ph"},{v:[6,14],faces:[3,18],type:"ph"},{v:[7,15],faces:[3,13],type:"ph"},{v:[8,9],faces:[2,27],type:"ph"},{v:[8,16],faces:[2,17],type:"ph"},{v:[9,17],faces:[2,29],type:"ph"},{v:[10,12],faces:[0,12],type:"ph"},{v:[10,18],faces:[12,18],type:"hh"},{v:[11,13],faces:[11,28],type:"ph"},{v:[11,19],faces:[13,28],type:"hh"},{v:[12,20],faces:[12,17],type:"hh"},{v:[13,21],faces:[28,29],type:"hh"},{v:[14,22],faces:[3,15],type:"ph"},{v:[14,23],faces:[15,18],type:"hh"},{v:[15,22],faces:[3,14],type:"ph"},{v:[15,24],faces:[13,14],type:"hh"},{v:[16,25],faces:[16,17],type:"hh"},{v:[16,27],faces:[2,16],type:"ph"},{v:[17,26],faces:[22,29],type:"hh"},{v:[17,27],faces:[2,22],type:"ph"},{v:[18,23],faces:[7,18],type:"ph"},{v:[18,28],faces:[7,12],type:"ph"},{v:[19,24],faces:[1,13],type:"ph"},{v:[19,29],faces:[1,28],type:"ph"},{v:[20,25],faces:[8,17],type:"ph"},{v:[20,30],faces:[8,12],type:"ph"},{v:[21,26],faces:[5,29],type:"ph"},{v:[21,31],faces:[5,28],type:"ph"},{v:[22,32],faces:[14,15],type:"hh"},{v:[23,33],faces:[7,15],type:"ph"},{v:[24,34],faces:[1,14],type:"ph"},{v:[25,35],faces:[8,16],type:"ph"},{v:[26,36],faces:[5,22],type:"ph"},{v:[27,37],faces:[16,22],type:"hh"},{v:[28,30],faces:[12,19],type:"hh"},{v:[28,38],faces:[7,19],type:"ph"},{v:[29,31],faces:[28,30],type:"hh"},{v:[29,39],faces:[1,30],type:"ph"},{v:[30,40],faces:[8,19],type:"ph"},{v:[31,41],faces:[5,30],type:"ph"},{v:[32,42],faces:[4,15],type:"ph"},{v:[32,43],faces:[4,14],type:"ph"},{v:[33,38],faces:[7,20],type:"ph"},{v:[33,42],faces:[15,20],type:"hh"},{v:[34,39],faces:[1,31],type:"ph"},{v:[34,43],faces:[14,31],type:"hh"},{v:[35,40],faces:[8,24],type:"ph"},{v:[35,44],faces:[16,24],type:"hh"},{v:[36,41],faces:[5,21],type:"ph"},{v:[36,45],faces:[21,22],type:"hh"},{v:[37,44],faces:[10,16],type:"ph"},{v:[37,45],faces:[10,22],type:"ph"},{v:[38,46],faces:[19,20],type:"hh"},{v:[39,47],faces:[30,31],type:"hh"},{v:[40,48],faces:[19,24],type:"hh"},{v:[41,49],faces:[21,30],type:"hh"},{v:[42,50],faces:[4,20],type:"ph"},{v:[43,51],faces:[4,31],type:"ph"},{v:[44,52],faces:[10,24],type:"ph"},{v:[45,53],faces:[10,21],type:"ph"},{v:[46,48],faces:[6,19],type:"ph"},{v:[46,54],faces:[6,20],type:"ph"},{v:[47,49],faces:[9,30],type:"ph"},{v:[47,55],faces:[9,31],type:"ph"},{v:[48,56],faces:[6,24],type:"ph"},{v:[49,57],faces:[9,21],type:"ph"},{v:[50,51],faces:[4,25],type:"ph"},{v:[50,54],faces:[20,25],type:"hh"},{v:[51,55],faces:[25,31],type:"hh"},{v:[52,53],faces:[10,23],type:"ph"},{v:[52,56],faces:[23,24],type:"hh"},{v:[53,57],faces:[21,23],type:"hh"},{v:[54,58],faces:[6,25],type:"ph"},{v:[55,59],faces:[9,25],type:"ph"},{v:[56,58],faces:[6,23],type:"ph"},{v:[57,59],faces:[9,23],type:"ph"},{v:[58,59],faces:[23,25],type:"hh"}],
+};
+
+const Q = 4; // alphabet size (ℤ_q) — the glyph states
+const GLYPHS = ["·", "1", "2", "3"];
+
+// A rule on an edge maps (a,b) -> (a',b'). We parameterize a reversible-friendly
+// family: a' = (a + k*b + c) mod Q, b' = (b + m*a + d) mod Q, with optional swap.
+// Reversibility over ℤ_q holds when the linear map [[1,k],[m,1]] is invertible mod Q.
+function makeRule({ k, m, c, d, swap }) {
+  return (a, b) => {
+    let na = (a + k * b + c) % Q;
+    let nb = (b + m * a + d) % Q;
+    na = ((na % Q) + Q) % Q;
+    nb = ((nb % Q) + Q) % Q;
+    return swap ? [nb, na] : [na, nb];
+  };
+}
+
+// invertibility of [[1,k],[m,1]] mod Q  => det = 1 - k*m must be a unit mod Q
+function gcd(a, b) { return b ? gcd(b, a % b) : a; }
+function isReversible({ k, m }) {
+  const det = ((1 - k * m) % Q + Q) % Q;
+  return gcd(det, Q) === 1;
+}
+
+// ── 3D projection ────────────────────────────────────────────────────────────
+function project(v, rx, ry, scale, cx, cy) {
+  let [x, y, z] = v;
+  // rotate Y then X
+  let cosy = Math.cos(ry), siny = Math.sin(ry);
+  let x1 = x * cosy + z * siny;
+  let z1 = -x * siny + z * cosy;
+  let cosx = Math.cos(rx), sinx = Math.sin(rx);
+  let y1 = y * cosx - z1 * sinx;
+  let z2 = y * sinx + z1 * cosx;
+  const persp = 14 / (14 + z2);
+  return { x: cx + x1 * scale * persp, y: cy - y1 * scale * persp, z: z2, persp };
+}
+
+const STATE_COLORS = ["#1a0a06", "#ff6b1a", "#ffb347", "#ffe9c2"];
+
+function App() {
+  const [faceState, setFaceState] = useState(() => Array(32).fill(0));
+  const [running, setRunning] = useState(false);
+  const [step, setStep] = useState(0);
+  const [speed, setSpeed] = useState(6);
+  const [rot, setRot] = useState({ x: -0.5, y: 0.4 });
+  const [autoSpin, setAutoSpin] = useState(true);
+  const [hover, setHover] = useState(null);
+  const [history, setHistory] = useState([]); // recent face-states for cycle detection
+
+  // two rule choices — one per edge orbit
+  const [phRule, setPhRule] = useState({ k: 1, m: 0, c: 1, d: 0, swap: false });
+  const [hhRule, setHhRule] = useState({ k: 0, m: 1, c: 0, d: 0, swap: true });
+
+  const dragRef = useRef(null);
+  const wrapRef = useRef(null);
+  const [size, setSize] = useState(560);
+
+  useEffect(() => {
+    const onResize = () => {
+      const w = wrapRef.current?.clientWidth || 560;
+      setSize(Math.max(300, Math.min(620, w)));
+    };
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  const phFn = useMemo(() => makeRule(phRule), [phRule]);
+  const hhFn = useMemo(() => makeRule(hhRule), [hhRule]);
+  const phRev = isReversible(phRule);
+  const hhRev = isReversible(hhRule);
+
+  const advance = useCallback((prev) => {
+    // accumulate proposed deltas, apply synchronously, resolve at vertices by summing mod Q
+    const acc = new Float64Array(32);
+    for (const e of TOPO.edges) {
+      const [f1, f2] = e.faces;
+      const fn = e.type === "ph" ? phFn : hhFn;
+      const [n1, n2] = fn(prev[f1], prev[f2]);
+      acc[f1] += n1 - prev[f1];
+      acc[f2] += n2 - prev[f2];
+    }
+    const next = new Array(32);
+    for (let i = 0; i < 32; i++) {
+      next[i] = (((prev[i] + Math.round(acc[i])) % Q) + Q) % Q;
+    }
+    return next;
+  }, [phFn, hhFn]);
+
+  useEffect(() => {
+    if (!running) return;
+    const id = setInterval(() => {
+      setFaceState((prev) => {
+        const next = advance(prev);
+        setHistory((h) => {
+          const key = next.join("");
+          const nh = [...h.slice(-40), key];
+          return nh;
+        });
+        return next;
+      });
+      setStep((s) => s + 1);
+    }, 1000 / speed);
+    return () => clearInterval(id);
+  }, [running, speed, advance]);
+
+  useEffect(() => {
+    if (!autoSpin) return;
+    let raf;
+    const tick = () => {
+      setRot((r) => ({ ...r, y: r.y + 0.004 }));
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [autoSpin]);
+
+  // cycle detection
+  const cycleInfo = useMemo(() => {
+    if (history.length < 2) return null;
+    const last = history[history.length - 1];
+    for (let i = history.length - 2; i >= 0; i--) {
+      if (history[i] === last) return { period: history.length - 1 - i };
+    }
+    return null;
+  }, [history]);
+
+  const activity = useMemo(() => {
+    // fraction of non-zero faces, and how much sits on pentagons
+    let nz = 0, penNz = 0, pen = 0;
+    for (let i = 0; i < 32; i++) {
+      if (TOPO.faceSizes[i] === 5) { pen++; if (faceState[i] !== 0) penNz++; }
+      if (faceState[i] !== 0) nz++;
+    }
+    return { nz, penNz, penFrac: nz > 0 ? penNz / nz : 0 };
+  }, [faceState]);
+
+  // ── interaction ──
+  const onPointerDown = (e) => {
+    setAutoSpin(false);
+    dragRef.current = { x: e.clientX, y: e.clientY, rot: { ...rot } };
+  };
+  const onPointerMove = (e) => {
+    if (!dragRef.current) return;
+    const dx = e.clientX - dragRef.current.x;
+    const dy = e.clientY - dragRef.current.y;
+    setRot({ x: dragRef.current.rot.x + dy * 0.008, y: dragRef.current.rot.y + dx * 0.008 });
+  };
+  const onPointerUp = () => { dragRef.current = null; };
+
+  const seed = (mode) => {
+    const s = Array(32).fill(0);
+    if (mode === "one") {
+      // single excitation on one hexagon
+      s[18] = 1;
+    } else if (mode === "pent") {
+      // light all 12 pentagons
+      for (let i = 0; i < 32; i++) if (TOPO.faceSizes[i] === 5) s[i] = 2;
+    } else if (mode === "rand") {
+      for (let i = 0; i < 32; i++) s[i] = Math.floor(Math.random() * Q);
+    } else if (mode === "anti") {
+      // antipodal pair
+      s[18] = 3; s[24] = 1;
+    }
+    setFaceState(s);
+    setStep(0);
+    setHistory([s.join("")]);
+  };
+
+  useEffect(() => { seed("one"); }, []); // initial
+
+  // ── render geometry ──
+  const cx = size / 2, cy = size / 2, scale = size / 13.5;
+  const projVerts = TOPO.vertices.map((v) => project(v, rot.x, rot.y, scale, cx, cy));
+
+  const facePolys = TOPO.faces.map((f, fi) => {
+    const pts = f.map((vi) => projVerts[vi]);
+    const zc = pts.reduce((a, p) => a + p.z, 0) / pts.length;
+    // back-face cull-ish: use centroid normal vs view
+    const cxF = pts.reduce((a, p) => a + p.x, 0) / pts.length;
+    const cyF = pts.reduce((a, p) => a + p.y, 0) / pts.length;
+    return { fi, pts, zc, cxF, cyF, size: TOPO.faceSizes[fi] };
+  }).sort((a, b) => a.zc - b.zc);
+
+  return (
+    <div style={{
+      fontFamily: "'IBM Plex Mono', ui-monospace, monospace",
+      background: "radial-gradient(ellipse at 50% 40%, #2a0f04 0%, #120703 55%, #0a0402 100%)",
+      color: "#f3d9bf", minHeight: "100vh", padding: "0", margin: 0,
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap');
+        * { box-sizing: border-box; }
+        .panel { background: rgba(20,9,4,0.72); border: 1px solid rgba(255,120,40,0.18); border-radius: 4px; }
+        button.bea { font-family: inherit; cursor: pointer; border-radius: 3px; transition: all .15s; }
+        button.bea:focus-visible { outline: 2px solid #ff8a3d; outline-offset: 2px; }
+        .seg { background: rgba(255,120,40,0.06); border: 1px solid rgba(255,120,40,0.22); color: #f3d9bf; padding: 7px 10px; font-size: 12px; }
+        .seg:hover { background: rgba(255,120,40,0.16); }
+        .seg.on { background: #ff6b1a; color: #1a0a06; border-color: #ff6b1a; font-weight: 600; }
+        input[type=range] { accent-color: #ff6b1a; }
+        .dim { color: #c89878; }
+        .hot { color: #ffb066; }
+        @media (prefers-reduced-motion: reduce) { * { animation: none !important; } }
+      `}</style>
+
+      <div style={{ maxWidth: 1080, margin: "0 auto", padding: "28px 20px 60px" }}>
+        {/* header */}
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.32em", color: "#ff8a3d", textTransform: "uppercase" }}>
+            C₆₀ · 32 faces · 90 edges · I<sub>h</sub> symmetry
+          </div>
+          <h1 style={{
+            fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: "clamp(26px,5vw,42px)",
+            margin: "6px 0 4px", color: "#ffe9c2", lineHeight: 1.05,
+          }}>
+            The Buckyball Edge Automaton
+          </h1>
+          <p style={{ margin: 0, fontSize: 13.5, color: "#c89878", maxWidth: 640, lineHeight: 1.5 }}>
+            Symbols live on the <span className="hot">faces</span>. Rules run on the <span className="hot">edges</span> —
+            the lines between the cells. There are only <span className="hot">two</span> kinds of edge, so you set only
+            two rules. Watch whether the action collects on the 12 pentagons: the defects curvature forces into being.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: size > 520 ? "1fr 320px" : "1fr", gap: 18, alignItems: "start" }}>
+          {/* ── sphere ── */}
+          <div ref={wrapRef} className="panel" style={{ padding: 10, position: "relative" }}>
+            <svg
+              width="100%" viewBox={`0 0 ${size} ${size}`}
+              style={{ touchAction: "none", display: "block", cursor: dragRef.current ? "grabbing" : "grab" }}
+              onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp} onPointerLeave={() => { onPointerUp(); setHover(null); }}
+            >
+              <defs>
+                <radialGradient id="glow" cx="50%" cy="45%" r="60%">
+                  <stop offset="0%" stopColor="#ff6b1a" stopOpacity="0.18" />
+                  <stop offset="100%" stopColor="#ff6b1a" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+              <circle cx={cx} cy={cy} r={scale * 5.2} fill="url(#glow)" />
+
+              {facePolys.map(({ fi, pts, size: fsz, cxF, cyF, zc }) => {
+                const st = faceState[fi];
+                const isPent = fsz === 5;
+                const front = zc > 0;
+                const op = front ? 1 : 0.16;
+                const d = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") + "Z";
+                const fill = STATE_COLORS[st];
+                const isHover = hover === fi;
+                return (
+                  <g key={fi} opacity={op}>
+                    <path
+                      d={d} fill={fill}
+                      stroke={isPent ? "#ffd9a0" : "rgba(255,150,70,0.35)"}
+                      strokeWidth={isPent ? 1.6 : 0.8}
+                      style={{ cursor: "pointer", transition: "fill .12s" }}
+                      onPointerDown={(e) => { e.stopPropagation();
+                        setFaceState((s) => { const n = [...s]; n[fi] = (n[fi] + 1) % Q; setHistory([n.join("")]); return n; }); }}
+                      onPointerEnter={() => setHover(fi)}
+                    />
+                    {front && (
+                      <text x={cxF} y={cyF + 4} textAnchor="middle"
+                        fontSize={isPent ? 15 : 12} fontWeight="600"
+                        fill={st >= 2 ? "#1a0a06" : "#ffe9c2"}
+                        style={{ pointerEvents: "none", fontFamily: "'IBM Plex Mono',monospace" }}>
+                        {GLYPHS[st]}
+                      </text>
+                    )}
+                    {isHover && front && (
+                      <path d={d} fill="none" stroke="#fff" strokeWidth="1.5" style={{ pointerEvents: "none" }} />
+                    )}
+                  </g>
+                );
+              })}
+            </svg>
+
+            {/* overlay readout */}
+            <div style={{ position: "absolute", left: 16, top: 14, fontSize: 11, lineHeight: 1.7 }}>
+              <div className="dim">step <span className="hot" style={{ fontSize: 14 }}>{step}</span></div>
+              <div className="dim">lit faces <span style={{ color: "#ffe9c2" }}>{activity.nz}/32</span></div>
+              <div className="dim">on pentagons{" "}
+                <span style={{ color: activity.penFrac > 0.4 ? "#ff8a3d" : "#ffe9c2" }}>
+                  {(activity.penFrac * 100).toFixed(0)}%
+                </span>
+              </div>
+              {cycleInfo && (
+                <div style={{ color: "#7fdca0", marginTop: 4 }}>● cycle · period {cycleInfo.period}</div>
+              )}
+            </div>
+            <div style={{ position: "absolute", right: 14, bottom: 12, fontSize: 10.5, color: "#a87a58", textAlign: "right" }}>
+              drag to rotate · tap a face to cycle its symbol
+            </div>
+          </div>
+
+          {/* ── controls ── */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {/* transport */}
+            <div className="panel" style={{ padding: 14 }}>
+              <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+                <button className="bea seg on" style={{ flex: 1, padding: "10px", fontSize: 13 }}
+                  onClick={() => setRunning((r) => !r)}>
+                  {running ? "❚❚ pause" : "▶ run"}
+                </button>
+                <button className="bea seg" style={{ padding: "10px 12px" }}
+                  onClick={() => { setFaceState((p) => advance(p)); setStep((s) => s + 1);
+                    setHistory((h) => [...h.slice(-40), advance(faceState).join("")]); }}>
+                  step ▸
+                </button>
+              </div>
+              <label style={{ fontSize: 11, color: "#c89878" }}>speed · {speed}/s</label>
+              <input type="range" min={1} max={20} value={speed}
+                onChange={(e) => setSpeed(+e.target.value)} style={{ width: "100%" }} />
+              <label style={{ fontSize: 11, color: "#c89878", display: "block", marginTop: 6 }}>
+                <input type="checkbox" checked={autoSpin} onChange={(e) => setAutoSpin(e.target.checked)} /> auto-rotate
+              </label>
+            </div>
+
+            {/* seeds */}
+            <div className="panel" style={{ padding: 14 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.2em", color: "#ff8a3d", textTransform: "uppercase", marginBottom: 9 }}>
+                seed
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                <button className="bea seg" onClick={() => seed("one")}>single spark</button>
+                <button className="bea seg" onClick={() => seed("anti")}>antipodal pair</button>
+                <button className="bea seg" onClick={() => seed("pent")}>light pentagons</button>
+                <button className="bea seg" onClick={() => seed("rand")}>random fill</button>
+              </div>
+            </div>
+
+            {/* rules */}
+            <div className="panel" style={{ padding: 14 }}>
+              <div style={{ fontSize: 11, letterSpacing: "0.2em", color: "#ff8a3d", textTransform: "uppercase", marginBottom: 10 }}>
+                the two rules
+              </div>
+              <RuleEditor label="pentagon–hexagon edges · ×60" rule={phRule} setRule={setPhRule} rev={phRev} accent="#ff8a3d" />
+              <div style={{ height: 12 }} />
+              <RuleEditor label="hexagon–hexagon edges · ×30" rule={hhRule} setRule={setHhRule} rev={hhRev} accent="#ffb347" />
+              <div style={{ marginTop: 11, fontSize: 11, color: "#c89878", lineHeight: 1.5 }}>
+                When both rules are <span style={{ color: "#7fdca0" }}>reversible</span>, the whole sphere conserves
+                information — it can only permute symbols across faces forever, never erase them. That's the
+                closed-cosmology regime.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* footer note */}
+        <div className="panel" style={{ marginTop: 18, padding: "16px 18px", fontSize: 12.5, color: "#c89878", lineHeight: 1.6 }}>
+          <span className="hot">What you're looking at.</span> Every edge borders exactly two faces, so each edge is a
+          two-in / two-out gate acting on its neighbors. The 12 pentagons (thick pale outline) are the only places the
+          geometry forbids a flat hexagonal neighborhood — Euler's formula forces exactly twelve of them onto any
+          sphere built this way. If you find a rule pair where activity keeps collecting on those pentagons, you've
+          watched curvature defects act as memory. Try <em>single spark</em> with the default rules, then nudge the
+          pentagon-edge rule and see how differently the wavefront moves.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RuleEditor({ label, rule, setRule, rev, accent }) {
+  const upd = (key, val) => setRule((r) => ({ ...r, [key]: val }));
+  return (
+    <div style={{ background: "rgba(0,0,0,0.25)", borderRadius: 3, padding: "10px 11px", border: "1px solid rgba(255,120,40,0.12)" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+        <span style={{ fontSize: 11, color: accent }}>{label}</span>
+        <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 2,
+          background: rev ? "rgba(127,220,160,0.15)" : "rgba(255,90,60,0.15)",
+          color: rev ? "#7fdca0" : "#ff8a6b" }}>
+          {rev ? "reversible" : "lossy"}
+        </span>
+      </div>
+      <div style={{ fontSize: 10.5, color: "#a87a58", marginBottom: 8, fontFamily: "'IBM Plex Mono',monospace" }}>
+        a′=(a+{rule.k}·b+{rule.c}) · b′=(b+{rule.m}·a+{rule.d}){rule.swap ? " · swap" : ""} mod 4
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 12px" }}>
+        {[["k", "k"], ["m", "m"], ["c", "+a"], ["d", "+b"]].map(([key, lbl]) => (
+          <label key={key} style={{ fontSize: 10.5, color: "#c89878", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ width: 22 }}>{lbl}</span>
+            <select value={rule[key]} onChange={(e) => upd(key, +e.target.value)}
+              style={{ flex: 1, background: "#1a0c05", color: "#ffe9c2", border: "1px solid rgba(255,120,40,0.3)",
+                borderRadius: 2, padding: "3px 4px", fontFamily: "inherit", fontSize: 11 }}>
+              {[0, 1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </label>
+        ))}
+      </div>
+      <label style={{ fontSize: 10.5, color: "#c89878", display: "flex", alignItems: "center", gap: 6, marginTop: 7 }}>
+        <input type="checkbox" checked={rule.swap} onChange={(e) => upd("swap", e.target.checked)} /> swap outputs
+      </label>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("bea-root"));
+root.render(<App />);
+</script>
+</body>
+</html>
