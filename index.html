@@ -90,12 +90,13 @@ nav {
   display: flex;
   align-items: center;
   gap: 9px;
+  flex-shrink: 0;
 }
 .nav-logo .o { color: var(--text-muted); }
 .wordmark { display: inline; }
 .wordmark .o { color: var(--text-muted); }
 .nav-logo svg { flex-shrink: 0; }
-.nav-links { display: flex; gap: 28px; list-style: none; }
+.nav-links { display: flex; gap: 28px; list-style: none; flex-wrap: wrap; justify-content: flex-end; margin-left: 32px; }
 .nav-links a {
   color: var(--text-muted);
   text-decoration: none;
@@ -104,8 +105,11 @@ nav {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 .nav-links a:hover { color: var(--gold); }
+@media (max-width: 1080px){ .nav-links { gap: 18px; } }
+@media (max-width: 920px){ .nav-inner { height: auto; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; gap: 8px 0; } .nav-links { gap: 14px; margin-left: 0; width: 100%; justify-content: flex-start; } }
 
 /* ── HERO ── */
 #hero {
