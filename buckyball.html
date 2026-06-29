@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Buckyball Edge Automaton — Ontinuity</title>
-<meta name="description" content="An interactive C60 cellular automaton, and an honest field-notes walk from a buckyball to holonomy, gauge freedom, and the formal mechanism behind the Meteorology of Information Propagation.">
+<meta name="description" content="An interactive C60 cellular automaton, and an honest field-notes walk from a buckyball to a homotopy-protected universal reversible computer — holonomy, gate universality over Aff(2,Z4), Turing-completeness, and the topological-computing ideas underneath.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -36,7 +36,7 @@ h1.title{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(28px,4
 h1.title .accent{color:var(--gold);}
 .lede{font-size:17px;color:var(--text-dim);max-width:680px;line-height:1.6;}
 #bea-root{max-width:var(--max-w);margin:0 auto;padding:8px var(--pad) 0;}
-.essay{max-width:760px;margin:0 auto;padding:40px var(--pad) 110px;}
+.essay{max-width:760px;margin:0 auto;padding:8px var(--pad) 110px;}
 .essay h2{font-family:'Orbitron',monospace;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:0.02em;margin:46px 0 14px;}
 .essay h3{font-size:15px;font-weight:600;color:var(--gold-bright);margin:28px 0 8px;letter-spacing:0.02em;}
 .essay p{margin-bottom:16px;color:var(--text);}
@@ -73,7 +73,7 @@ footer a:hover{color:var(--gold);}
 <header class="hero">
   <div class="hero-mono">Interactive · Field Notes · June 2026</div>
   <h1 class="title">The Buckyball <span class="accent">Edge Automaton</span></h1>
-  <p class="lede">A cellular automaton on the exact C<sub>60</sub> truncated icosahedron — symbols on the faces, rules on the edges, twelve pentagons that curvature forces into being. Below the toy is an honest walk of where chasing it led: holonomy, gauge freedom, and the formal mechanism behind one of this corpus's own papers.</p>
+  <p class="lede">A cellular automaton on the exact C<sub>60</sub> truncated icosahedron — symbols on the faces, rules on the edges, twelve pentagons that curvature forces into being. Below the toy is an honest walk of where chasing it led: from a sphere that can only count, through added handles, to a homotopy-protected universal reversible computer — and the topological-computing ideas underneath it.</p>
 </header>
 
 <div id="bea-root"></div>
@@ -91,19 +91,25 @@ footer a:hover{color:var(--gold);}
 
   <div class="callout"><strong>The mechanism is not new.</strong> Following the thread upward — defects, braiding, holonomy that computes — leads straight into established mathematics: topological defect braiding (Kitaev, Teo–Roy–Chen, the genon literature), and the connection between holonomy structure and computational power that Krohn–Rhodes theory has carried for sixty years. The genuinely defensible seam is small and specific: <em>finite-order holonomy behaves like a finite-state machine, while faithful unbounded computation requires infinite-order holonomy.</em> A bridge between known results, not a new continent — and worth saying plainly rather than overselling.</p></div>
 
-  <h3>The transferable idea</h3>
-  <p>What survived the walk was not a theorem but a shape: a <em>plastic connection</em> — a medium where transport rewrites the medium, and the rewritten medium conditions later transport. Process and memory as one substance. Tested directly against neural networks, it ties a fixed baseline on regular meshes (free adaptability, no regression) and, on metric-free graphs with a curvature prior, recovers structure where the standard gauge-equivariant machinery has no metric to work from. It does not beat purpose-built methods in crowded subfields. It earns its keep where there is a gap rather than a baseline.</p>
-
-  <h3>Where it landed</h3>
-  <p>The clean home turned out to be one of this corpus's own papers. The <a href="papers.html" style="color:var(--gold);">Meteorology of Information Propagation</a> argues that narratives spread over a medium that is itself rewritten by what flows through it — sediment, salinity, terrain that shifts when a story sinks in — and named fluid dynamics and chaos theory as its toolkit. But those tools all assume a <em>fixed</em> medium. The plastic connection is the missing piece. Built as a minimal coupled model, it reproduces the paper's three signature claims, and all three vanish when the plasticity is switched off:</p>
+  <h3>From a sphere to a computer, one handle at a time</h3>
+  <p>The real thread was computational. Each step added exactly one structural ingredient, and each claim was executed in code rather than asserted — seven reproducible scripts by the end. The arc:</p>
   <ol class="steps">
-    <li><b>Phase transition.</b> Under steadily rising counter-pressure the medium holds, then releases suddenly — a jump 2.5× sharper than the fixed null. The barometric "pressure builds then breaks."</li>
-    <li><b>Path-dependence.</b> The same narrative lands at full strength on terrain pre-soaked with its own pole and fails completely on opposing terrain. The fixed medium cannot tell the two histories apart. Sediment, made literal.</li>
-    <li><b>Recurrence.</b> An evaporated narrative recondenses from a trivial re-seed because the terrain remembers; the fixed medium must be re-driven from scratch. The water cycle.</li>
+    <li><b>Sphere → it counts, it cannot compute.</b> The holonomy on a sphere is abelian — it can measure enclosed area but carries no order-dependence, so no real computation lives there.</li>
+    <li><b>The sphere as an error-correcting code.</b> The C<sub>60</sub> face structure reads exactly as a <b>[32, 9.5, 8] code over ℤ₄</b> (proven via Smith normal form), and the twelve pentagon defects own the failure modes. The geometry <em>is</em> a code.</li>
+    <li><b>Torus control.</b> On a torus the concentration of activity is geometric, 4.4× — establishing causation, not correlation, between curvature structure and dynamics.</li>
+    <li><b>Genus-2 → it computes.</b> Add handles and the holonomy goes <em>non-abelian</em>: braiding loops around the handles transforms data, order matters, and the result is protected by homotopy (contractible detours do nothing).</li>
+    <li><b>Genus-2, full search → universal.</b> A four-generator flat connection realizes the <em>entire</em> affine group <b>Aff(2, ℤ₄)</b> — all 1536 elements. Any invertible affine transform of the token is a braid word. A universal gate set for a concrete reversible model, encoded purely in how loops wind around handles.</li>
+    <li><b>Genus-2 + junctions → Turing-complete.</b> The one new primitive — <em>state-dependent loop selection</em>, where the token's value chooses which loop it traverses next, driven by holonomy triviality — supplies control flow. That turns the universal gate set into a programmable machine: a reversible counter machine, with multiplication verified in code.</li>
   </ol>
-  <p>The right toolkit for that framework is smaller and more specific than the original paper's atmospheric-physics list: a graph Laplacian for the diffusion and the watershed structure, coupled slow–fast dynamics for the plasticity, and bifurcation theory with its early-warning signals for the forecast. The grand analogy is the dream; the minimal coupled system is the part that can be tested.</p>
+  <p>The single move, repeated until it bit: add a handle, then don't artificially restrict the generators. The distance from a glowing buckyball image to a universal reversible processor is that move, six times.</p>
 
-  <div class="callout"><strong>The honest ending.</strong> The buckyball did not become a theorem, a product, or a new architecture. It became the formal engine for a framework that already existed in metaphor and lacked the mathematics underneath it. That is a real landing — and a good argument for following an abstract thread all the way to its conclusion, even when the destination turns out to be rediscovery rather than invention. The understanding is worth having on its own.</p></div>
+  <h3>What it means — topological and quantum computation</h3>
+  <p>This is the classical skeleton of the architecture that makes <em>topological</em> quantum computing robust: computation carried by braiding and protected by homotopy, so local noise that doesn't change a loop's topology can't corrupt the result. That fault-tolerance-by-topology is exactly why the field (Kitaev's anyons, the genon literature) pursues it. What was built here is the classical, exact version of that skeleton over a small ring — proven to reach everything in its model — not a quantum device and not a claim of quantum speedup.</p>
+
+  <div class="callout"><strong>The honest ceilings, stated plainly.</strong> Three boundaries keep the claim defensible. <em>It is classical</em> — Turing-completeness is the bar for general computation and this clears it, but no quantum advantage is claimed. <em>Completeness needs unboundedness</em> — true Turing-completeness requires counters that grow without limit, which on a finite surface means unbounded winding; the architecture is complete, any physical instance is bounded (the same caveat every real tape carries). And <em>the mechanism is not new</em>: defect-holonomy braiding runs through Kitaev, Teo–Roy–Chen, and the genon work, and the link between holonomy structure and computational power is sixty years of Krohn–Rhodes theory. The one genuinely defensible seam is narrow and worth stating exactly: <b>finite-order holonomy behaves like a finite-state machine; faithful unbounded computation requires infinite-order holonomy.</b> A bridge between known results, not a new continent.</p></div>
+
+  <h3>The shape that survived</h3>
+  <p>Past the computer, one transferable idea remained: a <em>plastic connection</em> — a medium where transport rewrites the medium and the rewritten medium conditions later transport. Process and memory as one substance. Tested against neural networks it ties a fixed baseline on regular meshes while freely adapting, and on metric-free graphs with a curvature prior it recovers structure where the standard machinery has no metric to work from; a graph-neural-net holonomy classification, by contrast, was a clean null after three attempts. It earns its keep where there is a gap rather than a crowded baseline. That same plastic-connection shape turned out to be the missing formal mechanism behind one of this corpus's own papers, the <em>Meteorology of Information Propagation</em> — a curiosity worth following for anyone who wants to chase the abstract version. But the load-bearing result here is the computer.</p>
 </article>
 
 <footer>
