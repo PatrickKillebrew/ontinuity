@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Meteorology of Information Propagation — Ontinuity</title>
+<meta name="description" content="A complex-systems framework for modeling, predicting, and visualizing how narrative flows through social ecosystems — treating the social landscape as weather over heterogeneous terrain rather than contagion through a uniform medium.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#c9a84c; --gold-bright:#d9b85c; --gold-dim:#7a6530; --gold-deep:#3d2e0a;
+  --gold-glow:rgba(201,168,76,0.18);
+  --bg:#090909; --bg-raised:#0f0f0f; --bg-card:#121212; --bg-card-hover:#161616;
+  --text:#EFEFEF; --text-dim:#8A8A8A; --text-muted:#4A4A4A;
+  --border:rgba(201,168,76,0.18); --border-subtle:rgba(255,255,255,0.07);
+  --max-w:1000px; --pad:48px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:15px;line-height:1.65;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(201,168,76,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(201,168,76,0.03) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(9,9,9,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border-subtle);}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 var(--pad);height:56px;display:flex;align-items:center;justify-content:space-between;}
+.nav-logo{font-family:'Orbitron',monospace;font-size:clamp(13px,1.6vw,17px);font-weight:700;color:var(--gold);text-decoration:none;letter-spacing:0.04em;white-space:nowrap;display:flex;align-items:center;gap:9px;}
+.nav-logo .o{color:var(--text-muted);}
+.nav-links{display:flex;gap:28px;list-style:none;}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:12px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;transition:color 0.2s;}
+.nav-links a:hover{color:var(--gold);}
+.hero{position:relative;z-index:1;padding:120px var(--pad) 30px;max-width:var(--max-w);margin:0 auto;}
+.hero-mono{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--gold-dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+.hero-mono::before{content:'';width:28px;height:1px;background:var(--gold-dim);}
+h1.title{font-family:'Orbitron',monospace;font-weight:700;font-size:clamp(28px,4.5vw,44px);line-height:1.08;letter-spacing:-0.01em;margin-bottom:18px;}
+h1.title .accent{color:var(--gold);}
+.lede{font-size:17px;color:var(--text-dim);max-width:680px;line-height:1.6;}
+.essay{max-width:760px;margin:0 auto;padding:24px var(--pad) 110px;}
+.essay h2{font-family:'Orbitron',monospace;font-size:18px;font-weight:600;color:var(--gold);letter-spacing:0.02em;margin:46px 0 14px;}
+.essay h3{font-size:15px;font-weight:600;color:var(--gold-bright);margin:28px 0 8px;letter-spacing:0.02em;}
+.essay p{margin-bottom:16px;color:var(--text);}
+.essay p.dim{color:var(--text-dim);}
+.essay em{color:var(--gold-bright);font-style:italic;}
+.rule{border:0;border-top:1px solid var(--border-subtle);margin:36px 0;}
+.callout{background:var(--bg-card);border:1px solid var(--border);border-left:2px solid var(--gold);border-radius:4px;padding:18px 20px;margin:22px 0;font-size:14.5px;color:var(--text-dim);line-height:1.6;}
+.callout strong{color:var(--gold-bright);font-weight:600;}
+.map{margin:18px 0;border-top:1px solid var(--border-subtle);}
+.map .row{display:grid;grid-template-columns:1fr auto 1.3fr;gap:14px;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--border-subtle);}
+.map .a{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold-bright);}
+.map .arr{color:var(--text-muted);font-size:12px;}
+.map .b{color:var(--text-dim);font-size:14px;}
+.steps{list-style:none;counter-reset:s;margin:18px 0;}
+.steps li{counter-increment:s;position:relative;padding:10px 0 10px 40px;border-top:1px solid var(--border-subtle);color:var(--text-dim);}
+.steps li::before{content:counter(s);position:absolute;left:0;top:10px;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);border:1px solid var(--border);border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;}
+.steps li b{color:var(--gold-bright);font-weight:600;}
+footer{border-top:1px solid var(--border-subtle);padding:30px var(--pad);text-align:center;color:var(--text-muted);font-size:12px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.05em;}
+footer a{color:var(--gold-dim);text-decoration:none;}
+footer a:hover{color:var(--gold);}
+@media (max-width:640px){:root{--pad:24px;} .hero{padding-top:96px;} .map .row{grid-template-columns:1fr;gap:2px;} .map .arr{display:none;}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <a class="nav-logo" href="index.html"><span class="o">◎</span> ONTINUITY</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Home</a></li>
+      <li><a href="papers.html">Papers</a></li>
+      <li><a href="corpus.html">Corpus</a></li>
+      <li><a href="https://github.com/PatrickKillebrew/ontinuity">GitHub</a></li>
+    </ul>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero-mono">Concept Paper · v0.1 · May 2026</div>
+  <h1 class="title">The Meteorology of <span class="accent">Information Propagation</span></h1>
+  <p class="lede">A complex-systems framework for how narrative moves through social ecosystems — modeled as weather over heterogeneous terrain rather than contagion through a uniform medium.</p>
+</header>
+
+<article class="essay">
+  <hr class="rule">
+
+  <h3>The wrong model, and why it's wrong</h3>
+  <p>The dominant models of information spread are borrowed from epidemiology — the SIR family, adapted to treat stories and ideas as a contagion moving through a population. They have produced real insight, but they rest on one assumption that does not hold: that the medium information travels through is roughly <em>homogeneous</em>, a uniform population of similar people connected by similar contacts.</p>
+  <p>Social landscapes are not homogeneous. They are topographically complex terrain — shaped by culture, history, economics, identity, and institutional trust. A story that spreads freely across one region hits an impermeable boundary at the next. Epidemiological models have no mechanism for terrain: they model spread but not direction, velocity but not the phase change when a story stops spreading laterally and instead sinks in, accumulates, and conditions how the next story is received. The claim of this framework is narrow and specific: <em>treating the social landscape as uniform produces predictions that are miscalibrated in the same systematic directions that treating air as uniform would miscalibrate a weather forecast.</em></p>
+
+  <h3>What meteorology offers instead</h3>
+  <p>Atmospheric science earned its predictive power by taking the heterogeneity of its medium seriously. Weather is fluid dynamics in a system with variable pressure, temperature, humidity, and topography — chaotic at short time scales, statistically characterizable at longer ones. That is a far better description of how information actually moves than any contagion model. And the mathematics meteorology built to handle it already exists: fluid-flow equations, chaos and attractor theory, scaling methods for systems that look similar at many scales.</p>
+  <p>So the right question shifts. Not <em>"how fast will this spread?"</em> but <em>"what are the atmospheric conditions, and what kind of narrative weather do those conditions produce?"</em></p>
+
+  <h3>The mapping</h3>
+  <p>The framework lays out a full correspondence between atmospheric phenomena and their information-propagation equivalents. A selection of the load-bearing ones:</p>
+  <div class="map">
+    <div class="row"><span class="a">Watershed terrain</span><span class="arr">→</span><span class="b">the social landscape — cultural boundaries, receptivity, trust gradients</span></div>
+    <div class="row"><span class="a">Permeable / impermeable ground</span><span class="arr">→</span><span class="b">receptive audience (narrative sinks in) vs. resistant (runs off)</span></div>
+    <div class="row"><span class="a">Ocean salinity</span><span class="arr">→</span><span class="b">the epistemic baseline — accumulated content of prior cycles that conditions what survives</span></div>
+    <div class="row"><span class="a">High / low pressure</span><span class="arr">→</span><span class="b">dominant stable narrative vs. instability zone where new frameworks can move in</span></div>
+    <div class="row"><span class="a">Barometric pressure</span><span class="arr">→</span><span class="b">narrative–reality divergence — the gap between what frameworks claim and what data shows</span></div>
+    <div class="row"><span class="a">Storm</span><span class="arr">→</span><span class="b">a major narrative event — rapid, widespread, high epistemic impact</span></div>
+    <div class="row"><span class="a">Seeded clouds</span><span class="arr">→</span><span class="b">coordinated campaigns — precipitation engineered to fall in specific locations</span></div>
+    <div class="row"><span class="a">Climate</span><span class="arr">→</span><span class="b">the deep epistemic baseline — what a civilization can believe at all</span></div>
+  </div>
+  <p class="dim">The paper is explicit that these are intended as analytical correspondences, not decoration — the bet is that the mathematics describing the atmospheric side describes the information side closely enough to be useful. Which of them survive formalization is exactly the open empirical question, taken up below.</p>
+
+  <h3>The testable core — barometric pressure</h3>
+  <p>The sharpest, most operational idea in the framework is the barometric-pressure signal: the most reliable leading indicator of a narrative storm is the accumulating divergence between what dominant narratives claim and what measurable ground truth shows. When economic narratives say one thing and the data says another, pressure builds. Pressure builds until it releases — as a storm, a rapid uptake of a new explanatory framework that resolves the accumulated tension. The storm looks sudden from inside the discourse, but the pressure that produced it was visible in the data for months or years.</p>
+  <p>Coordinated campaigns show up in the same instrument as <em>seeded</em> weather: when a storm forms that is far larger than the existing pressure gradient would predict, manufacture is the parsimonious explanation. The signature is measurable — synchronized timing, concentrated source, precise targeting — without having to name the actors or judge the content true or false. The measurable claim is only whether the weather was natural or seeded.</p>
+
+  <h3>The water cycle — why narratives recur</h3>
+  <p>Static network models describe one-way spread and then stop. The water cycle supplies the missing temporal dimension. A narrative that saturates the discourse evaporates — loses force, lifts off active belief, returns to cultural latency — where it persists as potential, recondenses in a new moment, and falls again on a generation that experiences it as new. The specific facts change; the underlying shape (the villain structure, the moral arc) cycles through the same patterns. Events are weather, patterns of dominance and collapse are seasons, and the deep structure of what a civilization can believe is climate — the same laws at three time scales.</p>
+
+  <h3>What it forecasts, and what it doesn't</h3>
+  <p>The predictive claim is deliberately honest. It does <em>not</em> predict which specific story will dominate on a given date — chaos theory rules that out past a short horizon, the same reason a meteorologist cannot place each raindrop. What it forecasts is <em>conditions</em>: given the current pressure gradients, saturation levels, terrain, and measured divergence, the probability distribution over what kinds of narrative events are likely, where, and over what window — most reliable in the near term, degrading to climatological characterization at the long range. Exactly the structure of a weather forecast.</p>
+
+  <div class="callout"><strong>What this is — and what it is not yet.</strong> This is a concept paper, v0.1. Its contribution is not new mathematics; the tools it invokes (fluid dynamics, chaos theory, scaling methods) are mature. The contribution is the identification that those tools fit a domain where the epidemiological paradigm has dominated, plus a research program to test that fit: expand the measurement network from a single "weather station" to many, backtest the barometric signal against known historical phase transitions (2008, 2016, the COVID narrative cycles), and formalize the correspondences into measurable fields. Until that program runs, the framework is a well-specified hypothesis, not a validated model — and the paper says so.</p></div>
+
+  <h3>A note on the mechanism underneath</h3>
+  <p>Every tool the framework names — fluid dynamics, chaos — assumes a <em>fixed</em> medium. But the framework's own central image is a medium that is itself rewritten by what flows through it: terrain that shifts as a narrative sinks in, salinity that records prior cycles, sediment made literal. That is a medium where transport changes the medium and the changed medium conditions later transport. A separate thread in this corpus — chasing the geometry of a <a href="buckyball.html" style="color:var(--gold);">buckyball</a> all the way down — landed on exactly that object: a <em>plastic connection</em>, where process and memory are one substance. It is the formal mechanism this framework gestures at and the standard toolkit lacks. The grand analogy is the dream; a minimal coupled system built from that mechanism is the part that can actually be tested.</p>
+
+</article>
+
+<footer>
+  ONTINUITY · <a href="index.html">ontinuity.org</a> · concept paper v0.1
+</footer>
+</body>
+</html>
