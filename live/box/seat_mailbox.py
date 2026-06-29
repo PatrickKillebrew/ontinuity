@@ -37,7 +37,7 @@ _MB_DB = os.environ.get("ONTINUITY_DB_PATH",
 # Default lease: a claimed message not acked within this window is reclaimable.
 _LEASE_SECONDS = int(os.environ.get("MAILBOX_LEASE_SECONDS", "900"))  # 15 min
 
-_KINDS = {"task", "proposal", "review_finding", "signoff", "result", "note"}
+_KINDS = {"task", "proposal", "review_finding", "signoff", "result", "note", "question", "answer"}  # ORACLE-1: question/answer added for the Oracle handshake
 
 # NOSELF-1 — no-self-sign-off (one-node-primitive guardrail, corpus fold 310:
 # "verify anyone's work but your own"). Reviewable kinds must never be claimed by
@@ -96,6 +96,33 @@ def _mailbox_init():
         # from_seat (who SENT the mailbox message). Used by the no-self-sign-off filter so a
         # node is never handed its own work to review, even when a different seat dispatched it.
         for _col in ("author_seat", "author_lineage"):
+            try:
+                c.execute(f"ALTER TABLE seat_mailbox ADD COLUMN {_col} TEXT")
+            except Exception:
+                pass  # already exists -> idempotent
+        # ORACLE-1 additive migration (SAFE class: nullable, no rewrite of existing rows).
+        # corr_id     = asker-generated correlation id; the answer echoes it so the asker
+        #               matches its own reply (the handshake handle).
+        # citations   = JSON text array of {source, loc} the Oracle grounded its answer on.
+        # confidence  = 'grounded' | 'nearest' | 'absent' (the honesty-contract signal).
+        # First-class columns (not body-embedded) so they are queryable for audit and the
+        # forcing-trigger detector; live mailbox_send drops unknown body keys, so these MUST
+        # be real columns to survive a round-trip.
+        #
+        # CONCURRENT-INIT SAFETY (worker11 finding 552d70af-B, made durable in-code):
+        # BOTH the MAIN and FARM engines may run _mailbox_init against the SAME shared SQLite
+        # corpus at import. That is safe here: the idempotent try/except ALTER ADD COLUMN means
+        # a second initializer racing the first just hits "duplicate column" and passes, and
+        # SQLite write-serialization guarantees the two ALTERs cannot interleave destructively.
+        # No row rewrite, no data migration -> concurrent init is a no-op for the loser.
+        #
+        # ORACLE-HOST CONSTRAINT (single-driver-by-design): while the Oracle resides on the FARM
+        # engine (interim host, before its own Railway service), the farm is single-driver — exactly
+        # one driver may own/poll the farm; a second poller collides. Therefore any farm
+        # Researcher/burn-in session requires the Oracle be STOPPED first. This is an operational
+        # constraint on the host, not a defect in this migration; recorded here so it is durable
+        # in-code rather than tribal knowledge living only in a proposal body.
+        for _col in ("corr_id", "citations", "confidence"):
             try:
                 c.execute(f"ALTER TABLE seat_mailbox ADD COLUMN {_col} TEXT")
             except Exception:
@@ -193,14 +220,21 @@ def mailbox_send():
     try:
         c = _mb_conn()
         c.execute("""INSERT INTO seat_mailbox
-            (msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,status,created_at,reply_to,author_seat,author_lineage)
-            VALUES (?,?,?,?,?,?,?,?,?, 'queued', ?, ?, ?, ?)""",
+            (msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,status,created_at,reply_to,author_seat,author_lineage,corr_id,citations,confidence)
+            VALUES (?,?,?,?,?,?,?,?,?, 'queued', ?, ?, ?, ?, ?, ?, ?)""",
             (msg_id, from_seat, (b.get("from_lineage") or "").strip() or None, to_seat, kind,
              (b.get("block_id") or "").strip() or None, (b.get("ref") or "").strip() or None,
              (b.get("depends_on") or "").strip() or None, str(body), _now(),
              (b.get("reply_to") or "").strip() or None,
              (b.get("author_seat") or from_seat).strip() or None,
-             (b.get("author_lineage") or (b.get("from_lineage") or "")).strip() or None))
+             (b.get("author_lineage") or (b.get("from_lineage") or "")).strip() or None,
+             # ORACLE-1: correlation + grounding columns. corr_id is a plain string; citations
+             # is serialized to JSON text if a list/dict is passed (else stored as-is); confidence
+             # is a short enum string. All nullable -> absent for non-Oracle messages.
+             (b.get("corr_id") or "").strip() or None,
+             (json.dumps(b["citations"]) if isinstance(b.get("citations"), (list, dict))
+              else ((b.get("citations") or "").strip() or None)),
+             (b.get("confidence") or "").strip() or None))
         c.commit(); c.close()
         _ledger("mailbox_send", "ok", op_id=op_id, result=msg_id)
         return jsonify({"ok": True, "msg_id": msg_id})
@@ -229,6 +263,7 @@ def mailbox_fetch():
     # draining the whole queue oldest-first). If newest=true, claim newest-first.
     reply_to = (b.get("reply_to") or "").strip()
     newest = bool(b.get("newest"))
+    kinds = b.get("kinds") or None  # ORACLE-1: optional per-call kind filter; absent -> no kind restriction (prior behavior)
     targets = [seat] + [str(r) for r in roles]
     op_id = _ledger("mailbox_fetch", None, begin=True, args={"seat": seat, "roles": roles})
     try:
@@ -245,6 +280,17 @@ def mailbox_fetch():
         # is the only reviewable item -> the node long-polls on rather than self-signing).
         _nf, _np = _noself_predicate(seat, (_lin or b.get("lineage") or "").strip())  # KEYS-2: trusted lineage
         sql += _nf; params += _np
+        # ORACLE-1: optional per-call kind filter. Absent (None/[]) -> no kind restriction
+        # (identical to prior behavior). Present -> restrict to the validated subset of _KINDS.
+        # Present-but-ALL-INVALID -> claim NOTHING (symmetric with _yt_try_claim, which returns
+        # None on the same input). No silent fallback to unrestricted (worker11 finding 552d70af-A).
+        if kinds:
+            _ks = [str(k).strip() for k in kinds if str(k).strip() in _KINDS]
+            if not _ks:
+                c.execute("COMMIT"); c.close()  # release the BEGIN IMMEDIATE lock cleanly
+                _ledger("mailbox_fetch", "ok", op_id=op_id, result="empty:no-valid-kinds")
+                return jsonify({"ok": True, "message": None})
+            sql += f" AND kind IN ({','.join('?' for _ in _ks)})"; params += _ks
         if block:
             sql += " AND block_id=?"; params.append(block)
         if reply_to:
@@ -262,10 +308,10 @@ def mailbox_fetch():
         c.execute("UPDATE seat_mailbox SET status='claimed', claimed_by=?, claimed_at=?, lease_until=? "
                   "WHERE msg_id=? AND status='queued'", (seat, _now(), lease, mid))
         c.execute("COMMIT")
-        m = c.execute("SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,created_at,lease_until "
+        m = c.execute("SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,created_at,lease_until,corr_id,citations,confidence "
                       "FROM seat_mailbox WHERE msg_id=?", (mid,)).fetchone()
         c.close()
-        cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","depends_on","body","created_at","lease_until"]
+        cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","depends_on","body","created_at","lease_until","corr_id","citations","confidence"]
         _ledger("mailbox_fetch", "ok", op_id=op_id, result=mid)
         return jsonify({"ok": True, "message": dict(zip(cols, m))})
     except Exception as e:
@@ -345,13 +391,13 @@ def mailbox_peek():
     if b.get("status"):   where.append("status=?");    params.append(b["status"].strip())
     if b.get("block_id"): where.append("block_id=?");  params.append(b["block_id"].strip())
     limit = max(1, min(int(b.get("limit", 20)), 100))
-    sql = "SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,body,status,created_at,claimed_by,lease_until,done_at FROM seat_mailbox"
+    sql = "SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,body,status,created_at,claimed_by,lease_until,done_at,corr_id,citations,confidence FROM seat_mailbox"
     if where: sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY created_at DESC LIMIT ?"; params.append(limit)
     try:
         c = _mb_conn()
         rows = c.execute(sql, params).fetchall(); c.close()
-        cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","body","status","created_at","claimed_by","lease_until","done_at"]
+        cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","body","status","created_at","claimed_by","lease_until","done_at","corr_id","citations","confidence"]
         return jsonify({"ok": True, "count": len(rows), "messages": [dict(zip(cols, r)) for r in rows]})
     except Exception as e:
         return jsonify({"error": str(e)[:200]}), 500
@@ -464,21 +510,30 @@ _YT_WAIT_CAP = 90                            # matches MODAL_TIMEOUT_AUTONOMOUS_
 _YT_POLL_INTERVAL = 2.0                      # poll every ~2s
 
 
-def _yt_try_claim(seat, roles, block, lineage=""):
+def _yt_try_claim(seat, roles, block, lineage="", kinds=None):
     """One atomic claim attempt for a WORK-kind item. Mirrors mailbox_fetch's
     BEGIN IMMEDIATE claim, but filters to _WORK_KINDS so a draining node never
-    claims an ack (note/result). Returns the claimed message dict or None."""
+    claims an ack (note/result). Returns the claimed message dict or None.
+    ORACLE-1: if `kinds` is supplied (a per-call override, e.g. ["question"] for
+    the Oracle poll or ["answer"] for an asker's receive), it REPLACES the
+    _WORK_KINDS filter for this call only; each value is validated against _KINDS.
+    Absent kinds -> identical to prior behavior (default _WORK_KINDS)."""
     targets = [seat] + [str(r) for r in (roles or [])]
+    kind_set = _WORK_KINDS
+    if kinds:
+        kind_set = {str(k).strip() for k in kinds if str(k).strip() in _KINDS}
+        if not kind_set:
+            return None  # caller asked for kinds, none valid -> claim nothing (no silent fallback to work-kinds)
     c = _mb_conn()
     try:
         c.execute("BEGIN IMMEDIATE")  # serialize claimers — atomic, no double-claim
         # 1) reclaim expired claims back to queued (dead node's block returns to pool)
         c.execute("UPDATE seat_mailbox SET status='queued', claimed_by=NULL, claimed_at=NULL, lease_until=NULL "
                   "WHERE status='claimed' AND lease_until IS NOT NULL AND lease_until < ?", (_now(),))
-        # 2) oldest queued WORK item for any of this seat's targets
+        # 2) oldest queued item (of the selected kind set) for any of this seat's targets
         ph = ",".join("?" for _ in targets)
-        kph = ",".join("?" for _ in _WORK_KINDS)
-        params = list(targets) + list(_WORK_KINDS)
+        kph = ",".join("?" for _ in kind_set)
+        params = list(targets) + list(kind_set)
         sql = (f"SELECT msg_id FROM seat_mailbox WHERE status='queued' "
                f"AND to_seat IN ({ph}) AND kind IN ({kph})")
         # NOSELF-1: same guardrail on the long-poll claim path.
@@ -496,10 +551,10 @@ def _yt_try_claim(seat, roles, block, lineage=""):
         c.execute("UPDATE seat_mailbox SET status='claimed', claimed_by=?, claimed_at=?, lease_until=? "
                   "WHERE msg_id=? AND status='queued'", (seat, _now(), lease, mid))
         c.execute("COMMIT")
-        m = c.execute("SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,created_at,lease_until "
+        m = c.execute("SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,created_at,lease_until,corr_id,citations,confidence "
                       "FROM seat_mailbox WHERE msg_id=?", (mid,)).fetchone()
         c.close()
-        cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","depends_on","body","created_at","lease_until"]
+        cols = ["msg_id","from_seat","from_lineage","to_seat","kind","block_id","ref","depends_on","body","created_at","lease_until","corr_id","citations","confidence"]
         return dict(zip(cols, m))
     except Exception:
         try: c.execute("ROLLBACK"); c.close()
@@ -525,6 +580,7 @@ def you_there():
         return jsonify({"error": "seat required"}), 400
     roles = b.get("roles") or []
     block = (b.get("block_id") or "").strip()
+    kinds = b.get("kinds") or None  # ORACLE-1: per-call kind override (e.g. ["question"]/["answer"]); None -> _WORK_KINDS
     lineage = (_ylin or b.get("lineage") or "").strip()  # KEYS-2: trusted lineage if authenticated
     try:
         wait_seconds = int(b.get("wait_seconds", _YT_WAIT_DEFAULT))
@@ -539,7 +595,7 @@ def you_there():
     try:
         while True:
             polls += 1
-            msg = _yt_try_claim(seat, roles, block, lineage)
+            msg = _yt_try_claim(seat, roles, block, lineage, kinds)
             if msg is not None:
                 _ledger("you_there", "ok", op_id=op_id,
                         result=f"claimed {msg['msg_id']} kind={msg['kind']} polls={polls}")
