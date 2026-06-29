@@ -71,13 +71,14 @@ nav {
   border-bottom: 1px solid var(--border-subtle);
 }
 .nav-inner {
-  max-width: var(--max-w);
+  max-width: 1320px;
   margin: 0 auto;
   padding: 0 var(--pad);
   height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 24px;
 }
 .nav-logo {
   font-family: 'Orbitron', monospace;
@@ -96,20 +97,23 @@ nav {
 .wordmark { display: inline; }
 .wordmark .o { color: var(--text-muted); }
 .nav-logo svg { flex-shrink: 0; }
-.nav-links { display: flex; gap: 28px; list-style: none; flex-wrap: wrap; justify-content: flex-end; margin-left: 32px; }
+.nav-links { display: flex; gap: 22px; list-style: none; align-items: center; }
 .nav-links a {
   color: var(--text-muted);
   text-decoration: none;
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   transition: color 0.2s;
   white-space: nowrap;
 }
 .nav-links a:hover { color: var(--gold); }
-@media (max-width: 1080px){ .nav-links { gap: 18px; } }
-@media (max-width: 920px){ .nav-inner { height: auto; padding-top: 10px; padding-bottom: 10px; flex-wrap: wrap; gap: 8px 0; } .nav-links { gap: 14px; margin-left: 0; width: 100%; justify-content: flex-start; } }
+@media (max-width: 1180px){ .nav-links { gap: 16px; } .nav-links a { letter-spacing: 0.04em; } }
+@media (max-width: 1000px){
+  .nav-inner { height: auto; flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 12px; padding-bottom: 12px; }
+  .nav-links { flex-wrap: wrap; gap: 14px 18px; }
+}
 
 /* ── HERO ── */
 #hero {
