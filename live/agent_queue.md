@@ -827,3 +827,20 @@ Session: fresh control seat booted from the migration packet; flagged its suppre
 **OPEN (Oracle build, operator-gated):** Oracle as a Tetraform grounding session — resolve the latency question first (a gated answer takes multiple cycles vs the <=60s you_there window; may need an async corr_id contract). Coordinator as a shepherd-lineage code loop. Governor gains hands (gated on seat registry). Carried: manual-currency drift is now FIXED this session.
 
 **CROSS-REF:** design spec live/specs/gated_session_substrate.md (corrected, 912973a7); Oracle spec live/specs/oracle.md (9f2e4b22); conversation record live/conversations/2026-06-29_oracle-step1-leash-architecture.md. Engine idle, no orphaned claims, DB backup independent of the live keys.
+
+
+## ORACLE SHELVED — June 29 afternoon (control seat; post-close findings)
+
+After the day's close ritual, two questions resolved the Oracle's fate and it was SHELVED.
+
+**Latency (read from app.py):** an Oracle-as-Tetraform-session cannot answer inside the <=60s you_there window. SESSION_END is hard-refused before cycle 2 (two-cycle adversarial floor, app.py ~L2545/2877), and each cycle is >=2 sequential model calls (model_a Researcher L2422 -> model_b Challenger L2709). A grounded answer = 4+ sequential frontier calls + corpus reads. Synchronous is structurally impossible; if ever built the Oracle MUST be async (question+corr_id, retrieve later — the step-1 columns are that envelope).
+
+**Consumer (the deciding question):** the Oracle has none. (1) Workers never needed it this session — they ground by reading the corpus directly and caught their own defects all through the step-1 chain. (2) A pure-routing coordinator needs no adversarial grounding — routing is deterministic boolean checks against the ledger; bolting the Oracle onto the coordinator was an over-build, stripped twice. (3) The design chair cannot consume an async multi-cycle answer to ground a live sentence — that is the assertion rule's job (direct, synchronous corpus reads). So the async Oracle session has no caller.
+
+**DECISION (operator):** SHELVE the Oracle process (steps 2+). Keep the harmless step-1 plumbing. The real leash is the ASSERTION RULE + operator backstop (design chair) and the already-working courier/ledger/peer-review discipline (workers). The COORDINATOR is KEPT and remains the live build target. Do not resume the Oracle without naming a concrete consumer that needs adversarial grounding AND can consume an async answer.
+
+**THE NORTH STAR (restated):** still building toward a SINGLE PANE that lets the operator view and interact with >2 workers. Path: COORDINATOR (shepherd-lineage code loop — drains the FIFO mailbox, runs the no-self-sign-off chain in code, fires courier ops; nothing bolted on) -> SEAT REGISTRY / identity primitive (the live roster + per-identity keys; the dependency under everything) -> GOVERNOR gains hands (the read-only pane gets a dispatch/nudge relay). The Oracle is no longer on this path.
+
+**Process note:** the day's recurring failure was control reaching for memory/adjacent-layer reads over reading source; the operator forced each read. The latency answer and the consumer answer were both readable/derivable from source the whole time. Recorded in gated_session_substrate.md (decision banner) and the assertion rule.
+
+CROSS-REF: gated_session_substrate.md (Oracle-shelved banner); PUNCH_LIST DONE entry (Oracle steps 2+ shelved); conversation record 2026-06-29 (oracle-step1-leash-architecture). Engine idle, no orphaned claims.
