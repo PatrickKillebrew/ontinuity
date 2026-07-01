@@ -1,5 +1,5 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-06-21 by control seat (claude.ai-chat:opus-4.8) at fold.
+# Updated 2026-06-30 by a fresh control seat (claude.ai-chat:opus-4.8) — Coordinator retired, north-star reordered Governor-first.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the queue head.
 
 ## STATE AT FOLD
@@ -55,22 +55,29 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
-S22 ULTRA NODE BUILD — resume at the wireless-ADB connect step (staging is DONE):
-  - Staged on laptop C:\donkeycar\: termux.apk (113.8MB, F-Droid 0.118.3 — NOT Play Store),
-    build_cpu.sh (2460b, pinned llama.cpp b5027, OpenBLAS, pre-copies Adreno OpenCL libs, pulls
-    Llama 3.2 3B Q4_0, benchmarks w/ perf-core affinity + ctx 2048).
-  - Phone: wireless debugging ON, laptop ALREADY PAIRED (kille@LAPTOP-UEJLM2PL). Connect addr was
-    192.168.1.141:39917 but the wireless-debugging PORT ROTATES — that caused the connect pain.
-  - BULLETPROOF PATH: ten-second cable flip -> `adb tcpip 5555` over USB (fixed port, never rotates)
-    -> unplug -> `adb connect 192.168.1.141:5555`. Then `adb install termux.apk`, push+run build_cpu.sh.
-  - adb at C:\Users\kille\AppData\Local\Android\Sdk\platform-tools\adb.exe. Operator was plugging in
-    the USB cable at fold.
-BUILD TREE (the plan): CPU llama.cpp (branch 1, may be FASTEST on 8 Gen 1 — forum: GPU offload can be
-40% SLOWER due to immature OpenCL driver) -> Vulkan + OpenCL-Adreno benchmark (branch 2) -> GENIE on
-Hexagon NPU (branch 3, the endgame: ~10 tok/s sipping watts). FORUM GOTCHAS baked into build_cpu.sh:
-pin pre-b5028 (newer segfaults on Adreno); disable Phantom Process Killer
-(`adb shell device_config put activity_manager max_phantom_processes 2147483647`) or Android silently
-kills the inference server; keep RAM >400MB. Note 9 (SD845, no usable LLM-NPU) = second worker/test bench.
+GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).
+  - GOAL: one page (served by the existing governor relay, OUTSIDE the Claude UI) that shows every
+    worker seat's status at a glance. Largest visible win toward "see and interact with >2 workers."
+  - BUILD: a new read route `/governor/workers` in the live governor_routes.py pattern (server-side
+    diag fetch, X-API-Key gated, same-origin) + a Workers panel in governor.html (existing dark
+    aesthetic). The roster is DERIVABLE FROM seat_mailbox TODAY — no schema change:
+    `SELECT from_seat, MAX(created_at) last_seen, COUNT(*) msgs FROM seat_mailbox GROUP BY from_seat`
+    (verified live 2026-06-30: 11 seats). Enrich per-seat with last message kind + claimed/idle +
+    whether unacked work is addressed to it. SAFE tier, read-only.
+  - PATTERN TO COPY: live/governor/governor_routes.py (the /governor/data route) + governor_relay.py
+    (the local same-origin server that runs it outside the Claude UI).
+  - THEN (same arc): a per-worker NUDGE affordance (you_there already self-drains a worker's whole
+    turn on one nudge). HONEST CEILING — no software gives a dormant CHAT window a turn; the panel
+    makes the nudge one tap + surfaces idle-with-work; hands-free wake needs API workers (later).
+  - Full grounded plan + the retired-Coordinator reasoning: agent_queue fold 12c97d16;
+    gated_session_substrate.md superseding banner (d4dc6bed); PUNCH_LIST DONE entry (8a02cf9c).
+
+## BACKGROUND INFRA THREAD (not the next action — do not front-load over the Governor)
+S22 ULTRA local-LLM node — staged at the wireless-ADB connect step, still OPEN as a background thread
+(a future local inference provider / second worker). Resume path if picked up: ten-second cable flip
+-> `adb tcpip 5555` over USB (fixed port) -> unplug -> `adb connect 192.168.1.141:5555` -> `adb install
+termux.apk` -> push+run build_cpu.sh (staged C:\donkeycar\, pinned llama.cpp b5027, disable Phantom
+Process Killer). Full detail in PUNCH_LIST OPEN (S22 node). Parked in favor of the Governor build.
 
 ## STANDING LESSON (still load-bearing, from prior shift)
 Every in-cycle role MUST carry explicit *_URL/*_MODEL/*_API_KEY. A role configured "by omission"
