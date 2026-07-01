@@ -1,5 +1,9 @@
 # DESIGN NOTE — Leashing Everything Except the Design Chair
 
+> **SUPERSEDING DECISION — COORDINATOR RETIRED (operator, 2026-06-30). Read this before the June-29 banner below.**
+> A fresh control seat re-read the live box seat_mailbox.py end to end and confirmed the pool ALREADY self-routes: `_noself_predicate` (L50-61) excludes a reviewable row from its own author's claim, applied on both `mailbox_fetch` and the `you_there` self-drain path (`_yt_try_claim` L539-541). A finished proposal addressed to `any_worker` is claimable by every worker except its author, oldest-first, atomically. So the Coordinator re-implements in Python the routing SQL already does for free — it is REDUNDANT, not merely consumer-less. The June-29 banner below KEPT the Coordinator as "the live build target"; that is SUPERSEDED. The Coordinator is RETIRED: do not resume it, do not install staging/coordinator.py. The decohered June-30 control had invented a hand-routing role (addressing messages to NAMED seats, which breaks the self-drain) and the Coordinator was a fix for that self-inflicted bottleneck. DISCIPLINE: proposals go to `any_worker`, never a named seat; roles are emergent from item kind, not assigned by a router. NORTH STAR REORDERED (Governor-first): (0) retire coordinator + correct record [done 2026-06-30]; (1) Worker Status Panel — read route /governor/workers + governor.html panel, roster derivable from seat_mailbox TODAY, SAFE/read-only; (2) per-worker nudge affordance (you_there already self-drains on one nudge; honest ceiling — no software wakes a dormant CHAT window, hands-free wake needs API workers); (3) Seat Registry / identity primitive (atomic naming + true liveness + per-identity keys — the gate for Governor-with-hands); (4) auto-spawn workers as API processes (the ceiling-lift). See agent_queue.md fold 2026-06-30 (commit 12c97d16) for the full grounded proof.
+
+
 *Status: DESIGN (not built). Authored by control with operator (Patrick), 2026-06-29. CORRECTED 2026-06-29 after reading the actual engine loop and the existing shepherd/governor/mailbox source end-to-end. The first version of this note (commit d4a853b6) over-claimed that the engine is a general "configurable gated-session substrate" hosting three workloads including the coordinator; reading run_session_loop, shepherd.py, governor_*, and seat_mailbox.py disproved that. This version is grounded in those reads. Where this and the prior version disagree, this one wins.*
 
 > **DECISION — ORACLE SHELVED (operator, 2026-06-29 afternoon). The COORDINATOR is KEPT.**
@@ -58,12 +62,17 @@ Before control states any load-bearing system-fact in a design conversation — 
 1. INSTANTIABILITY / SINGLE-DRIVER. OPERATING_MANUAL.md L37: "exactly ONE driver owns the farm... Separate instances need separate mailboxes." Running an Oracle Tetraform session and (separately) the coordinator loop requires care about which engine instance hosts what. CONFIRM how many engine instances can be provisioned (MAIN, FARM exist; cost on Railway usage-based billing) and that each Tetraform session gets an isolated mailbox. NOTE: the coordinator is a code loop, not an engine session, so it does NOT consume a Tetraform driver slot — it can run as its own process and INVOKE Oracle sessions when needed.
 2. ORACLE-AS-SESSION LATENCY. A Tetraform-gated answer takes multiple cycles (adversarial floor: cannot close in one cycle). oracle.md §3.2 wants an answer within one you_there window (<=60s) so a chat asker does not hang across a turn boundary. CONFIRM whether a gated grounding session can return in-window, or whether the Oracle needs an async contract (answer arrives later, recovered by corr_id) for heavy questions.
 
-## BUILD ORDER (smallest real leverage first)
+## BUILD ORDER (CORRECTED 2026-06-30 — Governor-first; Coordinator retired as redundant)
 
-1. ASSERTION RULE into the CONTROL boot packet — highest-leverage, shippable now, codifies the rule the operator enforces by hand. (Corpus edit; no engine work.)
-2. ORACLE as a Tetraform grounding session (Oracle objective + Oracle-congruent prompts on the existing loop). Resolve the latency question first. Mailbox plumbing (oracle.md step 1) already SHIPPED and stands.
-3. COORDINATOR as a code loop in the shepherd's lineage: drain the FIFO mailbox, run the no-self-sign-off chain in code, fire courier ops, route the next item. It just coordinates. Generalizes shepherd.py; does not touch run_session_loop.
-4. GOVERNOR gains hands (relay to dispatch/nudge) — later, gated on the seat registry. Until then it is the read-only pane.
+The original order below front-loaded the Coordinator; that was the decoherence (a redundant traffic-director for a self-routing pool). The corrected path is about OBSERVATION and NUDGING, not routing:
+
+1. ASSERTION RULE into the CONTROL boot packet — still valid, highest-leverage, shippable, codifies the rule the operator enforces by hand. (Corpus edit; no engine work.)
+2. WORKER STATUS PANEL — read route /governor/workers (governor_routes.py pattern) + a panel in governor.html showing every seat at a glance. Roster derivable from seat_mailbox TODAY (GROUP BY from_seat: seat/last-seen/msg-count, verified live). SAFE, read-only, no schema change. The first real build and the largest visible win.
+3. PER-WORKER NUDGE AFFORDANCE — you_there already self-drains a worker's whole turn on one nudge (live). Panel adds a per-seat nudge control (the residual-nudge-reduction item) so the operator taps once instead of tab-hunting; surfaces idle-with-work. HONEST CEILING: no software gives a dormant CHAT window a turn — hands-free wake needs API workers (step 5).
+4. SEAT REGISTRY / identity primitive — atomic auto-naming, true liveness (last-poll), per-identity keys. The gate the corpus names for "Governor gains hands." Panel from step 2 sharpens once this lands but does not wait on it.
+5. AUTO-SPAWN WORKERS (API path) + GOVERNOR GAINS HANDS — workers as processes spawned with WORKER_BOOT_PACKET.md, woken by mailbox writes (the farm proves the pattern); the read-only pane gains a dispatch/nudge relay. The ceiling-lift for hands-free N-worker scale, gated on the registry.
+
+RETIRED: the Oracle (steps 2+, shelved June 29 — no consumer) and the Coordinator (retired June 30 — redundant with the live no-self claim predicate). Neither is on the path to the single pane.
 
 ## THE SPINE
 
