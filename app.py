@@ -4361,3 +4361,5 @@ if __name__ == '__main__':
             print(f"[EGRESS REGISTER] failed (non-fatal): {str(e)[:120]}", flush=True)
     _register_egress()
     socketio.run(app, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=False, allow_unsafe_werkzeug=True)
+
+# deploy-trigger: governor routes live (control seat, 2026-07-01)
