@@ -63,6 +63,22 @@ def governor_data():
 # corral on the pane. Kept explicit so a new worker name is never hidden.
 _GOV_POOL_SEATS = ("any_worker",)  # the shared pool target, shown as a lane not a seat
 
+# WHO IS SHOWN AS A LIVE SEAT — until the Phase-3 registry gives a real last-poll
+# heartbeat, "last mailed" is all we have, and a quietly-polling live worker looks
+# identical to a retired one. So two controls, OR'd together (a seat shows if ANY
+# holds), with retirement able to override:
+#   _GOV_ACTIVE_SEATS  — the seats YOU declare live right now. Always shown, always
+#                        treated as active. Edit this when you spin workers up/down.
+#   _GOV_ROSTER_WINDOW_H — backstop: a seat that mailed within this window still
+#                        shows even if not on the list (catches a new worker you
+#                        haven't listed yet). A seat with pending work or a live
+#                        claim is ALWAYS shown regardless.
+#   _GOV_RETIRED_SEATS — hard override: these never show, even if recently active.
+_GOV_ACTIVE_SEATS = ("worker11", "worker22")   # <-- the live workers; edit as you scale
+_GOV_RETIRED_SEATS = ("worker2", "worker4", "worker-review", "control-seat",
+                      "kb_ipad", "kb_laptop", "operator")
+_GOV_ROSTER_WINDOW_H = 48  # backstop window (hours) for an unlisted but recent seat
+
 def _gov_workers_data():
     # 1) roster: every seat that has sent mail, with volume + recency
     roster = _gov_q(
@@ -94,6 +110,7 @@ def _gov_workers_data():
     pool_claimable = sum(v for k, v in pool.items() if k in ("task", "proposal", "review_finding", "signoff"))
 
     seats = []
+    _now = _now_dt()
     for from_seat, msgs, last_seen in roster:
         if from_seat in _GOV_POOL_SEATS:
             continue  # any_worker is a lane, surfaced separately, not a seat row
@@ -103,6 +120,19 @@ def _gov_workers_data():
                                if k in ("task", "proposal", "review_finding", "signoff"))
         holding = held_by_seat.get(from_seat)
         is_control = from_seat in ("control", "control-seat")
+        declared_active = from_seat in _GOV_ACTIVE_SEATS
+        pending = direct_claimable + len(my_wait)
+        silent_h = _hours_since(last_seen, _now)
+        recent = (silent_h is not None) and (silent_h <= _GOV_ROSTER_WINDOW_H)
+        # DROP a seat only if: hard-retired, OR (not declared-active AND not control
+        # AND no pending work AND not holding AND not recent). Retirement overrides
+        # everything except a live claim or pending work you'd need to see.
+        keep = (is_control or declared_active or pending > 0
+                or holding is not None or recent)
+        if from_seat in _GOV_RETIRED_SEATS and holding is None and pending == 0:
+            keep = False
+        if not keep:
+            continue
         # idle-with-work = the nudge signal: not currently holding a claim, but
         # there is claimable work it could take (its own direct queue OR the pool).
         # Control is the operator's OWN seat (this conversation) — never a nudge
@@ -111,6 +141,7 @@ def _gov_workers_data():
         seats.append({
             "seat": from_seat,
             "is_control": is_control,
+            "declared_active": declared_active,
             "msgs": msgs,
             "last_seen": last_seen,
             "last_kind": last_by_seat.get(from_seat),
@@ -130,6 +161,22 @@ def _gov_workers_data():
 def _now_iso():
     from datetime import datetime, timezone
     return datetime.now(timezone.utc).isoformat()
+
+def _now_dt():
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc)
+
+def _hours_since(iso_str, now_dt):
+    # hours between an ISO timestamp and now; None if unparseable (never retire on
+    # a parse failure — safer to over-show than to silently hide a live seat)
+    if not iso_str:
+        return None
+    try:
+        from datetime import datetime
+        t = datetime.fromisoformat(iso_str)
+        return (now_dt - t).total_seconds() / 3600.0
+    except Exception:
+        return None
 
 @app.route("/governor/workers")
 @auth_required

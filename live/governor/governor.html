@@ -173,10 +173,14 @@ function renderWorkers(d){
       const lease=holding.lease?Math.max(0,new Date(holding.lease).getTime()-Date.now()):0;
       stateTxt=`holding ${holding.held} · lease ${lease>0?fmtAge(lease):"expired"}`;}
     else if(s.idle_with_work){ledCls="nudge";stateCls="nudge";stateTxt="idle · work waiting";}
+    else if(s.declared_active){ledCls="live";stateCls="idle";
+      stateTxt=age<15*60000?"idle · clear":`declared live · quiet ${fmtAge(age)}`;}
     else{ledCls=live;stateCls="idle";stateTxt=live==="dormant"?"dormant":"idle · clear";}
     const armed=s.idle_with_work&&!holding&&!s.is_control;
     const seenLab=`${fmtAge(age)} ago <span class="k">· ${s.last_kind||"—"}</span>`;
-    const nameTag=s.is_control?`<span class="wname">${s.seat}</span> <span class="k" style="color:var(--cool)">operator</span>`:`<span class="wname">${s.seat}</span>`;
+    const roleTag=s.is_control?` <span class="k" style="color:var(--cool)">operator</span>`
+                 :(s.declared_active?` <span class="k" style="color:var(--ok)">live</span>`:"");
+    const nameTag=`<span class="wname">${s.seat}</span>${roleTag}`;
     return `<div class="wrow ${armed?'nudge':''}">
       <span class="wled ${ledCls}"></span>
       <span class="wnamew">${nameTag}</span>
