@@ -875,3 +875,70 @@ The old order put COORDINATOR first. That was the decoherence: front-loading a r
 **ON LEASHING THE CONTROL CONVERSATION (operator conclusion, corpus-aligned):** a control design conversation CANNOT be gated the way the workers are — there is no server-side gate between a model and a sentence to the operator. The June 29 leash fold already settled this: the only leash for the design chair is (a) the ASSERTION RULE (show the grounding read in the same message before asserting a system-fact) and (b) the operator watching for tone/judgment drift and migrating the seat on the tone signal (the leading indicator, before the first hard error). The instinct to split design-control from coordination-control does not fix decoherence — the June 30 decoherence was in the design work itself (reaching for memory over source), which a split would not touch — and the coordination it would split off is largely the invented-middleman role a coherent control should not perform. The clean split is not two control conversations; it is design-control (operator + one seat, disciplined by the assertion rule + drift-watch) on one side, and CODE + the read-only pane doing the coordination on the other. Coordination should not be a conversation at all.
 
 **CROSS-REF:** this session's boot + deep read; live box seat_mailbox.py L40/L48/L50-61/L281/L539; WORKER_BOOT_PACKET.md (self-drain contract); gated_session_substrate.md (to be corrected same close); PUNCH_LIST DONE/OPEN (to be corrected same close). Engine idle (running:false), no orphaned claims. No deploy this fold (unwatched path).
+
+## CURRENT-STATE TOUCH POINT — 2026-07-19 (control seat; boot mid-conversation, the portable-tenant arc)
+
+**HOW THIS SESSION STARTED (relevant, because it became the subject).** The operator pasted the
+CONTROL_QUICKBOOT snippet into a conversation already hours deep in NON-system work (building a
+personal chord-tab app). The boot ran clean — LLaves read, __probe__ returned the real 19-op
+allowlist, all five state docs read via the courier, real lines reported. Later in the session the
+operator identified that transition itself as the thing to productize: "Think back about how I took
+you from an un-oriented, free thinking instance to one that was quickly snapped into a context by a
+boot packet snippet. That's part of the nuts and bolts of how this sausage is made."
+
+**BUILT**
+- CONTROL_QUICKBOOT STEP 0 stale-PAT fix (c5c7ec16) + punch entries (3269bd3b).
+- PUNCH_LIST LLaves item INVERTED on operator correction (f7fa0b14).
+- project-corpus-standard/ packaged (a0fcc127) + punch entries (6f5c68b4) — DESIGN SUPERSEDED
+  same session.
+- projects/songbook/ seeded (77302bfd) then REWRITTEN against the record (ed7022d2, private repo).
+- Conversation record 2eab4a3d (public), the first for this project arc.
+- PUNCH_LIST close reconcile + portable-tenant item (8ea7cc3f).
+
+**LEARNED — why the boot actually works (the finding that reframes the wedge)**
+The magic is not the documents; it is the SEQUENCE with UNFABRICATABLE RETURNS. Named by a seat
+that had just been through it, then confirmed by the operator: "Those sequenced steps with the
+unfabricatable real answer returns is what actually harnesses the model in the seat and tightly
+fastens the harness's belly strap good and tight as the model bucks against it until settling into
+docile compliance." Load-bearing parts: (1) fetch-and-verify framing rather than obey — what stops
+a fresh seat correctly pattern-matching the packet as prompt injection (the worker3 refusal already
+on the punch list is the same knob); (2) the __probe__ hands test, whose 403 echoes the LIVE
+allowlist and therefore cannot be recited from priors; (3) a hard gate on the five reads demanding a
+REAL LINE back from each; (4) failure paths documented UPSTREAM of where a seat hits them.
+
+**LEARNED — the honest ceiling on the boot**
+It conditions; it does not hold. THIS seat, hours after a clean boot, (a) asserted Cerebras hosts
+vision with no verification and was caught by the operator, and (b) hand-authored a whole project
+corpus from recall instead of running the documented rituals. The paradigm already names the
+mechanism ("a long chat context can latch a private belief across turns"). Consequence for the
+tenant build: open gate + close gate + the assertion rule holding tension in between. One gate is
+not enough, and this session is the evidence.
+
+**LEARNED — infrastructure shape for a tenant (grounded, not assumed)**
+Verified live this close: the ENGINE (Railway) hosts the courier and the role-provider env vars;
+the BOX (Hetzner, gunicorn 0.0.0.0:5001, key-auth at the app layer since the IP-whitelist retired
+06-10) is where the mailbox and every /op/* actually run. read_journal returned live box journal
+lines; read_repo returned via raw_cdn_cachebust. So a tenant needs BOTH surfaces —
+repo-commit != box-install holds per-tenant.
+
+**REVERSED**
+- project-corpus-standard/ as a STANDALONE product -> demoted to the documentation layer of a full
+  tenant. Operator: "Cornel's version has to use the exact same engine that you use... My engine is
+  THE ENGINE. We have to duplicate that." Two grounded defects in the standalone design: it assumed
+  a browser-chat user has file hands, and it packaged filing while omitting retrieval.
+- The first Songbook corpus (77302bfd) -> rewritten (ed7022d2). Hand-authored from recall, no close
+  ritual, no conversation record. Superseded, with the failure recorded rather than erased.
+- "The LLaves PAT should be refreshed" -> REMOVE the PATs entirely. Operator: "if the correct token
+  is reachable from the Railway vault, why should we create a new exposure surface by duplicating it
+  in llaves?" Standing principle: a credential cache that can go stale is worse than no cache — it
+  does not save a lookup, it teaches a wrong conclusion.
+
+**STATE LEFT**
+Engine idle (running:False, cycle 0), health ok, 322 sessions, allowlist 19 unchanged. No orphaned
+claims. Secrets sweep PASS across all ten files committed this session. Manual currency PASS
+(allowlist 19 == 19).
+
+**NEXT**
+Design the portable tenant: per-tenant engine + box provisioning, the tenant's own __probe__, where
+their corpus lives, per-identity credentials (composes with the per-identity-keys item), and the
+configuration runbook the operator named as a deliverable.
