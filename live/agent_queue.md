@@ -942,3 +942,72 @@ claims. Secrets sweep PASS across all ten files committed this session. Manual c
 Design the portable tenant: per-tenant engine + box provisioning, the tenant's own __probe__, where
 their corpus lives, per-identity credentials (composes with the per-identity-keys item), and the
 configuration runbook the operator named as a deliverable.
+
+## PLATFORM-AGNOSTIC SUCCESSION PROVED — 2026-09-03 (OpenAI Control + external Researcher lap)
+
+**WHY THIS IS A MILESTONE**
+The July 20 record concluded that the consumer chat application is not the harness; the ENGINE is,
+and a different model should be seated rather than accommodated by a new architecture. On September
+3 that stopped being a design claim. A fresh `chatgpt-work:gpt-5.6-sol` conversation inherited the
+Control office through the existing boot packet, corpus, and 19-op HTTPS courier, then answered the
+engine's external Researcher mailbox. Nothing in Ontinuity was rebuilt for OpenAI.
+
+**BUILT / CHANGED**
+- No application code, mailbox protocol, role prompt, or bridge was built.
+- MAIN Challenger staffing changed from retired `cerebras:zai-glm-4.7` to live
+  `cerebras:gemma-4-31b` after checking the provider's available-model response. Parietal remained
+  `cerebras:gpt-oss-120b`; the correction was configuration-only.
+- Corpus close: September 3 conversation record; PUNCH DONE proof + OPEN provenance defect;
+  OPERATING_MANUAL cross-platform mailbox-seat/cockpit/config currency; CONTROL_HANDOFF touchpoint.
+
+**THE TWO-LAP PROOF**
+- `2026-09-03_14-13-03`: ChatGPT occupied external Model A; Challenger's retired model returned
+  404; gate refused certification and persisted `incomplete_model_dead`, 3 cycles. The negative lap
+  matters: platform portability did not weaken fail-closed behavior.
+- `2026-09-03_14-35-29`: after the staffing correction, Parietal froze 3 criteria; ChatGPT answered
+  the real `researcher_turn`; Gemma challenged and found all 3 complete; ChatGPT requested
+  SESSION_END; Gemma accepted close; extraction completed; DB persisted `complete`, 2 cycles.
+
+**LEARNED**
+- The portable object is the OFFICE: retrieval order, authority, scoped hands, role boundaries,
+  mailbox contract, and gates. It is not a previous vendor's conversation memory.
+- A consumer chat model can be both the Control conversation and, when intentionally driving the
+  external mailbox, a real in-cycle Researcher. The distinction is temporal/architectural, not a
+  permanent vendor identity.
+- The old cockpit was not deleted. `app.py` + `templates/index.html` still serve transcript,
+  Researcher input, and Keys modal at the Railway engine root. `ontinuity.org` now points to the
+  static public site. The modal remains a process-global last-save-wins override and can itself
+  create configuration drift.
+- `sessions.model_a_string` is NOT honest occupant provenance in external mode: both new rows retain
+  the historical Claude label. Functional model agnosticism is proved; evidence attribution still
+  needs a protocol-bound external identity.
+
+**REVERSED / CORRECTED**
+- "Stopped external sessions do not persist" -> false for the deployed engine; the failed lap is
+  durably recorded as `incomplete_model_dead`.
+- "Porting to ChatGPT needs a new MCP/adapter layer" -> false; that repeated the July 20 redesign
+  drift. Existing HTTPS hands + mailbox were sufficient.
+- "The missing web monitor was removed" -> false; the cockpit lives at the engine domain while the
+  branded domain serves the static site.
+
+**OPERATOR RULING**
+"I'm not worried about completing punchlist items at the moments—I'm just glad that we were able to
+reproduce a working system on a platform other than Claude." Preserve the roadmap; do not invent a
+build merely to fill the next slot. The immediate intent is more test spins.
+
+**STATE LEFT**
+MAIN healthy/idle; allowlist 19; Challenger `gemma-4-31b`; one failed-closed and one complete session
+preserved; no application deploy; no orphaned active session observed. Conversation/corpus close
+contains no credentials. Paradigm/rubric/quickboot unchanged because the constitutional contract did
+not change—the existing contract was validated.
+
+**NEXT**
+Continue ordinary Control-seat test work when the operator supplies it. Before formalizing the
+September lap as experimental/commercial evidence, bind the external occupant's actual harness:model
+identity into the session provenance. Portable-tenant design remains the durable roadmap head when
+the operator chooses to resume it.
+
+**CROSS-REF:** sessions `2026-09-03_14-13-03`, `2026-09-03_14-35-29`;
+`live/conversations/2026-09-03_openai-control-succession-platform-agnostic-proof.md`; September 3
+PUNCH_LIST DONE/OPEN entries; OPERATING_MANUAL and CONTROL_HANDOFF currency in the same atomic close
+commit.

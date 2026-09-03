@@ -1,8 +1,14 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-06-30 by a fresh control seat (claude.ai-chat:opus-4.8) — Coordinator retired, north-star reordered Governor-first.
+# Updated 2026-09-03 by a successor Control seat (`chatgpt-work:gpt-5.6-sol`) — cross-platform Control + Researcher succession proved live; roadmap deliberately paused by operator.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the queue head.
 
 ## STATE AT FOLD
+- PLATFORM SUCCESSION PROVED: a fresh ChatGPT Work conversation inherited Control through the existing corpus/boot and 19-op HTTPS courier, then occupied the external Researcher seat in the real engine. No OpenAI-specific engine rebuild or bridge was required.
+- Evidence pair: `2026-09-03_14-13-03` failed closed as `incomplete_model_dead` (3 cycles) when the retired Cerebras Challenger returned 404; after a staffing-only change to `cerebras:gemma-4-31b`, `2026-09-03_14-35-29` completed in 2 cycles through contract, independent challenge, close review, and extraction.
+- MAIN engine healthy and idle after the lap. Challenger remains `cerebras:gemma-4-31b`; Parietal remains `cerebras:gpt-oss-120b` (distinct models; verify lineage constraints before future changes).
+- Full live cockpit still exists at the Railway engine root (transcript, Researcher input, Keys modal). `ontinuity.org` is the static public site. Observe freely; do not casually Save the Keys modal—runtime config is process-global, outranks the vault, last-save-wins.
+- PROVENANCE DEFECT OPEN: session `model_a_string` still names the historical Claude occupant when ChatGPT answers the external mailbox. Use the September 3 conversation record + session ids as the honest join until identity is carried by the protocol.
+- Operator ruling: do not resume punch-list builds merely to keep motion going; this fold documents the milestone. The July 19 portable-tenant roadmap remains durable but is not the present instruction.
 - Engine healthy. Box hands LIVE. Courier allowlist now 19 ops (added mailbox_purge this shift).
 - MAILBOX RESULT-CHANNEL FIXED end to end this shift (was the night's big blocker — see below).
   Queue healthy (was 419 stale results jammed; purged). Correlated fetch + ack confirmed working.
@@ -55,6 +61,9 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
+**CURRENT OPERATOR POSTURE (2026-09-03): take the system for further ordinary test spins; no punch-list build is presently authorized.** When roadmap work resumes, the latest durable queue head is the July 19 portable-tenant design, which supersedes the older Governor-first paragraph below. Before treating the September sessions as formal experimental evidence, fix external-occupant provenance (OPEN, PUNCH_LIST).
+
+**HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).
   - GOAL: one page (served by the existing governor relay, OUTSIDE the Claude UI) that shows every
     worker seat's status at a glance. Largest visible win toward "see and interact with >2 workers."
