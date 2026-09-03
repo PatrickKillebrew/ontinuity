@@ -61,7 +61,7 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
-**CURRENT CONTROLLING ACTION (2026-09-03): Phase 0 of `live/ONTINUITY_1_0_COMPLETION_PLAN.md` — resolve the punch list into a truthful, dependency-ordered 1.0 board.** Do not start a build merely because an item appears pending: the list still contains completed, retired, duplicated, and superseded work. Every genuine remainder must map to one of the ten release conditions or move to post-1.0/horizon/discard. The operator has declared the transition from discovery/decoration to completion. New architecture requires evidence that a release condition fails without it.
+**CURRENT CONTROLLING ACTION (2026-09-03): B0 of `live/ONTINUITY_1_0_BOARD.md` — establish the live release baseline.** Phase 0 record reconciliation is complete at the board level: the real remainder is mapped to RC-1..RC-10, stale pending sections are historical rather than selectable, and the first dependency is explicit. Establish GitHub/Railway/box/schema/config/courier/UI state with checkable evidence before changing runtime. If a surface is unreachable, record `UNKNOWN` and the access-path defect; never fill it from the July record. After B0, the first build lanes are B1 capability admission and B3 fail-closed completion.
 
 **HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).
