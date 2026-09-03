@@ -62,6 +62,12 @@ Additional changes:
 - failed work-product extraction records
   `incomplete_missing_extraction / work_product_extraction_failed` before the
   workspace write;
+- provider failures retain a structured cause instead of requiring later
+  inference from error strings: timeout, malformed response, rate limit,
+  configuration, and generic provider failure are distinguished;
+- a Researcher timeout or malformed response receives its own incomplete status;
+  Challenger failures retain the integrity status
+  `incomplete_challenger_dead` while `end_reason` records the specific cause;
 - root and `live` database/endpoint copies move together in this work block.
 
 No historical session row is rewritten by this candidate.
@@ -70,7 +76,7 @@ No historical session row is rewritten by this candidate.
 
 ## 4. MUSEUM RESULT
 
-Ten local specimens pass:
+Thirteen local test methods pass:
 
 - certified close;
 - requested completion without close;
@@ -107,8 +113,6 @@ B3 is not complete. The candidate still needs:
 
 - independent review of the exact bytes;
 - an endpoint-level integration specimen with Flask dependencies installed;
-- explicit runtime differentiation of provider timeout versus malformed/empty
-  provider response (both presently collapse into provider death after retry);
 - a decision on whether a Challenger death should continue-but-disqualify or
   terminate immediately;
 - authenticated installation of the matching box files;

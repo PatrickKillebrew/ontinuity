@@ -42,3 +42,16 @@ def classify_completion(requested_status=None, transcript_turns=None,
     if has_close:
         return "complete", "certified_close"
     return "incomplete_no_close", end_reason or "no_certified_close"
+
+
+def model_failure_outcome(role, failure_kind):
+    """Map a structured seat failure to its terminal session outcome."""
+    seat = "researcher" if role == "model_a" else "challenger"
+    kind = failure_kind or "provider_dead"
+    if role == "model_a" and kind == "timeout":
+        return "incomplete_timeout", "researcher_timeout"
+    if role == "model_a" and kind == "malformed_response":
+        return "incomplete_malformed_response", "researcher_malformed_response"
+    if role == "model_a":
+        return "incomplete_model_dead", f"researcher_{kind}"
+    return "incomplete_challenger_dead", f"{seat}_{kind}"

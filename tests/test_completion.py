@@ -1,6 +1,6 @@
 import unittest
 
-from completion import classify_completion
+from completion import classify_completion, model_failure_outcome
 
 
 class CompletionMuseum(unittest.TestCase):
@@ -54,6 +54,22 @@ class CompletionMuseum(unittest.TestCase):
         self.assertEqual(
             classify_completion("stopped", [], end_reason="operator_stop:mailbox"),
             ("stopped", "operator_stop:mailbox"),
+        )
+
+    def test_researcher_timeout_and_malformed_response_are_distinct(self):
+        self.assertEqual(
+            model_failure_outcome("model_a", "timeout"),
+            ("incomplete_timeout", "researcher_timeout"),
+        )
+        self.assertEqual(
+            model_failure_outcome("model_a", "malformed_response"),
+            ("incomplete_malformed_response", "researcher_malformed_response"),
+        )
+
+    def test_challenger_failure_keeps_integrity_status_and_specific_reason(self):
+        self.assertEqual(
+            model_failure_outcome("model_b", "timeout"),
+            ("incomplete_challenger_dead", "challenger_timeout"),
         )
 
 

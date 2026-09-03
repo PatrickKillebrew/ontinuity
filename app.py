@@ -9,7 +9,7 @@ Install dependencies first:
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import threading
-from completion import classify_completion
+from completion import classify_completion, model_failure_outcome
 import os
 import json
 import re
@@ -149,6 +149,7 @@ active_session = {
     "start_time": None,
     "end_time": None,
     "end_reason": None,
+    "last_model_failure": {},
     "knowtext_version": None,
     "waiting_for_input": False,
     "input_type": None,
@@ -1584,6 +1585,20 @@ def get_api_key(role):
     farm 403 differential was this one vault-blind line."""
     return (get_effective_config(role).get("api_key") or "").strip()
 
+def record_model_failure(role, kind, detail=""):
+    """Keep the provider failure structured until the session assigns an outcome."""
+    active_session.setdefault("last_model_failure", {})[role] = {
+        "kind": kind,
+        "detail": str(detail)[:500],
+    }
+
+def model_failure_kind(exc):
+    if isinstance(exc, http_requests.exceptions.Timeout):
+        return "timeout"
+    if isinstance(exc, (KeyError, ValueError, TypeError)):
+        return "malformed_response"
+    return "provider_error"
+
 def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
     headers = {
         "Authorization": f"Bearer {get_api_key(role)}",
@@ -1608,6 +1623,7 @@ def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
                 if delay is None:
                     msg = "Rate limit — max retries exceeded. Wait a few minutes and start a new session."
                     active_session["errors"].append("API error: 429 rate limit, max retries exceeded")
+                    record_model_failure(role, "rate_limit", msg)
                     socketio.emit('routing_action', {'type': 'error', 'message': msg})
                     return None
                 msg = f"Rate limit — waiting {delay}s before retry {attempt + 1}/3..."
@@ -1645,10 +1661,12 @@ def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
                 time.sleep(5)
                 continue
             active_session["errors"].append(f"API error: {str(e)}")
+            record_model_failure(role, "timeout", e)
             socketio.emit('routing_action', {'type': 'error', 'message': f"API call failed after retries: {str(e)}"})
             return None
         except Exception as e:
             active_session["errors"].append(f"API error: {str(e)}")
+            record_model_failure(role, model_failure_kind(e), e)
             socketio.emit('routing_action', {'type': 'error', 'message': f"API call failed: {str(e)}"})
             return None
 
@@ -1673,6 +1691,7 @@ def call_anthropic_format(endpoint_config, system_prompt, messages, role, max_to
         return data["content"][0]["text"]
     except Exception as e:
         active_session["errors"].append(f"API error: {str(e)}")
+        record_model_failure(role, model_failure_kind(e), e)
         socketio.emit('routing_action', {'type': 'error', 'message': f"API call failed: {str(e)}"})
         return None
 
@@ -1707,10 +1726,12 @@ def call_gemini_native(endpoint_config, system_prompt, messages, role, max_token
         return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception as e:
         active_session["errors"].append(f"Gemini API error: {str(e)}")
+        record_model_failure(role, model_failure_kind(e), e)
         socketio.emit('routing_action', {'type': 'error', 'message': f"Gemini API call failed: {str(e)}"})
         return None
 
 def call_model(role, conversation_messages, system_override=None, max_tokens=None):
+    active_session.setdefault("last_model_failure", {}).pop(role, None)
     config = get_effective_config(role)
     # External Researcher seat: url == "external" routes Model A through the
     # mailbox instead of an API. No api_key required. Everything downstream
@@ -1721,6 +1742,7 @@ def call_model(role, conversation_messages, system_override=None, max_tokens=Non
     if not config.get("url") or not config.get("api_key"):
         msg = f"Model '{role}' has no URL or API key configured — skipping call."
         active_session["errors"].append(msg)
+        record_model_failure(role, "configuration", msg)
         socketio.emit('routing_action', {'type': 'error', 'message': msg})
         return None
     # Parietal DISTILL needs more room — default higher for parietal role
@@ -1855,8 +1877,10 @@ def mailbox_researcher_turn(system_prompt, conversation_messages, kind="research
     external_mailbox["waiting"] = True
     socketio.emit('routing_action', {'type': 'cycle',
         'message': f"Researcher turn {external_mailbox['turn_id']} posted to external mailbox — waiting for agent."})
-    external_mailbox["event"].wait(timeout=MAILBOX_TIMEOUT_S)
+    answered = external_mailbox["event"].wait(timeout=MAILBOX_TIMEOUT_S)
     external_mailbox["waiting"] = False
+    if not answered:
+        record_model_failure("model_a", "timeout", "external mailbox response timeout")
     return external_mailbox["response"]
 
 def mailbox_deliver(turn_id, response):
@@ -2344,6 +2368,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["running"] = True
     active_session["end_status"] = "complete"   # Deploy 34 (#51 fold): overwritten by abnormal exits
     active_session["end_reason"] = None
+    active_session["last_model_failure"] = {}
     active_session["start_time"] = timestamp()
     active_session["transcript"] = []
     active_session["tag_sequence"] = []
@@ -2426,8 +2451,10 @@ def run_session_loop(objective, start_fresh=False, contract=None):
         # Model A
         a_response = call_model("model_a", conversation, system_override=cycle_model_a_system)
         if not a_response:
-            active_session["end_status"] = "incomplete_model_dead"   # Deploy 34: provider death is not a clean completion (#51)
-            socketio.emit('routing_action', {'type': 'error', 'message': 'STATUS=incomplete_model_dead: Researcher provider death recorded (deploy 34 instrumentation; first natural death is the green light).'})
+            _failure = active_session.get("last_model_failure", {}).get("model_a", {})
+            active_session["end_status"], active_session["end_reason"] = model_failure_outcome(
+                "model_a", _failure.get("kind"))
+            socketio.emit('routing_action', {'type': 'error', 'message': f"STATUS={active_session['end_status']}: {active_session['end_reason']}."})
             break
         active_session["transcript"].append({"role": "model_a", "content": a_response, "cycle": active_session["cycle"]})  # Phase-0: the missing join key behind 154 zero-metric rows
         conversation.append({"role": "assistant", "content": a_response})
@@ -2721,6 +2748,9 @@ def run_session_loop(objective, start_fresh=False, contract=None):
             # contained an unreviewed cycle. Gate-and-continue: don't kill the
             # session (Challenger may answer next cycle), but it can never certify clean.
             _cyc = active_session["cycle"]
+            _failure = active_session.get("last_model_failure", {}).get("model_b", {})
+            _, active_session["end_reason"] = model_failure_outcome(
+                "model_b", _failure.get("kind"))
             active_session.setdefault("unreviewed_cycles", []).append(_cyc)
             active_session["tag_sequence"].append(f"Cycle {_cyc} B: NO_REVIEW")
             active_session["challenge_events"].append(
@@ -4224,6 +4254,7 @@ def handle_new_session(data):
     active_session["start_time"] = None
     active_session["end_time"] = None
     active_session["end_reason"] = None
+    active_session["last_model_failure"] = {}
     active_session["knowtext_version"] = None
     active_session["waiting_for_input"] = False
     active_session["input_type"] = None
