@@ -33,7 +33,7 @@ Work proceeds top to bottom. A later block may begin early only when it cannot c
 ### B0 — Establish the live release baseline
 
 **Serves:** RC-7; prerequisite to every build  
-**State:** IN PROGRESS
+**State:** PARTIAL — repository/public baseline recorded in `live/ONTINUITY_1_0_BASELINE.md`; authenticated live fields remain
 
 Create a machine-readable and human-readable manifest of:
 
@@ -274,9 +274,9 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Finish **B0 — Establish the live release baseline**.
+Finish the authenticated observations for **B0 — Establish the live release baseline**.
 
-The repository half is established at commit `cd6dd66e934372f9d01589d6383e147ec52fd03a` on 2026-09-03. Public `ontinuity.org` serves the current gate-and-contract homepage and Boundary De-Identifier. Railway MAIN/FARM revisions, box installed-file hashes, schema state, and live courier/model configuration still require authenticated evidence. If a tool surface cannot reach them, record that as an access-path finding; do not infer the values from July documentation.
+The repository/public half is recorded in `live/ONTINUITY_1_0_BASELINE.md`. Public `ontinuity.org` serves the current gate-and-contract homepage and Boundary De-Identifier. Railway MAIN/FARM revisions, box installed-file hashes, schema state, and live courier/model configuration still require authenticated evidence. The present ChatGPT Work surface could reach GitHub and the public site but not the Railway hostname/API; that limitation is recorded rather than treated as an Ontinuity outage. Run the already-existing reads from an allowed network surface and append the results; do not infer them from July documentation.
 
 When B0 closes, select B1 and B3 as the first two build lanes. No other historical punch item outranks them.
 
