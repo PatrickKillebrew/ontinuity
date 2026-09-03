@@ -84,7 +84,9 @@ Full commercial multi-tenancy is POST-1.0 unless the outside-operator test prove
 ### B3 — Make session completion fail closed
 
 **Serves:** RC-4  
-**State:** READY AFTER B0; may run alongside B1 design
+**State:** IN PROGRESS — first fail-closed persistence candidate built locally;
+independent review and live verification outstanding. See
+`B3_FAIL_CLOSED_COMPLETION.md`.
 
 Consolidates:
 

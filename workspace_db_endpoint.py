@@ -28,6 +28,7 @@ import os
 import json
 import re
 from flask import Flask, Blueprint, request, jsonify
+from completion import classify_completion
 
 # Import the database module — must be in same directory or on PYTHONPATH
 try:
@@ -174,6 +175,16 @@ def receive_session():
         # Register models
         model_ids = _register_models(db, data.get("models", {}))
 
+        # Re-apply the close gate at the persistence boundary. A caller cannot
+        # obtain a `complete` row by omitting status or asserting completion
+        # without the transcript evidence that earns it.
+        persisted_status, persisted_reason = classify_completion(
+            requested_status=data.get("status"),
+            transcript_turns=data.get("transcript_turns", []),
+            unreviewed_cycles=data.get("unreviewed_cycles", []),
+            end_reason=data.get("end_reason"),
+        )
+
         # ── Insert session ──────────────────────────────────────────────
         db.insert_session({
             "session_id":              session_id,
@@ -184,7 +195,8 @@ def receive_session():
             "start_time":              data.get("start_time"),
             "end_time":                data.get("end_time"),
             "total_cycles":            data.get("total_cycles", 0),
-            "status":                  data.get("status", "complete"),
+            "status":                  persisted_status,
+            "end_reason":              persisted_reason,
             "model_a_id":              model_ids.get("model_a"),
             "model_b_id":              model_ids.get("model_b"),
             "model_c_id":              model_ids.get("model_c"),

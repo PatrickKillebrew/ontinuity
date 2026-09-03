@@ -28,7 +28,7 @@ from typing import Optional, Dict, Any, List
 # SCHEMA VERSION
 # Increment when tables or columns change.
 # ─────────────────────────────────────────────
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 
 
 def now_utc() -> str:
@@ -190,8 +190,9 @@ CREATE TABLE IF NOT EXISTS sessions (
     start_time              TEXT,
     end_time                TEXT,
     total_cycles            INTEGER,
-    status                  TEXT NOT NULL DEFAULT 'complete',
-    -- 'complete', 'failed', 'stopped', 'running'
+    status                  TEXT NOT NULL DEFAULT 'in_progress',
+    -- 'complete' is earned only by a certified close; all defaults fail closed
+    end_reason              TEXT,
 
     -- Model configuration
     model_a_id              TEXT REFERENCES model_registry(model_id),
@@ -536,6 +537,7 @@ class OntinuityDB:
         conn = self.connect()
         conn.executescript(DDL)
         conn.executescript(INDEXES)
+        self._apply_additive_migrations()
         conn.commit()
         self._record_schema_version()
         print(f"Ontinuity database initialized at {self.db_path} "
@@ -553,9 +555,32 @@ class OntinuityDB:
                    (version_id, version, applied_at, notes)
                    VALUES (?, ?, ?, ?)""",
                 (new_id(), SCHEMA_VERSION, now_utc(),
-                 "Initial sixteen-table schema.")
+                 "Fail-closed session status and persisted end_reason.")
             )
             conn.commit()
+
+    def _apply_additive_migrations(self):
+        """Apply backward-compatible columns needed by the current writer."""
+        conn = self.connect()
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(sessions)")}
+        if "end_reason" not in columns:
+            conn.execute("ALTER TABLE sessions ADD COLUMN end_reason TEXT")
+        conn.executescript("""
+            CREATE TRIGGER IF NOT EXISTS sessions_complete_requires_reason_insert
+            BEFORE INSERT ON sessions
+            WHEN NEW.status = 'complete'
+             AND COALESCE(NEW.end_reason, '') != 'certified_close'
+            BEGIN
+                SELECT RAISE(ABORT, 'complete requires certified_close');
+            END;
+            CREATE TRIGGER IF NOT EXISTS sessions_complete_requires_reason_update
+            BEFORE UPDATE OF status, end_reason ON sessions
+            WHEN NEW.status = 'complete'
+             AND COALESCE(NEW.end_reason, '') != 'certified_close'
+            BEGIN
+                SELECT RAISE(ABORT, 'complete requires certified_close');
+            END;
+        """)
 
     # ── INSERT HELPERS ─────────────────────────────────────────────────────
 
@@ -647,7 +672,7 @@ class OntinuityDB:
             """INSERT OR REPLACE INTO sessions (
                 session_id, user_id, project_id, branch_id, series_id,
                 parent_session_id, objective, start_time, end_time,
-                total_cycles, status,
+                total_cycles, status, end_reason,
                 model_a_id, model_b_id, model_c_id, parietal_id, projenius_id,
                 model_a_string, model_b_string, model_c_string,
                 parietal_string, projenius_string,
@@ -661,7 +686,7 @@ class OntinuityDB:
             ) VALUES (
                 :session_id, :user_id, :project_id, :branch_id,
                 :series_id, :parent_session_id, :objective,
-                :start_time, :end_time, :total_cycles, :status,
+                :start_time, :end_time, :total_cycles, :status, :end_reason,
                 :model_a_id, :model_b_id, :model_c_id,
                 :parietal_id, :projenius_id,
                 :model_a_string, :model_b_string, :model_c_string,
@@ -685,7 +710,8 @@ class OntinuityDB:
                 "start_time": s.get("start_time"),
                 "end_time": s.get("end_time"),
                 "total_cycles": s.get("total_cycles"),
-                "status": s.get("status", "complete"),
+                "status": s.get("status") or "in_progress",
+                "end_reason": s.get("end_reason"),
                 "model_a_id": s.get("model_a_id"),
                 "model_b_id": s.get("model_b_id"),
                 "model_c_id": s.get("model_c_id"),

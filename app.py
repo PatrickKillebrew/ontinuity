@@ -9,6 +9,7 @@ Install dependencies first:
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import threading
+from completion import classify_completion
 import os
 import json
 import re
@@ -147,6 +148,7 @@ active_session = {
     "cycle": 0,
     "start_time": None,
     "end_time": None,
+    "end_reason": None,
     "knowtext_version": None,
     "waiting_for_input": False,
     "input_type": None,
@@ -444,14 +446,12 @@ def build_session_payload():
     # bucket. Gates the OUTCOME on evidence of certification, catching uncertified
     # exits (ALIGNMENT_NEEDED / lone DB_QUERY / untagged) regardless of upstream path.
     # Death/stopped/terminated statuses (end_status already non-'complete') pass through.
-    _end_status = s.get("end_status", "complete")
-    _has_close = any(t.get("tag") == "SESSION_END" for t in transcript_turns)
-    _unreviewed = bool(s.get("unreviewed_cycles"))
-    _final_status = (
-        _end_status if _end_status != "complete"
-        else "incomplete_challenger_dead" if _unreviewed
-        else "complete" if _has_close
-        else "incomplete_no_close")
+    _final_status, _end_reason = classify_completion(
+        requested_status=s.get("end_status"),
+        transcript_turns=transcript_turns,
+        unreviewed_cycles=s.get("unreviewed_cycles"),
+        end_reason=s.get("end_reason"),
+    )
     return {
         "session_id": session_id,
         "objective": sanitize_content(s.get("objective", "")),
@@ -459,6 +459,7 @@ def build_session_payload():
         "end_time": s.get("end_time"),
         "total_cycles": s.get("cycle", 0),
         "status": _final_status,
+        "end_reason": _end_reason,
         "project_name": WORKSPACE_PROJECT,
         "branch_name": WORKSPACE_BRANCH,
         "models": {
@@ -488,6 +489,7 @@ def build_session_payload():
         "instance": os.environ.get("INSTANCE_NAME", "main").strip() or "main",
         "modal_timeouts": s.get("modal_timeouts", []),
         "challenge_events_raw": s.get("challenge_events", []),
+        "unreviewed_cycles": s.get("unreviewed_cycles", []),
         "transcript_turns": transcript_turns,
         "behavioral_observations": behavioral_obs,
         "executions": [dict(e, session_id=session_id) for e in s.get("execution_log", [])],
@@ -2249,6 +2251,7 @@ def run_work_product_extraction():
         response = call_model(extractor, messages)
     path = artifact_path("work_product")
     content = sanitize_content(response) if (response and len(response.strip()) >= 20) else "[EXTRACTION FAILED]"
+    extraction_ok = content != "[EXTRACTION FAILED]"
     # F.3 audits the deliverable itself — the last unaudited artifact in the system.
     # Flagged claims are annotated loudly, never silently shipped.
     if content != "[EXTRACTION FAILED]":
@@ -2262,6 +2265,7 @@ def run_work_product_extraction():
     save_file(path, content)
     active_session["artifacts"].append({"label": "Work Product", "path": path, "content": content})
     socketio.emit('artifact_ready', {'label': 'Work Product', 'content': content})
+    return extraction_ok
 
 # -----------------------------------------
 # FINAL SYNTHESIS
@@ -2339,6 +2343,7 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session.setdefault("branch", None)
     active_session["running"] = True
     active_session["end_status"] = "complete"   # Deploy 34 (#51 fold): overwritten by abnormal exits
+    active_session["end_reason"] = None
     active_session["start_time"] = timestamp()
     active_session["transcript"] = []
     active_session["tag_sequence"] = []
@@ -3191,8 +3196,16 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                 ("Session log", write_session_log),
                 ("Workspace write", write_session_to_workspace)):
             try:
-                _step_fn()
+                _step_result = _step_fn()
+                if _step_name == "Work product extraction" and _step_result is False:
+                    active_session["end_status"] = "incomplete_missing_extraction"
+                    active_session["end_reason"] = "work_product_extraction_failed"
+                    active_session["errors"].append(
+                        "Work product extraction failed after retry; completion withheld.")
             except Exception as e:
+                if _step_name == "Work product extraction":
+                    active_session["end_status"] = "incomplete_missing_extraction"
+                    active_session["end_reason"] = "work_product_extraction_failed"
                 msg = f"{_step_name} failed: {type(e).__name__}: {e}"
                 print(f"[END SEQUENCE] {msg}", flush=True)
                 active_session["errors"].append(msg)
@@ -4210,6 +4223,7 @@ def handle_new_session(data):
     active_session["artifacts"] = []
     active_session["start_time"] = None
     active_session["end_time"] = None
+    active_session["end_reason"] = None
     active_session["knowtext_version"] = None
     active_session["waiting_for_input"] = False
     active_session["input_type"] = None
@@ -4328,6 +4342,9 @@ import signal as _signal
 def _graceful_shutdown(signum, frame):
     try:
         if active_session.get("running") or active_session.get("finalizing"):
+            if active_session.get("end_status", "complete") == "complete":
+                active_session["end_status"] = "incomplete_terminated"
+                active_session["end_reason"] = "process_terminated"
             active_session["running"] = False
             print("[SIGTERM] session in flight — emergency flush of log + workspace write", flush=True)
             try:
