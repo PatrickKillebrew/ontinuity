@@ -61,7 +61,7 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
-**CURRENT OPERATOR POSTURE (2026-09-03): take the system for further ordinary test spins; no punch-list build is presently authorized.** When roadmap work resumes, the latest durable queue head is the July 19 portable-tenant design, which supersedes the older Governor-first paragraph below. Before treating the September sessions as formal experimental evidence, fix external-occupant provenance (OPEN, PUNCH_LIST).
+**CURRENT CONTROLLING ACTION (2026-09-03): Phase 0 of `live/ONTINUITY_1_0_COMPLETION_PLAN.md` — resolve the punch list into a truthful, dependency-ordered 1.0 board.** Do not start a build merely because an item appears pending: the list still contains completed, retired, duplicated, and superseded work. Every genuine remainder must map to one of the ten release conditions or move to post-1.0/horizon/discard. The operator has declared the transition from discovery/decoration to completion. New architecture requires evidence that a release condition fails without it.
 
 **HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).

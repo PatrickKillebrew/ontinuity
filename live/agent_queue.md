@@ -1011,3 +1011,34 @@ the operator chooses to resume it.
 `live/conversations/2026-09-03_openai-control-succession-platform-agnostic-proof.md`; September 3
 PUNCH_LIST DONE/OPEN entries; OPERATING_MANUAL and CONTROL_HANDOFF currency in the same atomic close
 commit.
+
+## COMPLETION PHASE DECLARED — 2026-09-03
+
+**DECISION**
+The discovery/build phase is over. The operator's destination is a finished, testable Ontinuity
+whose behavior is inspectable without first understanding the mind that imagined it. Created
+`live/ONTINUITY_1_0_COMPLETION_PLAN.md` as the controlling roadmap rather than adding another
+architectural branch.
+
+**WHAT THE PLAN CONTROLS**
+Ten release conditions: cold-seat continuity; operator-approved scoped identity; honest provenance;
+fail-closed integrity; independent authority; complete evidence chain; reproducible install/state;
+comparative reliability; outside-operator transfer; independent systems/security/evaluation review.
+It then orders work into record reconciliation, identity/provenance, integrity/evidence,
+consolidation, falsification, human transfer, and external/career evidence.
+
+**DISCIPLINE**
+- Existing punch items are raw backlog/history, not automatic build orders.
+- New architecture is guilty until an RC demonstrably fails without it.
+- Progress = release conditions passed, not commits, concepts, sessions, or punch volume.
+- Explicitly non-blocking ambitions stay post-1.0 unless evidence promotes them.
+
+**STATE LEFT**
+No runtime/code/config change and no deploy. PUNCH_LIST points to the controlling plan. Handoff's
+single next action now names Phase 0. Conversation record:
+`live/conversations/2026-09-03_completion-phase-and-career-path.md`.
+
+**NEXT**
+Reconcile every pending punch item against deployed code, receipts, and later rulings; remove stale
+and duplicate entries from pending; map real remainder to RC-1..RC-10 or post-1.0/horizon/discard;
+then select the first dependency-bound build.
