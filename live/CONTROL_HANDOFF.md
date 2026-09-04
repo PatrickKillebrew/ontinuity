@@ -1,5 +1,5 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-03 by a successor Control seat (`chatgpt-work:gpt-5.6-sol`) — cross-platform Control + Researcher succession proved live; roadmap deliberately paused by operator.
+# Updated 2026-09-04 by successor Control (`chatgpt-work:gpt-5.6-sol`) — B0 authenticated baseline complete; drift preserved before correction.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the queue head.
 
 ## STATE AT FOLD
@@ -61,7 +61,7 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
-**CURRENT CONTROLLING ACTION (2026-09-03): complete the authenticated fields in B0, `live/ONTINUITY_1_0_BASELINE.md`.** Phase 0 record reconciliation is complete at the board level. The repository/public baseline is now recorded: current Git source, fingerprints, routes, allowlist, cockpit/Keys source, canonical-path findings, and public site. This ChatGPT Work network path could not obtain an HTTP response from Railway, so MAIN/FARM deployed revisions, box installed hashes, schema rows, mailbox state, and effective runtime models remain explicitly `UNKNOWN`. Run the existing `/diag/version`, `/diag/engine`, `/agent/handoff`, box read/query ops, and Railway deployment reads from an allowed surface; append their returned evidence before changing runtime. After B0, first build lanes are B1 capability admission and B3 fail-closed completion.
+**CURRENT CONTROLLING ACTION (2026-09-04): open B1 capability-admission design and dispatch the preserved B3 candidate for independent review.** B0 is complete at `live/ONTINUITY_1_0_BASELINE.md`; the read-only reporter and first specimen are in `live/tools/release_baseline.py` and `live/baselines/2026-09-04_b0.json`. Its result is `DRIFT`: FARM lacks `/diag/version`; box `file_server.py`, `db.py`, and `workspace_db_endpoint.py` differ from Git; one mailbox proposal lease is expired. Do not correct those observations before the B0 record lands. B1 is the primary design lane. B3 remains branch `codex/b3-fail-closed-completion` at `bff526b…`; the authoring Control seat must not review-and-deploy its own bytes.
 
 **HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).

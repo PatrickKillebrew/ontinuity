@@ -1,6 +1,6 @@
 # ONTINUITY 1.0 — RELEASE BASELINE B0
 
-**Observed:** 2026-09-03  
+**Observed:** 2026-09-03; authenticated completion 2026-09-04
 **Release block:** B0  
 **Release condition:** RC-7 — Consolidated, reproducible system  
 **Purpose:** establish the first evidence-bounded description of the system at the start of the completion phase. Unknown live facts are preserved as unknown rather than filled from the July record.
@@ -9,9 +9,36 @@
 
 ## 1. BASELINE RESULT
 
-**Result: PARTIAL PASS.** The repository and public-site surfaces are directly verified and internally inspectable. Railway and box live-state queries are unreachable from the current ChatGPT Work network path, so deployed revisions, installed box hashes, database state, and current runtime configuration remain `UNKNOWN`. This is an access-path limitation, not evidence that either service is unavailable.
+**Result: PASS — DRIFT DETECTED.** Repository, Railway MAIN/FARM, engine,
+box, database, mailbox, cockpit, and public-site surfaces were read without
+changing state. The standing machine-readable command is
+`python live/tools/release_baseline.py --llaves <path>`. Its first preserved
+specimen is `live/baselines/2026-09-04_b0.json`.
 
-The baseline is sufficient to identify the first release dependencies and to prevent work from being selected from stale punch-list text. It is not sufficient to authorize a runtime correction or claim deployment equivalence.
+The baseline is sufficient to identify the first release dependencies and to
+prevent work from being selected from stale punch-list text. It explicitly
+does **not** claim deployment equivalence: FARM and three box files drift. No
+drift was corrected before this observation was recorded.
+
+### Authenticated completion — 2026-09-04
+
+| Surface | Current observation |
+|---|---|
+| GitHub `main` | `af2e6bf594df45db2453f100eac865a2d0891291` |
+| MAIN deployment | latest SUCCESS `5ae156eb…`, commit `9a7eac2…`; later docs-only event for `af2e6bf…` is `SKIPPED` |
+| MAIN running bytes | `app.py` blob `3fcaaf31…`, MATCHES current Git blob |
+| FARM deployment | latest SUCCESS `d97c14ff…`, commit `f9696c4…`, 2026-07-19 |
+| FARM running bytes | `/diag/version` absent from deployed whitelist (HTTP 403): DRIFT |
+| Engines | MAIN idle; FARM idle; both database health checks OK; 324 sessions |
+| Box files | `seat_mailbox.py`, `box_ops.py` MATCH; `file_server.py`, `db.py`, `workspace_db_endpoint.py` DRIFT |
+| Database | schema record `1.0.0`; 21 tables; 272 complete, 32 model-dead, 8 no-close, 12 stopped |
+| Mailbox | one expired claimed proposal; queued work remains across proposal/review/signoff/result kinds |
+| Public surfaces | public site, MAIN cockpit, and FARM root each returned HTTP 200 |
+| Runtime roles | non-secret vault assignments observed; process-global Keys-modal overrides remain `UNKNOWN` because no safe diagnostic exposes them |
+
+The sandbox proxy timed out individual reads intermittently. Two consecutive
+read-only runs collectively resolved the required fields; the preserved JSON
+states this explicitly rather than merging them invisibly.
 
 ---
 
@@ -107,9 +134,21 @@ These fingerprints are the comparison targets for the live probes below.
 
 ---
 
-## 3. LAST-KNOWN LIVE STATE — NOT REOBSERVED
+## 3. CURRENT AUTHENTICATED LIVE STATE
 
-The September 3 succession fold records the following as live at the close of its second lap:
+MAIN vault staffing (configuration source, not proof against a process-global
+Keys-modal override): external Model A with historical occupant label
+`claude.ai-chat:claude-opus-4.8`; Challenger `cerebras:gemma-4-31b`; Model C
+`novita:meta-llama/llama-3.1-8b-instruct`; Parietal
+`cerebras:gpt-oss-120b`; Projenius `novita:deepseek/deepseek-v3-0324`.
+
+FARM vault staffing: Researcher `cerebras:zai-glm-4.7`; Challenger,
+Parietal, and Projenius `cerebras:gpt-oss-120b`; Model C
+`novita:meta-llama/llama-3.1-8b-instruct`. FARM still names the retired
+Researcher model and must not be driven until B1/B3 disposition determines
+whether it remains a required 1.0 surface.
+
+The September 3 succession fold remains historical evidence for:
 
 - MAIN healthy and idle;
 - courier allowlist 19;
@@ -119,25 +158,20 @@ The September 3 succession fold records the following as live at the close of it
 - one completed session `2026-09-03_14-35-29`;
 - no orphaned active session observed.
 
-Those facts are valid historical evidence for that close. They are not substituted for current observations in this baseline.
+The current reads independently confirmed both engines idle and healthy.
 
 ---
 
-## 4. LIVE FIELDS STILL UNKNOWN
+## 4. REMAINING UNOBSERVABLE FIELD
 
 | Surface | Required observation | Current state |
 |---|---|---|
-| Railway MAIN | deployment id, commit hash, status, restart time | UNKNOWN — current workspace cannot reach Railway engine/API path |
-| Railway FARM | deployment id, commit hash, status, restart time | UNKNOWN — same access-path limitation |
-| MAIN engine | `/diag/version`, `/diag/engine`, `/agent/handoff` | UNKNOWN — no current HTTP response obtained |
-| Runtime roles | effective URL/model per role after process-global overrides and env fallback | UNKNOWN — repository defaults are intentionally blank |
-| Box | installed hashes for `file_server.py`, `seat_mailbox.py`, `box_ops.py`, DB endpoint/schema files | UNKNOWN — courier unreachable from current workspace |
-| Database | schema versions, table inventory, session counts/statuses, latest receipts | UNKNOWN — box query relay unreachable |
-| Mailbox | queued/claimed/done counts, expired leases, orphaned claims | UNKNOWN — box courier unreachable |
-| Governor | authenticated `/governor/data` and `/governor/workers` payloads | UNKNOWN — source exists; deployed authenticated response not observed |
-| Cockpit | live engine-root rendering and Socket.IO behavior | UNKNOWN — source exists; Railway root not observed now |
+| Runtime roles | effective URL/model after process-global overrides and env fallback | UNKNOWN — the Keys-modal override outranks the vault, but no safe diagnostic exposes its current non-secret source/model values |
 
-**Access-path finding:** GitHub transport and the public `ontinuity.org` site work from this workspace. Direct requests to `web-production-7eaf8.up.railway.app` stalled, and the ordinary web-access surface rejected that Railway hostname as unsafe. A later Railway API attempt was denied by the workspace network-approval layer. No HTTP status was received from Ontinuity; therefore this does not establish an application outage or an authentication failure.
+**Access-path finding:** the documented Railway GraphQL vault path and MAIN
+courier work from this Control surface. Individual requests intermittently
+timed out at the sandbox proxy; retries reached the same services. A proxy
+timeout is not an Ontinuity outage.
 
 ---
 
@@ -191,10 +225,19 @@ The remaining task is to run these existing reads from an allowed network surfac
 
 - **Claim tested:** Can the completion phase start from one truthful system map rather than the July snapshot or historical handoff?
 - **Evidence read:** current Git `main`; current source; Phase-0 release board; public site; September succession fold; operating manual and handoff.
-- **Change made:** created the release board; converted old pending sections to historical status; advanced the handoff; created this baseline.
-- **Test result:** PARTIAL PASS — repository/public baseline complete; authenticated live equivalence outstanding.
-- **New debt:** none. Two pre-existing drift seams are now explicit: DB-source duplication and Governor-copy duplication.
+- **Change made:** created one read-only machine report; preserved its first
+  authenticated specimen; amended this human baseline with live evidence.
+- **Test result:** PASS — the command reports drift without changing state.
+  The observed system itself is `DRIFT`, not equivalent.
+- **New debt:** FARM lacks the deployed version diagnostic; box
+  `file_server.py`, `db.py`, and `workspace_db_endpoint.py` differ from Git;
+  one mailbox lease is expired; effective Keys-modal overrides remain
+  unobservable.
 - **State left:** no runtime, configuration, box, schema, mailbox, or deployment mutation; documentation-only repository changes.
-- **Next dependency:** complete the authenticated observations using the existing endpoints, then begin B1 capability admission and B3 fail-closed completion as the first build lanes.
+- **Next dependency:** begin B1 capability admission and send the preserved B3
+  candidate for independent review. Reconcile deployment drift under B6; do
+  not mix it into B0 evidence collection.
 
-The baseline is amended in place when the missing live evidence is obtained. It must not be marked PASS until deployed engine and box fingerprints are compared with this repository record.
+The baseline is complete because deployed engine and box fingerprints have now
+been compared with the repository record. PASS describes the observation
+mechanism, not the system's equivalence state.
