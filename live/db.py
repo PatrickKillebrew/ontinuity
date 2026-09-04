@@ -219,6 +219,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     friction_reasons        TEXT,
     -- JSON array of reason strings, parallel to friction_profile
     challenge_count         INTEGER DEFAULT 0,
+    adversarial_catch_count INTEGER DEFAULT 0,
     uphold_count            INTEGER DEFAULT 0,
     reject_count            INTEGER DEFAULT 0,
     pursue_both_count       INTEGER DEFAULT 0,
@@ -403,6 +404,10 @@ CREATE TABLE IF NOT EXISTS behavioral_observations (
 
     -- Session state
     ambient_signal        INTEGER,
+    computed_signal       INTEGER,
+    injected_signal       INTEGER,
+    randomized_flag       INTEGER,
+    modal_touched         INTEGER,
     cumulative_uphold_count INTEGER,
     cumulative_challenge_count INTEGER,
     session_cycle_ratio   REAL,
@@ -412,6 +417,19 @@ CREATE TABLE IF NOT EXISTS behavioral_observations (
     ruling_if_challenged  TEXT,
 
     created_at            TEXT NOT NULL
+);
+
+-- Persisted deterministic execution evidence emitted by the engine.
+CREATE TABLE IF NOT EXISTS session_executions (
+    execution_id  TEXT PRIMARY KEY,
+    session_id    TEXT NOT NULL REFERENCES sessions(session_id),
+    user_id       TEXT NOT NULL REFERENCES users(user_id),
+    cycle_number  INTEGER,
+    kind          TEXT,
+    detail        TEXT,
+    status        TEXT,
+    result        TEXT,
+    created_at    TEXT NOT NULL
 );
 
 -- ── 16. INTAKE SESSIONS ──────────────────────────────────────────────────────
@@ -689,7 +707,12 @@ class OntinuityDB:
             conn.commit()
 
     def _apply_additive_migrations(self):
-        """Idempotently add nullable evidence columns without rewriting history."""
+        """Add nullable evidence columns to an existing challenge_events table.
+
+        CREATE TABLE IF NOT EXISTS cannot evolve an already-created SQLite
+        table. PRAGMA inspection makes this migration idempotent and leaves all
+        historical rows unchanged (the new cells remain NULL).
+        """
         conn = self.connect()
         existing = {
             row["name"] for row in
@@ -713,6 +736,31 @@ class OntinuityDB:
             if column not in transcript_existing:
                 conn.execute(
                     f"ALTER TABLE session_transcripts ADD COLUMN {column} TEXT")
+
+        session_existing = {
+            row["name"] for row in
+            conn.execute("PRAGMA table_info(sessions)").fetchall()
+        }
+        if "adversarial_catch_count" not in session_existing:
+            conn.execute(
+                "ALTER TABLE sessions ADD COLUMN "
+                "adversarial_catch_count INTEGER DEFAULT 0")
+
+        behavioral_existing = {
+            row["name"] for row in
+            conn.execute("PRAGMA table_info(behavioral_observations)").fetchall()
+        }
+        behavioral_additions = {
+            "computed_signal": "INTEGER",
+            "injected_signal": "INTEGER",
+            "randomized_flag": "INTEGER",
+            "modal_touched": "INTEGER",
+        }
+        for column, declaration in behavioral_additions.items():
+            if column not in behavioral_existing:
+                conn.execute(
+                    "ALTER TABLE behavioral_observations ADD COLUMN "
+                    f"{column} {declaration}")
         conn.commit()
 
     # ── INSERT HELPERS ─────────────────────────────────────────────────────
@@ -811,7 +859,8 @@ class OntinuityDB:
                 parietal_string, projenius_string,
                 distillation_method, knowtext_version,
                 friction_profile, friction_reasons,
-                challenge_count, uphold_count, reject_count,
+                challenge_count, adversarial_catch_count,
+                uphold_count, reject_count,
                 pursue_both_count, escalate_count,
                 avg_friction_signal, signal_variance, peak_signal,
                 cycles_to_first_challenge, cycles_to_session_end,
@@ -826,7 +875,8 @@ class OntinuityDB:
                 :parietal_string, :projenius_string,
                 :distillation_method, :knowtext_version,
                 :friction_profile, :friction_reasons,
-                :challenge_count, :uphold_count, :reject_count,
+                :challenge_count, :adversarial_catch_count,
+                :uphold_count, :reject_count,
                 :pursue_both_count, :escalate_count,
                 :avg_friction_signal, :signal_variance, :peak_signal,
                 :cycles_to_first_challenge, :cycles_to_session_end,
@@ -859,6 +909,8 @@ class OntinuityDB:
                 "friction_profile": json.dumps(s.get("friction_profile", [])),
                 "friction_reasons": json.dumps(s.get("friction_reasons", [])),
                 "challenge_count": s.get("challenge_count", 0),
+                "adversarial_catch_count": s.get(
+                    "adversarial_catch_count", 0),
                 "uphold_count": s.get("uphold_count", 0),
                 "reject_count": s.get("reject_count", 0),
                 "pursue_both_count": s.get("pursue_both_count", 0),
@@ -923,6 +975,7 @@ class OntinuityDB:
                                  distillation_method: str = None) -> str:
         version_id = new_id()
         clean = sanitize(content_full) or ""
+        schema_version = schema_version or "KNOWTEXT SCHEMA VERSION: 1.1"
         fields = _parse_knowtext_fields(clean)
         self.connect().execute(
             """INSERT INTO knowtext_versions (
@@ -1165,12 +1218,13 @@ class OntinuityDB:
                 model_a_hedging_count, model_a_certainty_count,
                 model_b_tag, model_b_word_count, model_b_token_est,
                 model_b_challenge_issued,
-                ambient_signal, cumulative_uphold_count,
+                ambient_signal, computed_signal, injected_signal,
+                randomized_flag, modal_touched, cumulative_uphold_count,
                 cumulative_challenge_count, session_cycle_ratio,
                 ruling_if_challenged, created_at
             ) VALUES (
                 ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
             )""",
             (
                 observation_id,
@@ -1189,6 +1243,10 @@ class OntinuityDB:
                 obs.get("model_b_token_est"),
                 int(obs.get("model_b_challenge_issued", False)),
                 obs.get("ambient_signal"),
+                obs.get("computed_signal"),
+                obs.get("injected_signal"),
+                obs.get("randomized_flag"),
+                obs.get("modal_touched"),
                 obs.get("cumulative_uphold_count", 0),
                 obs.get("cumulative_challenge_count", 0),
                 obs.get("session_cycle_ratio"),
@@ -1198,6 +1256,29 @@ class OntinuityDB:
         )
         self._commit()
         return observation_id
+
+    def insert_session_execution(self, execution: Dict[str, Any]) -> str:
+        """Persist one deterministic execution result inside the ingest transaction."""
+        execution_id = new_id()
+        self.connect().execute(
+            """INSERT INTO session_executions (
+                execution_id, session_id, user_id, cycle_number,
+                kind, detail, status, result, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                execution_id,
+                execution.get("session_id"),
+                execution.get("user_id"),
+                execution.get("cycle", execution.get("cycle_number")),
+                execution.get("kind"),
+                execution.get("detail"),
+                execution.get("status"),
+                execution.get("result"),
+                now_utc(),
+            ),
+        )
+        self._commit()
+        return execution_id
 
     def insert_intake_session(self, user_id: str, participant_name: str,
                                organization: str = None,

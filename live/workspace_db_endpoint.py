@@ -40,7 +40,8 @@ except ImportError:
 # ─────────────────────────────────────────────
 # CONFIGURATION
 # ─────────────────────────────────────────────
-DB_PATH        = os.environ.get("ONTINUITY_DB_PATH", "ontinuity.db")
+_HERE = os.path.dirname(os.path.abspath(__file__))
+DB_PATH        = os.environ.get("ONTINUITY_DB_PATH", os.path.join(_HERE, "ontinuity.db"))
 WORKSPACE_TOKEN = os.environ.get("WORKSPACE_TOKEN", "").strip()
 # If set, Railway must send this in the X-Workspace-Token header.
 # Leave empty during local development.
@@ -53,6 +54,7 @@ def get_db() -> "OntinuityDB":
     if _db is None and DB_AVAILABLE:
         _db = OntinuityDB(DB_PATH)
         _db.init()
+        _ensure_receipts_table()
     return _db
 
 def init_db():
@@ -68,6 +70,83 @@ def init_db():
 # BLUEPRINT
 # ─────────────────────────────────────────────
 db_blueprint = Blueprint("ontinuity_db", __name__)
+
+import sqlite3 as _sqlite3
+from datetime import datetime as _dt, timezone as _tz
+
+_FORBIDDEN_SQL = re.compile(
+    r"\b(insert|update|delete|drop|alter|create|attach|detach|pragma|vacuum|"
+    r"reindex|replace|begin|commit|rollback)\b",
+    re.IGNORECASE,
+)
+
+_RECEIPT_DETAIL_CODES = {
+    "",
+    "session_ingest_failed",
+}
+
+
+def _ensure_receipts_table():
+    """Keep the deployed append-only write receipt spine available."""
+    try:
+        conn = _sqlite3.connect(DB_PATH)
+        conn.execute("""CREATE TABLE IF NOT EXISTS write_receipts (
+            receipt_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT, outcome TEXT, detail TEXT,
+            turns_written INTEGER, artifacts_written INTEGER,
+            received_at TEXT NOT NULL)""")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"receipts table init failed: {e}")
+
+
+def _write_receipt(session_id, outcome, detail="", turns=0, artifacts=0):
+    # Receipt detail is deliberately a closed vocabulary. Exception text can
+    # contain credentials, headers, and credential-bearing URLs.
+    safe_detail = detail if detail in _RECEIPT_DETAIL_CODES else ""
+    try:
+        conn = _sqlite3.connect(DB_PATH)
+        conn.execute(
+            "INSERT INTO write_receipts "
+            "(session_id, outcome, detail, turns_written, artifacts_written, received_at) "
+            "VALUES (?,?,?,?,?,?)",
+            (session_id, outcome, safe_detail, turns, artifacts,
+             _dt.now(_tz.utc).isoformat()),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"receipt write failed: {e}")
+
+
+@db_blueprint.route("/api/query", methods=["GET"])
+def api_query():
+    """Bounded SELECT-only diagnostic query retained from the installed box."""
+    if WORKSPACE_TOKEN and request.headers.get("X-Workspace-Token", "") != WORKSPACE_TOKEN:
+        return jsonify({"error": "Unauthorized"}), 401
+    sql = (request.args.get("sql") or "").strip().rstrip(";").strip()
+    if not sql.lower().startswith("select"):
+        return jsonify({"error": "SELECT statements only"}), 400
+    if ";" in sql:
+        return jsonify({"error": "single statement only"}), 400
+    if _FORBIDDEN_SQL.search(sql):
+        return jsonify({"error": "statement contains forbidden keyword"}), 400
+    try:
+        conn = _sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+        conn.row_factory = _sqlite3.Row
+        cur = conn.execute(sql)
+        rows = cur.fetchmany(200)
+        cols = [d[0] for d in cur.description] if cur.description else []
+        conn.close()
+        return jsonify({
+            "columns": cols,
+            "rows": [list(row) for row in rows],
+            "row_count": len(rows),
+            "truncated_at": 200,
+        }), 200
+    except Exception:
+        return jsonify({"error": "query_failed"}), 400
 
 
 def _auth_ok():
@@ -216,6 +295,8 @@ def receive_session():
             "friction_profile":        data.get("friction_profile", []),
             "friction_reasons":        data.get("friction_reasons", []),
             "challenge_count":         data.get("challenge_count", 0),
+            "adversarial_catch_count": data.get(
+                "adversarial_catch_count", 0),
             "uphold_count":            data.get("uphold_count", 0),
             "reject_count":            data.get("reject_count", 0),
             "pursue_both_count":       data.get("pursue_both_count", 0),
@@ -365,6 +446,15 @@ def receive_session():
             obs["user_id"] = user_id
             db.insert_behavioral_observation(obs)
 
+        # Preserve the already-deployed execution-log path. These rows share
+        # the complete-session transaction and therefore cannot survive a
+        # failed ingest as partial evidence.
+        for execution in data.get("executions", []):
+            execution = dict(execution)
+            execution["session_id"] = session_id
+            execution["user_id"] = user_id
+            db.insert_session_execution(execution)
+
         result = {
             "status": "ok",
             "session_id": session_id,
@@ -378,18 +468,25 @@ def receive_session():
                 event for event in raw_events if event not in structured_raw]),
             "model_calls_written": len(data.get("model_call_envelopes", [])),
             "retractions_written": len(data.get("expunged_ledger", [])),
+            "executions_written": len(data.get("executions", [])),
             "manifest_written": bool(manifest),
         }
         db.commit_transaction()
+        _write_receipt(
+            session_id,
+            "ok",
+            turns=len(data.get("transcript_turns", [])),
+            artifacts=len(data.get("artifacts", [])),
+        )
         return jsonify(result), 200
 
-    except Exception as e:
+    except Exception:
         db.rollback_transaction()
-        import traceback
-        error_detail = traceback.format_exc()
-        print(f"Session write error: {error_detail}")
+        print("Session ingest failed; transaction rolled back.")
+        _write_receipt(
+            session_id, "error", detail="session_ingest_failed")
         return jsonify({
-            "error": str(e),
+            "error": "session_ingest_failed",
             "session_id": session_id
         }), 500
 

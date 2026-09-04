@@ -1,7 +1,7 @@
 # ONTINUITY RESEARCH PRESERVATION CONTRACT
 
 **Release lane:** B5-P — bounded evidence preservation before measurement  
-**Status:** independently reviewed candidate; not committed, deployed, or live  
+**Status:** implementation contract; live status requires the evidence in Section 5
 **Capture version:** `ontinuity-research-evidence/1.0`  
 **Database schema version:** `1.1.0`
 
@@ -12,7 +12,7 @@ Ontinuity's operational record is also the irreplaceable substrate described in
 retractions. Analysis can be built later. Evidence that was never captured
 cannot be reconstructed later without invention.
 
-This contract therefore preserves raw evidence from new sessions before B8
+This contract therefore requires preservation of raw evidence from new sessions before B8
 measurement begins. It does **not** add behavioral scoring, psychological
 interpretation, experiments, dashboards, model routing, gate decisions, access
 control, or deployment behavior. It does not rewrite historical rows.
@@ -154,20 +154,26 @@ The additive schema creates:
 
 - `model_call_envelopes`;
 - `session_reproducibility_manifests`;
-- `retraction_events`.
+- `retraction_events`;
+- `session_executions` for deterministic execution results already emitted by
+  the engine.
 
 It adds nullable `sequence_number`, `adjudication_channel`, `raw_event`, and
 `capture_version` columns to `challenge_events`, plus nullable `raw_content` and
-`raw_content_sha256` columns to `session_transcripts`. Initialization inspects
-the live table shapes and adds only absent columns. Natural unique evidence
-keys and first-write-preserving inserts protect the new child rows, while the
-complete `/api/session` write runs in one serialized SQLite transaction.
-Re-running the migration is safe. No DROP, DELETE, type change, or historical
-UPDATE is permitted by this lane.
+`raw_content_sha256` columns to `session_transcripts`. It also preserves the
+installed system's `adversarial_catch_count` session aggregate and behavioral
+observation fields for computed signal, injected signal, randomization, and
+operator-modal contact. Initialization inspects existing table shapes and adds
+only absent columns. Natural unique evidence keys and first-write-preserving
+inserts protect the new child rows, while the complete `/api/session` write
+runs in one serialized SQLite transaction. Re-running the migration is safe.
+No DROP, DELETE, type change, or historical UPDATE is permitted by this lane.
 
-Root and `live/` database/endpoint copies receive the same evidence semantics
-without erasing their documented pre-existing behavioral-column differences.
-B6 still owns canonical-location and installed-byte reconciliation.
+The endpoint also preserves the installed box's bounded SELECT-only diagnostic
+route, append-only success/failure write receipts, execution-row ingest,
+Knowtext schema default, and module-relative absolute default database path.
+Root and `live/` database/endpoint copies must have the same behavior. B6 still
+owns the larger canonical-location and installed-byte reconciliation.
 
 ## 5. ACCEPTANCE EVIDENCE
 
@@ -191,16 +197,24 @@ Before these bytes can be called live:
    `incomplete_pre_session` attempt with zero transcript turns, releases its
    start reservation, and permits the next start; a dashboard question wait
    retains only its own token until one continuation or cancellation;
-10. a deliberately challenged specimen session can be reconstructed from the
+10. the installed query route remains SELECT-only, successful and failed
+    ingests append receipts, execution rows participate in complete-session
+    rollback, and the recovered behavioral fields survive migration and ingest;
+11. a deliberately challenged specimen session can be reconstructed from the
    database without consulting a model's memory.
 
-The first nine are code-level acceptance for B5-P. The tenth is the live
+The first ten are code-level acceptance for B5-P. The eleventh is the live
 specimen required before the capture boundary is declared operational.
 
 ## 6. DEFERRED WORK
 
 - authenticated actor/occupant identity: B1/B2;
 - operator-event and full artifact-to-deployment joins: remainder of B5;
+- explicit conversation -> session -> mailbox block -> review -> commit ->
+  deployment -> receipt correlation: remainder of B5;
+- provider latency, retry, token, and cost metadata: later additive telemetry,
+  after defining provider-neutral fields and secret-redaction tests;
+- immutable artifact revision/digest joins to exact deployed bytes: B5/B6;
 - backup/restore proof and canonical installation: B6;
 - behavioral metrics, interpretation, and comparative claims: B8;
 - consent policy, de-identification implementation, and research-access roles:

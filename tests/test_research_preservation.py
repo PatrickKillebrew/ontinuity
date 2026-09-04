@@ -1,11 +1,13 @@
 import hashlib
 import importlib.util
+import io
 import json
 from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
 from unittest import mock
+from contextlib import redirect_stdout
 
 from flask import Flask
 
@@ -565,6 +567,25 @@ class AdditiveMigrationTests(unittest.TestCase):
                 ) VALUES ('old-turn', 's', 1, 1, 'model_a',
                           'legacy content', 'then')"""
             )
+            # Simulate already-existing deployed tables that predate the
+            # recovered live-only research columns. CREATE TABLE IF NOT EXISTS
+            # cannot add these columns; the additive migration must.
+            conn.execute(
+                """CREATE TABLE sessions (
+                    session_id TEXT PRIMARY KEY,
+                    user_id TEXT,
+                    project_id TEXT,
+                    branch_id TEXT,
+                    series_id TEXT
+                )"""
+            )
+            conn.execute(
+                """CREATE TABLE behavioral_observations (
+                    observation_id TEXT PRIMARY KEY,
+                    session_id TEXT,
+                    friction_signal INTEGER
+                )"""
+            )
             conn.commit()
             conn.close()
 
@@ -596,6 +617,19 @@ class AdditiveMigrationTests(unittest.TestCase):
             self.assertEqual(old_turn["content"], "legacy content")
             self.assertIsNone(old_turn["raw_content"])
             self.assertIsNone(old_turn["raw_content_sha256"])
+            session_columns = {
+                row["name"] for row in database.connect().execute(
+                    "PRAGMA table_info(sessions)").fetchall()
+            }
+            self.assertIn("adversarial_catch_count", session_columns)
+            behavioral_columns = {
+                row["name"] for row in database.connect().execute(
+                    "PRAGMA table_info(behavioral_observations)").fetchall()
+            }
+            self.assertTrue({
+                "computed_signal", "injected_signal", "randomized_flag",
+                "modal_touched",
+            }.issubset(behavioral_columns))
             tables = {
                 row[0] for row in database.connect().execute(
                     "SELECT name FROM sqlite_master WHERE type='table'"
@@ -605,6 +639,7 @@ class AdditiveMigrationTests(unittest.TestCase):
                 "model_call_envelopes",
                 "session_reproducibility_manifests",
                 "retraction_events",
+                "session_executions",
             }.issubset(tables))
             database.close()
 
@@ -618,9 +653,12 @@ class AdditiveMigrationTests(unittest.TestCase):
 class EndpointPersistenceTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        endpoint._db = root_db.OntinuityDB(
-            str(Path(self.tmp.name) / "endpoint.db"))
+        self.db_path = str(Path(self.tmp.name) / "endpoint.db")
+        self.original_db_path = endpoint.DB_PATH
+        endpoint.DB_PATH = self.db_path
+        endpoint._db = root_db.OntinuityDB(self.db_path)
         endpoint._db.init()
+        endpoint._ensure_receipts_table()
         endpoint.WORKSPACE_TOKEN = ""
         flask_app = Flask(__name__)
         flask_app.register_blueprint(endpoint.db_blueprint)
@@ -629,6 +667,7 @@ class EndpointPersistenceTests(unittest.TestCase):
     def tearDown(self):
         endpoint._db.close()
         endpoint._db = None
+        endpoint.DB_PATH = self.original_db_path
         self.tmp.cleanup()
 
     def _base_payload(self, session_id):
@@ -840,6 +879,138 @@ class EndpointPersistenceTests(unittest.TestCase):
                 (payload["session_id"],)).fetchone()[0], 0, table)
         retry = self.client.post("/api/session", json=payload)
         self.assertEqual(retry.status_code, 200, retry.get_json())
+
+    def test_query_route_is_bounded_read_only_and_operational(self):
+        payload = self._base_payload("query-session")
+        self.assertEqual(
+            self.client.post("/api/session", json=payload).status_code, 200)
+        selected = self.client.get(
+            "/api/query", query_string={
+                "sql": "SELECT session_id, status FROM sessions "
+                       "WHERE session_id='query-session'",
+            })
+        self.assertEqual(selected.status_code, 200, selected.get_json())
+        self.assertEqual(selected.get_json()["rows"],
+                         [["query-session", "complete"]])
+        for statement in (
+                "DELETE FROM sessions",
+                "SELECT 1; SELECT 2",
+                "PRAGMA table_info(sessions)"):
+            refused = self.client.get(
+                "/api/query", query_string={"sql": statement})
+            self.assertEqual(refused.status_code, 400, statement)
+        query_canary = "SECRET_CANARY_QUERY_COLUMN"
+        invalid = self.client.get(
+            "/api/query", query_string={
+                "sql": f"SELECT {query_canary} FROM sessions",
+            })
+        self.assertEqual(invalid.status_code, 400)
+        self.assertEqual(invalid.get_json(), {"error": "query_failed"})
+        self.assertNotIn(query_canary, canonical(invalid.get_json()))
+
+    def test_write_receipts_record_success_and_failure(self):
+        ok_payload = self._base_payload("receipt-ok")
+        self.assertEqual(
+            self.client.post("/api/session", json=ok_payload).status_code, 200)
+
+        failed_payload = self._base_payload("receipt-error")
+        canary = (
+            "Authorization: Bearer SECRET_CANARY "
+            "https://provider.invalid/v1?q=token")
+        output = io.StringIO()
+        with mock.patch.object(
+                endpoint._db, "insert_session",
+                side_effect=RuntimeError(canary)), redirect_stdout(output):
+            failed = self.client.post("/api/session", json=failed_payload)
+        self.assertEqual(failed.status_code, 500)
+        self.assertEqual(failed.get_json()["error"], "session_ingest_failed")
+        self.assertNotIn(canary, canonical(failed.get_json()))
+        self.assertNotIn(canary, output.getvalue())
+
+        # The helper itself refuses arbitrary detail, so a future caller cannot
+        # accidentally reintroduce exception-text persistence.
+        endpoint._write_receipt(
+            "receipt-direct", "error", detail=canary)
+
+        conn = sqlite3.connect(self.db_path)
+        rows = conn.execute(
+            "SELECT session_id, outcome, detail FROM write_receipts "
+            "WHERE session_id IN "
+            "('receipt-ok', 'receipt-error', 'receipt-direct') "
+            "ORDER BY receipt_id").fetchall()
+        conn.close()
+        self.assertEqual(rows,
+                         [("receipt-ok", "ok", ""),
+                          ("receipt-error", "error",
+                           "session_ingest_failed"),
+                          ("receipt-direct", "error", "")])
+        self.assertNotIn(canary, canonical(rows))
+
+    def test_execution_and_live_behavior_fields_persist_atomically(self):
+        payload = self._base_payload("execution-session")
+        payload.update({
+            "adversarial_catch_count": 3,
+            "behavioral_observations": [{
+                "session_id": "execution-session",
+                "cycle_number": 1,
+                "friction_signal": 4,
+                "computed_signal": 2,
+                "injected_signal": 4,
+                "randomized_flag": 1,
+                "modal_touched": 1,
+            }],
+            "executions": [{
+                "cycle": 1,
+                "kind": "CODE_TEST",
+                "detail": "python -m unittest",
+                "status": "passed",
+                "result": "all tests passed",
+            }],
+        })
+        response_obj = self.client.post("/api/session", json=payload)
+        self.assertEqual(response_obj.status_code, 200, response_obj.get_json())
+        self.assertEqual(response_obj.get_json()["executions_written"], 1)
+        conn = endpoint._db.connect()
+        session = conn.execute(
+            "SELECT adversarial_catch_count FROM sessions WHERE session_id=?",
+            (payload["session_id"],)).fetchone()
+        self.assertEqual(session["adversarial_catch_count"], 3)
+        observation = conn.execute(
+            "SELECT computed_signal, injected_signal, randomized_flag, "
+            "modal_touched FROM behavioral_observations WHERE session_id=?",
+            (payload["session_id"],)).fetchone()
+        self.assertEqual(tuple(observation), (2, 4, 1, 1))
+        execution = conn.execute(
+            "SELECT kind, status, result FROM session_executions "
+            "WHERE session_id=?", (payload["session_id"],)).fetchone()
+        self.assertEqual(tuple(execution),
+                         ("CODE_TEST", "passed", "all tests passed"))
+
+        rollback = self._base_payload("execution-rollback")
+        rollback["executions"] = [
+            {"cycle": 1, "kind": "first", "status": "passed"},
+            {"cycle": 2, "kind": "second", "status": "passed"},
+        ]
+        original = endpoint._db.insert_session_execution
+        calls = 0
+
+        def fail_second(execution):
+            nonlocal calls
+            calls += 1
+            if calls == 2:
+                raise RuntimeError("forced second execution failure")
+            return original(execution)
+
+        with mock.patch.object(endpoint._db, "insert_session_execution",
+                               side_effect=fail_second):
+            failed = self.client.post("/api/session", json=rollback)
+        self.assertEqual(failed.status_code, 500)
+        self.assertEqual(conn.execute(
+            "SELECT COUNT(*) FROM sessions WHERE session_id=?",
+            (rollback["session_id"],)).fetchone()[0], 0)
+        self.assertEqual(conn.execute(
+            "SELECT COUNT(*) FROM session_executions WHERE session_id=?",
+            (rollback["session_id"],)).fetchone()[0], 0)
 
     def test_long_unicode_transcript_round_trip_preserves_raw_and_digest(self):
         raw = " \n“Engine-visible” — " + ("Ω" * 5200) + "\t\n "
