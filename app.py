@@ -15,6 +15,9 @@ import re
 import base64
 import datetime
 import time
+import hashlib
+import uuid
+from urllib.parse import urlparse
 import requests as http_requests
 
 app = Flask(__name__)
@@ -130,6 +133,8 @@ KNOWTEXT_REQUIRED_FIELDS = [
 ]
 
 SCHEMA_VERSION = "KNOWTEXT SCHEMA VERSION: 1.1"
+RESEARCH_CAPTURE_VERSION = "ontinuity-research-evidence/1.0"
+RESEARCH_SCHEMA_VERSION = "1.1.0"
 
 # -----------------------------------------
 # SESSION STATE
@@ -142,6 +147,12 @@ active_session = {
     "tag_sequence": [],
     "signal_sequence": [],
     "challenge_events": [],
+    "challenge_records": [],
+    "model_call_envelopes": [],
+    "model_call_sequence": 0,
+    "expunged_ledger": [],
+    "frozen_contract": [],
+    "reproducibility_manifest": None,
     "unreviewed_cycles": [],
     "errors": [],
     "cycle": 0,
@@ -162,8 +173,12 @@ active_session = {
     "no_progress_count": 0,            # F.1: consecutive cycles Challenger flagged no progress; reset on progress or successful RESOLVE
     "malformed_count": 0,             # F.1: consecutive Researcher cycles with no valid status tag
     "execution_log": [],               # F.2: deterministic record of every real workspace execution this session (F.3 detector ground truth)
-    "claim_warning_count": 0           # F.2: consecutive Researcher cycles with execution-claims but no real execution
+    "claim_warning_count": 0,          # F.2: consecutive Researcher cycles with execution-claims but no real execution
+    "_start_context": None
 }
+
+_start_context_lock = threading.Lock()
+_model_call_capture_lock = threading.Lock()
 
 # Runtime config overrides (set from frontend settings modal)
 # Structure: { 'model_b': {'key': '...', 'url': '...', 'model': '...'} }
@@ -248,6 +263,360 @@ def sanitize_content(text):
     for char, replacement in replacements.items():
         text = text.replace(char, replacement)
     return text
+
+
+def _canonical_json(value):
+    """Stable UTF-8 JSON used for preserved evidence and its digest."""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True,
+                      separators=(",", ":"))
+
+
+def _sha256_text(value):
+    if value is None:
+        return None
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _utc_iso():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def _endpoint_host(url):
+    """Return only the non-secret routing host; never preserve a full URL."""
+    raw = (url or "").strip()
+    if not raw or raw.lower().startswith("external"):
+        return None
+    try:
+        return (urlparse(raw).hostname or "").lower() or None
+    except Exception:
+        return None
+
+
+def _reset_research_capture(preserved_envelopes=None):
+    """Start a fresh evidence buffer without allowing cross-session inheritance.
+
+    PRE_SESSION and ORIENT are model calls belonging to the session being opened.
+    A start token owns the pending capture; run_session_loop preserves only
+    envelopes claimed with that exact token. Direct loop calls start empty.
+    """
+    pre_session = list(preserved_envelopes or [])
+    active_session["challenge_records"] = []
+    active_session["model_call_envelopes"] = pre_session
+    active_session["model_call_sequence"] = max(
+        (int(e.get("sequence_number", 0)) for e in pre_session), default=0)
+    active_session["expunged_ledger"] = []
+    active_session["frozen_contract"] = []
+    active_session["reproducibility_manifest"] = None
+
+
+def _begin_session_start_capture(started_by):
+    """Reserve one cycle-zero capture context; reject overlapping starts."""
+    with _start_context_lock:
+        if (active_session.get("running") or active_session.get("finalizing")
+                or active_session.get("_start_context")):
+            return None
+        _reset_research_capture()
+        token = str(uuid.uuid4())
+        active_session["_start_context"] = {
+            "token": token,
+            "started_by": started_by,
+            "state": "pre_session",
+        }
+        active_session["started_by"] = started_by
+        # PRE_SESSION and ORIENT are part of the session, not work that happens
+        # before it. Give their evidence a stable identity before the first call.
+        active_session["start_time"] = timestamp()
+        active_session["end_time"] = None
+        active_session["objective"] = ""
+        active_session["knowtext_version"] = None
+        active_session["project_id"] = None
+        active_session["branch"] = None
+        active_session["cycle"] = 0
+        # An aborted start must never serialize residue from the preceding
+        # completed session as if it belonged to this cycle-zero attempt.
+        for key in ("transcript", "tag_sequence", "signal_sequence",
+                    "challenge_events", "unreviewed_cycles", "errors",
+                    "artifacts", "session_ledger", "rejected_claims",
+                    "results_board", "execution_log", "experiment_sequence",
+                    "modal_touched_cycles", "modal_timeouts",
+                    "parietal_navigate_outputs",
+                    "parietal_adjudicate_rulings"):
+            active_session[key] = []
+        active_session["contract"] = []
+        active_session["end_status"] = "incomplete_pre_session"
+        active_session["distillation_method"] = "failed"
+        return token
+
+
+def _claim_session_start_capture(token):
+    """Atomically hand exactly one start's cycle-zero envelopes to its loop."""
+    with _start_context_lock:
+        context = active_session.get("_start_context") or {}
+        if not token or context.get("token") != token:
+            return None
+        envelopes = list(active_session.get("model_call_envelopes", []))
+        # Close the handoff gap under the same lock: a second start cannot
+        # reserve/reset global session state between claim and loop startup.
+        active_session["running"] = True
+        active_session["_start_context"] = None
+        return envelopes
+
+
+def _release_session_start_capture(token):
+    with _start_context_lock:
+        context = active_session.get("_start_context") or {}
+        if token and context.get("token") == token:
+            active_session["_start_context"] = None
+            return True
+        return False
+
+
+def _mark_dashboard_start_waiting(token, objective, start_fresh):
+    """Retain a dashboard start only while its questions await an answer."""
+    with _start_context_lock:
+        context = active_session.get("_start_context") or {}
+        if not token or context.get("token") != token:
+            return False
+        if context.get("state") != "pre_session":
+            return False
+        context.update({
+            "state": "awaiting_dashboard_answers",
+            "objective": objective,
+            "start_fresh": bool(start_fresh),
+        })
+        return True
+
+
+def _consume_dashboard_start(token):
+    """Atomically claim one pending dashboard continuation without ending capture."""
+    with _start_context_lock:
+        context = active_session.get("_start_context") or {}
+        if not token or context.get("token") != token:
+            return None
+        if context.get("state") != "awaiting_dashboard_answers":
+            return None
+        context["state"] = "continuing"
+        return dict(context)
+
+
+def _start_context_owned(token):
+    with _start_context_lock:
+        return bool(token and
+                    (active_session.get("_start_context") or {}).get("token")
+                    == token)
+
+
+def _reset_idle_session_state():
+    """Clear session-local state after an explicit dashboard reset/cancel.
+
+    Caller owns _start_context_lock. This is kept separate from abort
+    persistence so captured cycle-zero evidence is written before it is erased.
+    """
+    _reset_research_capture()
+    active_session["transcript"] = []
+    active_session["tag_sequence"] = []
+    active_session["signal_sequence"] = []
+    active_session["challenge_events"] = []
+    active_session["unreviewed_cycles"] = []
+    active_session["errors"] = []
+    active_session["cycle"] = 0
+    active_session["artifacts"] = []
+    active_session["start_time"] = None
+    active_session["end_time"] = None
+    active_session["knowtext_version"] = None
+    active_session["waiting_for_input"] = False
+    active_session["input_type"] = None
+    active_session["human_input_value"] = None
+    active_session["session_ledger"] = []
+    active_session["parietal_navigate_outputs"] = []
+    active_session["parietal_adjudicate_rulings"] = []
+    active_session["rejected_claims"] = []
+    active_session["results_board"] = []
+    active_session["execution_log"] = []
+    active_session["experiment_sequence"] = []
+    active_session["modal_touched_cycles"] = []
+    active_session["modal_timeouts"] = []
+    active_session["contract"] = []
+    active_session["objective"] = ""
+    active_session["end_status"] = "complete"
+    active_session["started_by"] = None
+    active_session["project_id"] = None
+    active_session["branch"] = None
+    active_session["close_refusal_count"] = 0
+    active_session["start_fresh"] = False
+    active_session["distillation_method"] = "failed"
+
+
+def _abort_pre_session_start(token, reason, reset_after=False):
+    """Close one terminal PRE_SESSION attempt and preserve any call evidence.
+
+    Dashboard question-wait is deliberately non-terminal and never calls this
+    helper. All actual aborts release their reservation, even when persistence
+    itself fails. If no model call began there is no research evidence to write.
+    """
+    with _start_context_lock:
+        context = active_session.get("_start_context") or {}
+        if not token or context.get("token") != token:
+            return False
+        if context.get("state") == "finalizing_abort":
+            return False
+        context["state"] = "finalizing_abort"
+        has_call_evidence = bool(active_session.get("model_call_envelopes"))
+        active_session["running"] = False
+        active_session["finalizing"] = has_call_evidence
+
+    try:
+        if not has_call_evidence:
+            return False
+        active_session["end_status"] = "incomplete_pre_session"
+        active_session["end_time"] = timestamp()
+        active_session["cycle"] = 0
+        active_session["contract"] = []
+        active_session["frozen_contract"] = []
+        active_session["reproducibility_manifest"] = (
+            _build_reproducibility_manifest(
+                active_session["start_time"], []))
+        socketio.emit("routing_action", {
+            "type": "error",
+            "message": ("PRE_SESSION ended before the main loop "
+                        f"({reason}); preserving cycle-zero evidence."),
+        })
+        return write_session_to_workspace()
+    finally:
+        with _start_context_lock:
+            context = active_session.get("_start_context") or {}
+            if context.get("token") == token:
+                if reset_after:
+                    _reset_idle_session_state()
+                active_session["_start_context"] = None
+                active_session["finalizing"] = False
+
+
+def _configured_prompt_files():
+    """Capture prompt bytes used or callable by the session, without secrets."""
+    paths = []
+    for role in ("model_a", "model_b", "model_c", "parietal", "projenius"):
+        path = CONFIG[role].get("system_prompt_path")
+        if path and path not in paths:
+            paths.append(path)
+    for path in ("prompts/parietal_resolve.txt",
+                 "prompts/knowtext_extraction_prompt.txt"):
+        if path not in paths:
+            paths.append(path)
+    records = []
+    for path in paths:
+        content = load_file(path)
+        records.append({
+            "path": path,
+            "content": content,
+            "sha256": _sha256_text(content),
+            "status": "CAPTURED" if content is not None else "UNKNOWN",
+        })
+    return records
+
+
+def _non_secret_role_config():
+    roles = {}
+    for role in ("model_a", "model_b", "model_c", "parietal", "projenius"):
+        config = get_effective_config(role)
+        url = config.get("url") or ""
+        roles[role] = {
+            "model": config.get("model") or None,
+            "provider_format": (
+                "external" if url.strip().lower().startswith("external")
+                else detect_api_format(url) if url else None),
+            "endpoint_host": _endpoint_host(url),
+            "system_prompt_path": config.get("system_prompt_path") or None,
+            "configured": bool(url and (
+                config.get("api_key") or
+                (role == "model_a" and url.strip().lower().startswith("external")))),
+        }
+    return roles
+
+
+def _observed_code_revision():
+    for name in ("RAILWAY_GIT_COMMIT_SHA", "GIT_COMMIT_SHA",
+                 "SOURCE_VERSION", "VERCEL_GIT_COMMIT_SHA",
+                 "HEROKU_SLUG_COMMIT"):
+        value = (os.environ.get(name) or "").strip()
+        if value:
+            return {"status": "OBSERVED", "value": value,
+                    "source_env": name}
+    return {"status": "UNKNOWN", "value": None, "source_env": None}
+
+
+def _build_reproducibility_manifest(session_id, frozen_contract):
+    contract_json = _canonical_json(frozen_contract or [])
+    prompt_files = _configured_prompt_files()
+    prompt_files_json = _canonical_json(prompt_files)
+    roles = _non_secret_role_config()
+    model_a_external = (
+        roles.get("model_a", {}).get("provider_format") == "external")
+    return {
+        "session_id": session_id,
+        "capture_version": RESEARCH_CAPTURE_VERSION,
+        "schema_version": RESEARCH_SCHEMA_VERSION,
+        "started_by": active_session.get("started_by") or "UNKNOWN",
+        "instance": (os.environ.get("INSTANCE_NAME", "main").strip()
+                     or "main"),
+        "code_revision": _observed_code_revision(),
+        "frozen_contract": frozen_contract or [],
+        "frozen_contract_sha256": _sha256_text(contract_json),
+        "prompt_files": prompt_files,
+        "prompt_files_sha256": _sha256_text(prompt_files_json),
+        "role_config": roles,
+        # B1/B2 will bind a real actor. A configured legacy model label is not
+        # evidence of who actually occupied an external Researcher seat.
+        "external_occupant_identity": None,
+        "external_occupant_status": (
+            "UNVERIFIED_PENDING_B1_B2" if model_a_external
+            else "NOT_APPLICABLE"),
+    }
+
+
+def _ruling_tag(text, fallback="UNKNOWN"):
+    match = re.search(r"\[RULING:\s*(UPHOLD|REJECT|PURSUE[ _]BOTH|ESCALATE)\]",
+                      text or "", re.IGNORECASE)
+    if not match:
+        match = re.match(
+            r"\s*(UPHOLD|REJECT|PURSUE[ _]BOTH|ESCALATE)\b",
+            text or "", re.IGNORECASE)
+    if not match:
+        return fallback
+    return match.group(1).upper().replace(" ", "_")
+
+
+def record_structured_challenge(challenged_claim, grounds, ruling,
+                                ruling_justification,
+                                adjudication_channel, raw_event=None):
+    """Preserve the complete challenge/adjudication evidence without parsing it
+    back out of the shortened human-readable challenge_events strings."""
+    records = active_session.setdefault("challenge_records", [])
+    records.append({
+        "sequence_number": len(records) + 1,
+        "cycle_number": active_session.get("cycle", 0),
+        "challenged_claim": challenged_claim or "",
+        "grounds": grounds or "",
+        "ruling": ruling or "UNKNOWN",
+        "ruling_justification": ruling_justification or "",
+        "adjudication_channel": adjudication_channel,
+        "raw_event": raw_event,
+        "capture_version": RESEARCH_CAPTURE_VERSION,
+    })
+
+
+def _snapshot_model_call_envelopes(session_id):
+    """Freeze a bounded evidence view; never persist an open call as final."""
+    snapshot_at = _utc_iso()
+    records = []
+    with _model_call_capture_lock:
+        for live_envelope in active_session.get("model_call_envelopes", []):
+            envelope = dict(live_envelope, session_id=session_id)
+            if envelope.get("status") == "started":
+                envelope["status"] = "incomplete_at_snapshot"
+                envelope["ended_at"] = snapshot_at
+            records.append(envelope)
+    return records
 
 # -----------------------------------------
 # BEHAVIORAL ANALYSIS HELPERS
@@ -418,7 +787,8 @@ def build_session_payload():
     for entry in s.get("transcript", []):
         turn_number += 1
         cycle = entry.get("cycle", 0)
-        content = sanitize_content(entry.get("content", "")) or ""
+        raw_content = entry.get("content", "") or ""
+        content = sanitize_content(raw_content) or ""
         role = entry.get("role", "")
         role_key = "a" if role == "model_a" else ("b" if role == "model_b" else "")
         tag = None
@@ -435,6 +805,8 @@ def build_session_payload():
             "turn_number": turn_number,
             "role": role,
             "content": content,
+            "raw_content": raw_content,
+            "raw_content_sha256": _sha256_text(raw_content),
             "tag": tag,
             "friction_signal": int(sig_m.group(1)) if sig_m else None,
         })
@@ -452,6 +824,11 @@ def build_session_payload():
         else "incomplete_challenger_dead" if _unreviewed
         else "complete" if _has_close
         else "incomplete_no_close")
+    manifest = s.get("reproducibility_manifest")
+    if not manifest:
+        manifest = _build_reproducibility_manifest(
+            session_id, s.get("frozen_contract", []))
+        s["reproducibility_manifest"] = manifest
     return {
         "session_id": session_id,
         "objective": sanitize_content(s.get("objective", "")),
@@ -487,7 +864,10 @@ def build_session_payload():
         "expunged_ledger": s.get("expunged_ledger", []),
         "instance": os.environ.get("INSTANCE_NAME", "main").strip() or "main",
         "modal_timeouts": s.get("modal_timeouts", []),
+        "challenge_events": s.get("challenge_records", []),
         "challenge_events_raw": s.get("challenge_events", []),
+        "model_call_envelopes": _snapshot_model_call_envelopes(session_id),
+        "reproducibility_manifest": dict(manifest, session_id=session_id),
         "transcript_turns": transcript_turns,
         "behavioral_observations": behavioral_obs,
         "executions": [dict(e, session_id=session_id) for e in s.get("execution_log", [])],
@@ -865,11 +1245,35 @@ def expunge_overruled_ledger(challenged_response, ruling_cycle):
         active_session["session_ledger"] = kept
         audit = active_session.setdefault("expunged_ledger", [])
         for e in expunged:
-            audit.append({"cycle": e.get("cycle"), "summary": e.get("summary"), "expunged_by_ruling_cycle": ruling_cycle})
+            source_entry = json.loads(_canonical_json(e))
+            audit.append({
+                "source_entry": source_entry,
+                "source_cycle": e.get("cycle"),
+                "claim_text": e.get("summary"),
+                "ruling_cycle": ruling_cycle,
+                "disposition": "EXPUNGED",
+            })
             line = f"EXPUNGED from established results by cycle-{ruling_cycle} ruling: {e.get('summary','')[:200]}"
             if line not in active_session["rejected_claims"]:
                 active_session["rejected_claims"].append(line)
     return len(expunged)
+
+
+def apply_upheld_challenge(challenged_response, ruling_text, ruling_cycle):
+    """Apply one ledger-coherence rule to every adjudicator's UPHOLD."""
+    extract_rejected_claim(ruling_text, ruling_cycle)
+    count = expunge_overruled_ledger(challenged_response, ruling_cycle)
+    if count:
+        socketio.emit('routing_action', {
+            'type': 'info',
+            'message': (f'Ledger coherence: {count} established-result '
+                        f'entr{"y" if count == 1 else "ies"} expunged by the uphold.')
+        })
+    socketio.emit('routing_action', {
+        'type': 'parietal',
+        'message': 'Claim ruled against — added to Researcher session memory.'
+    })
+    return count
 
 def get_datetime_injection():
     """F.4: inject the real current date/time from the system clock. The model has
@@ -1708,31 +2112,96 @@ def call_gemini_native(endpoint_config, system_prompt, messages, role, max_token
         socketio.emit('routing_action', {'type': 'error', 'message': f"Gemini API call failed: {str(e)}"})
         return None
 
+def _begin_model_call_envelope(role, conversation_messages, system_prompt,
+                               config):
+    url = config.get("url") or ""
+    api_format = (
+        "external" if url.strip().lower().startswith("external")
+        else detect_api_format(url) if url else None)
+    messages_json = _canonical_json(conversation_messages)
+    with _model_call_capture_lock:
+        active_session["model_call_sequence"] = int(
+            active_session.get("model_call_sequence", 0)) + 1
+        sequence_number = active_session["model_call_sequence"]
+    envelope = {
+        "sequence_number": sequence_number,
+        "role": role,
+        "cycle_number": active_session.get("cycle", 0),
+        "model": config.get("model") or None,
+        "provider_format": api_format,
+        "endpoint_host": _endpoint_host(url),
+        "system_prompt": system_prompt,
+        "system_prompt_sha256": _sha256_text(system_prompt),
+        "messages": json.loads(messages_json),
+        "messages_sha256": _sha256_text(messages_json),
+        "response": None,
+        "response_sha256": None,
+        "status": "started",
+        "started_at": _utc_iso(),
+        "ended_at": None,
+        "capture_version": RESEARCH_CAPTURE_VERSION,
+    }
+    with _model_call_capture_lock:
+        active_session.setdefault("model_call_envelopes", []).append(envelope)
+    return envelope, api_format
+
+
+def _finish_model_call_envelope(envelope, response, status):
+    with _model_call_capture_lock:
+        envelope["response"] = response
+        envelope["response_sha256"] = _sha256_text(response)
+        envelope["status"] = status
+        envelope["ended_at"] = _utc_iso()
+    return response
+
+
+def _model_response_status(response):
+    if response is None:
+        return "failed"
+    if response == "":
+        return "failed_empty_response"
+    return "succeeded"
+
+
 def call_model(role, conversation_messages, system_override=None, max_tokens=None):
     config = get_effective_config(role)
-    # External Researcher seat: url == "external" routes Model A through the
-    # mailbox instead of an API. No api_key required. Everything downstream
-    # is untouched — the engine cannot tell what occupies the seat.
-    if role == "model_a" and (config.get("url") or "").strip().lower().startswith("external"):
-        system_prompt = system_override or load_file(config["system_prompt_path"]) or ""
-        return mailbox_researcher_turn(system_prompt, conversation_messages)
-    if not config.get("url") or not config.get("api_key"):
-        msg = f"Model '{role}' has no URL or API key configured — skipping call."
-        active_session["errors"].append(msg)
-        socketio.emit('routing_action', {'type': 'error', 'message': msg})
-        return None
-    # Parietal DISTILL needs more room — default higher for parietal role
-    if max_tokens is None:
-        max_tokens = 4000 if role == "parietal" else 2000
-    api_format = detect_api_format(config["url"])
+    url = config.get("url") or ""
     system_prompt = system_override or load_file(config["system_prompt_path"]) or ""
-    if api_format == "anthropic":
-        return call_anthropic_format(config, system_prompt, conversation_messages, role, max_tokens)
-    elif api_format == "gemini":
-        return call_gemini_native(config, system_prompt, conversation_messages, role, max_tokens)
-    else:
-        messages = [{"role": "system", "content": system_prompt}] + conversation_messages
-        return call_openai_format(config, messages, role, max_tokens)
+    envelope, api_format = _begin_model_call_envelope(
+        role, conversation_messages, system_prompt, config)
+
+    try:
+        # External Researcher seat: url == "external" routes Model A through
+        # the mailbox. Everything downstream sees the same logical response.
+        if role == "model_a" and url.strip().lower().startswith("external"):
+            response = mailbox_researcher_turn(system_prompt, conversation_messages)
+            return _finish_model_call_envelope(
+                envelope, response, _model_response_status(response))
+        if not config.get("url") or not config.get("api_key"):
+            msg = f"Model '{role}' has no URL or API key configured — skipping call."
+            active_session["errors"].append(msg)
+            socketio.emit('routing_action', {'type': 'error', 'message': msg})
+            return _finish_model_call_envelope(envelope, None, "failed_config")
+        # Parietal DISTILL needs more room — default higher for parietal role.
+        if max_tokens is None:
+            max_tokens = 4000 if role == "parietal" else 2000
+        if api_format == "anthropic":
+            response = call_anthropic_format(
+                config, system_prompt, conversation_messages, role, max_tokens)
+        elif api_format == "gemini":
+            response = call_gemini_native(
+                config, system_prompt, conversation_messages, role, max_tokens)
+        else:
+            messages = ([{"role": "system", "content": system_prompt}]
+                        + conversation_messages)
+            response = call_openai_format(config, messages, role, max_tokens)
+        return _finish_model_call_envelope(
+            envelope, response, _model_response_status(response))
+    except Exception:
+        # Exception text can contain credential-bearing URLs or headers. Preserve
+        # only the honest terminal state, then retain the original propagation.
+        _finish_model_call_envelope(envelope, None, "failed_exception")
+        raise
 
 # -----------------------------------------
 # TAG AND SIGNAL UTILITIES
@@ -1856,6 +2325,28 @@ def mailbox_researcher_turn(system_prompt, conversation_messages, kind="research
     external_mailbox["event"].wait(timeout=MAILBOX_TIMEOUT_S)
     external_mailbox["waiting"] = False
     return external_mailbox["response"]
+
+
+def captured_mailbox_researcher_turn(system_prompt, conversation_messages,
+                                     kind="researcher_turn"):
+    """Capture a direct external-seat exchange that does not use call_model.
+
+    The normal Researcher cycle already passes through call_model. This wrapper
+    exists for cycle-zero PRE_SESSION authorship questions, whose mailbox path
+    intentionally bypasses provider routing.
+    """
+    config = get_effective_config("model_a")
+    evidence_config = dict(config, url="external-mailbox")
+    envelope, _ = _begin_model_call_envelope(
+        "model_a", conversation_messages, system_prompt, evidence_config)
+    try:
+        response = mailbox_researcher_turn(
+            system_prompt, conversation_messages, kind=kind)
+        return _finish_model_call_envelope(
+            envelope, response, _model_response_status(response))
+    except Exception:
+        _finish_model_call_envelope(envelope, None, "failed_exception")
+        raise
 
 def mailbox_deliver(turn_id, response):
     """Deliver an external agent's response. Returns (ok, error)."""
@@ -2329,7 +2820,15 @@ def write_session_log():
 # -----------------------------------------
 # MAIN SESSION LOOP
 # -----------------------------------------
-def run_session_loop(objective, start_fresh=False, contract=None):
+def run_session_loop(objective, start_fresh=False, contract=None,
+                     start_token=None):
+    preserved = (_claim_session_start_capture(start_token)
+                 if start_token else [])
+    if start_token and preserved is None:
+        socketio.emit('routing_action', {'type': 'error',
+            'message': 'Session start context expired or was superseded; start refused.'})
+        return
+    _reset_research_capture(preserved_envelopes=preserved)
     # Deploy 27: the agent-start path passes start_fresh as a parameter only;
     # session state must carry it or the deploy-26 lineage seal never engages.
     active_session["start_fresh"] = bool(start_fresh)
@@ -2339,11 +2838,14 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session.setdefault("branch", None)
     active_session["running"] = True
     active_session["end_status"] = "complete"   # Deploy 34 (#51 fold): overwritten by abnormal exits
-    active_session["start_time"] = timestamp()
+    active_session["start_time"] = (
+        active_session.get("start_time") if start_token else None
+    ) or timestamp()
     active_session["transcript"] = []
     active_session["tag_sequence"] = []
     active_session["signal_sequence"] = []
     active_session["challenge_events"] = []
+    active_session["challenge_records"] = []
     active_session["unreviewed_cycles"] = []
     active_session["errors"] = []
     active_session["cycle"] = 0
@@ -2351,7 +2853,13 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["session_ledger"] = []
     active_session["rejected_claims"] = []
     active_session["results_board"] = []   # F.9: every PASSED result + value, banked at injection time
+    active_session["knowtext_version"] = None
+    active_session["modal_timeouts"] = []
+    active_session["parietal_navigate_outputs"] = []
+    active_session["parietal_adjudicate_rulings"] = []
     active_session["contract"] = contract or []  # frozen criteria from PRE_SESSION; empty = no contract
+    active_session["frozen_contract"] = json.loads(
+        _canonical_json(active_session["contract"]))
     active_session["close_refusal_count"] = 0     # consecutive refused closes — the 59-cycle guard
     active_session["experiment_sequence"] = []    # Deploy 32: per-cycle {cycle, computed, injected, randomized}
     active_session["modal_touched_cycles"] = []   # Deploy 33: cycles where an in-loop operator modal fired
@@ -2365,6 +2873,8 @@ def run_session_loop(objective, start_fresh=False, contract=None):
     active_session["malformed_count"] = 0
     active_session["execution_log"] = []       # F.2: fresh deterministic execution record per session
     active_session["claim_warning_count"] = 0  # F.2: fresh claim-without-execution counter
+    active_session["reproducibility_manifest"] = _build_reproducibility_manifest(
+        active_session["start_time"], active_session["frozen_contract"])
 
     # Load and filter Knowtext for injection
     if start_fresh:
@@ -2762,9 +3272,17 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                                   "recorded output. The challenge is answered by ground truth:\n"
                                   + "\n".join(cited)
                                   + "\n\nFULL RECORDED OUTPUT (authoritative):\n" + "\n".join(log_lines_full))
-                    active_session["challenge_events"].append(
-                        f"Cycle {active_session['cycle']}: F.3 RESOLVED — challenge against corroborated claims answered by execution log"
-                    )
+                    raw_event = (
+                        f"Cycle {active_session['cycle']}: F.3 RESOLVED — "
+                        "challenge against corroborated claims answered by execution log")
+                    active_session["challenge_events"].append(raw_event)
+                    record_structured_challenge(
+                        challenged_claim=a_response,
+                        grounds=b_response,
+                        ruling="RESOLVED_BY_EXECUTION_LOG",
+                        ruling_justification=resolution,
+                        adjudication_channel="execution_log",
+                        raw_event=raw_event)
                     socketio.emit('routing_action', {'type': 'parietal', 'message': 'Challenge resolved by execution log — claims corroborated; ADJUDICATE skipped.'})
                     if corroborated_challenge_should_close(researcher_requested_end, assessment):
                         # June 6 first-external-session specimen: three identical laps
@@ -2799,36 +3317,60 @@ def run_session_loop(objective, start_fresh=False, contract=None):
                     active_session["parietal_adjudicate_rulings"].append(
                         f"Cycle {active_session['cycle']}: {ruling[:300]}"
                     )
-                    active_session["challenge_events"].append(
-                        f"Cycle {active_session['cycle']}: {ruling[:200]}"
-                    )
-                    # If ruling is UPHOLD, extract the rejected claim for Researcher memory
-                    if "UPHOLD" in ruling.upper():
-                        extract_rejected_claim(ruling, active_session["cycle"])
-                        n_exp = expunge_overruled_ledger(a_response, active_session["cycle"])
-                        if n_exp:
-                            socketio.emit('routing_action', {'type': 'info', 'message': f'Ledger coherence: {n_exp} established-result entr{"y" if n_exp == 1 else "ies"} expunged by the uphold.'})
-                        socketio.emit('routing_action', {
-                            'type': 'parietal',
-                            'message': 'Claim ruled against — added to Researcher session memory.'
-                        })
+                    raw_event = f"Cycle {active_session['cycle']}: {ruling[:200]}"
+                    active_session["challenge_events"].append(raw_event)
+                    record_structured_challenge(
+                        challenged_claim=a_response,
+                        grounds=b_response,
+                        ruling=_ruling_tag(ruling),
+                        ruling_justification=ruling,
+                        adjudication_channel="parietal",
+                        raw_event=raw_event)
+                    if _ruling_tag(ruling) == "UPHOLD":
+                        apply_upheld_challenge(
+                            a_response, ruling, active_session["cycle"])
                     if "ESCALATE" in ruling.upper():
                         # Parietal says escalate — get human input
                         nav = run_parietal_navigate(knowtext, active_session["signal_sequence"])
                         escalate_ctx = nav if nav else ruling
                         adjudication = wait_for_human_input("challenge", escalate_ctx)
-                        active_session["challenge_events"].append(
-                            f"Cycle {active_session['cycle']}: ESCALATED — {adjudication}"
-                        )
+                        raw_event = (
+                            f"Cycle {active_session['cycle']}: ESCALATED — {adjudication}")
+                        active_session["challenge_events"].append(raw_event)
+                        operator_ruling = _ruling_tag(
+                            adjudication, fallback="OPERATOR_DISPOSITION")
+                        record_structured_challenge(
+                            challenged_claim=a_response,
+                            grounds=b_response,
+                            ruling=operator_ruling,
+                            ruling_justification=adjudication,
+                            adjudication_channel="operator",
+                            raw_event=raw_event)
+                        if operator_ruling == "UPHOLD":
+                            apply_upheld_challenge(
+                                a_response, adjudication,
+                                active_session["cycle"])
                         conversation.append({"role": "user", "content": f"[CHALLENGE ESCALATED]: {adjudication}\n{ambient_line}"})
                     else:
                         conversation.append({"role": "user", "content": f"[PARIETAL RULING]: {ruling}\n{ambient_line}"})
                 else:
                     # Parietal not configured — fall back to human
                     adjudication = wait_for_human_input("challenge", b_response)
-                    active_session["challenge_events"].append(
-                        f"Cycle {active_session['cycle']}: {adjudication}"
-                    )
+                    raw_event = f"Cycle {active_session['cycle']}: {adjudication}"
+                    active_session["challenge_events"].append(raw_event)
+                    operator_ruling = _ruling_tag(
+                        adjudication, fallback="OPERATOR_DISPOSITION")
+                    record_structured_challenge(
+                        challenged_claim=a_response,
+                        grounds=b_response,
+                        ruling=operator_ruling,
+                        ruling_justification=adjudication,
+                        adjudication_channel="operator",
+                        raw_event=raw_event)
+                    if operator_ruling == "UPHOLD":
+                        apply_upheld_challenge(
+                            a_response, adjudication,
+                            active_session["cycle"])
                     conversation.append({"role": "user", "content": f"[CHALLENGE ADJUDICATED]: {adjudication}\n{ambient_line}"})
                 continue
             elif b_tag == "VERIFY_CITATION":
@@ -3290,14 +3832,18 @@ def agent_start():
     blockers = agent_start_blockers(objective)
     if blockers:
         return jsonify({"error": "cannot start", "blockers": blockers}), 409
-    active_session["started_by"] = "external-mailbox"
+    start_token = _begin_session_start_capture("external-mailbox")
+    if not start_token:
+        return jsonify({"error": "cannot start",
+                        "blockers": ["another session start is pending"]}), 409
     active_session["project_id"] = (body.get("project_id") or "").strip() or None
     active_session["branch"] = (body.get("branch") or "").strip() or None
     active_session["close_refusals"] = 0
     active_session["stopped_by"] = None
     socketio.emit('routing_action', {'type': 'injection',
         'message': f"Session start requested by external agent via /agent/start (start_fresh: {start_fresh})."})
-    t = threading.Thread(target=pre_session_then_start, args=(objective, start_fresh))
+    t = threading.Thread(target=pre_session_then_start,
+                         args=(objective, start_fresh, start_token))
     t.daemon = True
     t.start()
     return jsonify({"ok": True, "started_by": "external-mailbox", "start_fresh": start_fresh})
@@ -4093,6 +4639,11 @@ def handle_start_session(data):
     if not objective:
         emit('routing_action', {'type': 'error', 'message': 'No objective provided'})
         return
+    start_token = _begin_session_start_capture("dashboard")
+    if not start_token:
+        emit('routing_action', {'type': 'error',
+            'message': 'Another session start is already pending.'})
+        return
     # Accept full config overrides (key, url, model) from frontend settings
     configs = data.get('api_keys', {})
     if configs:
@@ -4105,75 +4656,101 @@ def handle_start_session(data):
                 # Backward compat: plain key string
                 runtime_configs[role] = {'key': cfg.strip()}
     received_fresh = bool(data.get('start_fresh', False))
-    active_session["started_by"] = "dashboard"
     active_session["close_refusals"] = 0
     active_session["stopped_by"] = None
     emit('routing_action', {'type': 'injection', 'message': f'start_fresh received from dashboard: {received_fresh}'})
-    thread = threading.Thread(target=pre_session_then_start, args=(objective, received_fresh))
+    thread = threading.Thread(target=pre_session_then_start,
+                              args=(objective, received_fresh, start_token))
     thread.daemon = True
     thread.start()
 
-def pre_session_then_start(obj, start_fresh=False):
-    # Run Projenius ORIENT to prime session with project-level context
-    # Uses a short timeout — if ORIENT is slow or unavailable, session starts without it
-    # F.7: start_fresh skips ORIENT entirely — otherwise prior-session knowledge
-    # leaks into the objective even though Knowtext injection is correctly skipped.
-    knowtext = load_file(session_knowtext_path()) or ""
-    orient_context = ""
-    if start_fresh:
-        socketio.emit('routing_action', {'type': 'injection', 'message': 'Starting fresh — skipping Projenius ORIENT (no project context).'})
-    else:
-        try:
-            orient_result = [None]
-            def do_orient():
-                orient_result[0] = run_projenius_orient(obj, knowtext)
-            orient_thread = threading.Thread(target=do_orient)
-            orient_thread.daemon = True
-            orient_thread.start()
-            orient_thread.join(timeout=25)
-            if orient_thread.is_alive():
-                socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT timed out — starting without project context.'})
-            elif orient_result[0]:
-                orient_context = orient_result[0]
-                socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT complete — project context primed.'})
-            else:
-                socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT returned no context — starting without it.'})
-        except Exception as e:
-            socketio.emit('routing_action', {'type': 'error', 'message': f'Projenius ORIENT error: {str(e)} — continuing without project context.'})
-
-    parietal_cfg = get_effective_config("parietal")
-    has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
-    if has_parietal:
-        # Pass ORIENT context to PRE_SESSION if available
-        refined, needs_answers, contract = run_pre_session(obj, orient_context=orient_context)
-        if needs_answers:
-            if active_session.get("started_by") == "external-mailbox":
-                # Deploy 16: authorship questions go to the author. An agent-started
-                # session's PRE_SESSION questions route to the mailbox, not to a
-                # dashboard modal the operator may never see (June 6: two starts
-                # died invisible behind a stale completion panel).
-                q = active_session.get("_pre_session_questions", "")
-                answers = mailbox_researcher_turn(
-                    "PRE_SESSION QUESTIONS — you are the session starter; answer the "
-                    "Parietal's questions below so the contract can be authored. Reply "
-                    "with plain answers, no status tag.\n\n" + q,
-                    [{"role": "user", "content": f"Original objective: {obj}"}],
-                    kind="pre_session_questions")
-                if answers:
-                    obj2, contract = run_pre_session_with_answers(obj, answers)
-                    run_session_loop(obj2, start_fresh=start_fresh, contract=contract)
-                    return
-                socketio.emit('routing_action', {'type': 'error',
-                    'message': 'PRE_SESSION questions unanswered (mailbox timeout) — agent start aborted.'})
+def pre_session_then_start(obj, start_fresh=False, start_token=None):
+    retain_dashboard_pending = False
+    if start_token:
+        with _start_context_lock:
+            start_context = active_session.get("_start_context") or {}
+            if start_context.get("token") != start_token:
                 return
-            active_session["_pre_session_objective"] = obj
-            active_session["start_fresh"] = start_fresh
-            return
-        obj = refined
+            started_by = start_context.get("started_by")
+            active_session["objective"] = obj
     else:
-        socketio.emit('routing_action', {'type': 'error', 'message': 'Parietal not configured — starting without PRE_SESSION.'})
-        contract = []
-    run_session_loop(obj, start_fresh=start_fresh, contract=contract)
+        started_by = active_session.get("started_by")
+
+    try:
+        # Run Projenius ORIENT to prime session with project-level context.
+        # F.7: start_fresh skips ORIENT entirely — otherwise prior-session
+        # knowledge leaks into a deliberately fresh session.
+        knowtext = load_file(session_knowtext_path()) or ""
+        orient_context = ""
+        if start_fresh:
+            socketio.emit('routing_action', {'type': 'injection', 'message': 'Starting fresh — skipping Projenius ORIENT (no project context).'})
+        else:
+            try:
+                orient_result = [None]
+                def do_orient():
+                    orient_result[0] = run_projenius_orient(obj, knowtext)
+                orient_thread = threading.Thread(target=do_orient)
+                orient_thread.daemon = True
+                orient_thread.start()
+                orient_thread.join(timeout=25)
+                if orient_thread.is_alive():
+                    socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT timed out — starting without project context.'})
+                elif orient_result[0]:
+                    orient_context = orient_result[0]
+                    socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT complete — project context primed.'})
+                else:
+                    socketio.emit('routing_action', {'type': 'injection', 'message': 'Projenius ORIENT returned no context — starting without it.'})
+            except Exception as exc:
+                # Exception strings may contain provider URLs or headers.
+                socketio.emit('routing_action', {'type': 'error',
+                    'message': f'Projenius ORIENT error ({type(exc).__name__}) — continuing without project context.'})
+
+        parietal_cfg = get_effective_config("parietal")
+        has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
+        if has_parietal:
+            refined, needs_answers, contract = run_pre_session(
+                obj, orient_context=orient_context)
+            if needs_answers:
+                if started_by == "external-mailbox":
+                    # Authorship questions go back to the external starter.
+                    q = active_session.get("_pre_session_questions", "")
+                    answers = captured_mailbox_researcher_turn(
+                        "PRE_SESSION QUESTIONS — you are the session starter; answer the "
+                        "Parietal's questions below so the contract can be authored. Reply "
+                        "with plain answers, no status tag.\n\n" + q,
+                        [{"role": "user", "content": f"Original objective: {obj}"}],
+                        kind="pre_session_questions")
+                    if answers:
+                        obj2, contract = run_pre_session_with_answers(obj, answers)
+                        run_session_loop(obj2, start_fresh=start_fresh,
+                                         contract=contract,
+                                         start_token=start_token)
+                        return
+                    socketio.emit('routing_action', {'type': 'error',
+                        'message': 'PRE_SESSION questions unanswered (mailbox timeout) — agent start aborted.'})
+                    return
+                active_session["_pre_session_objective"] = obj
+                active_session["start_fresh"] = start_fresh
+                retain_dashboard_pending = _mark_dashboard_start_waiting(
+                    start_token, obj, start_fresh)
+                return
+            obj = refined
+        else:
+            socketio.emit('routing_action', {'type': 'error', 'message': 'Parietal not configured — starting without PRE_SESSION.'})
+            contract = []
+        run_session_loop(obj, start_fresh=start_fresh, contract=contract,
+                         start_token=start_token)
+    except Exception as exc:
+        socketio.emit('routing_action', {'type': 'error',
+            'message': ("PRE_SESSION aborted after "
+                        f"{type(exc).__name__}; cycle-zero evidence will be preserved.")})
+        _abort_pre_session_start(start_token, "exception")
+    finally:
+        # A loop claim clears ownership. The only valid retained owner is a
+        # dashboard prompt waiting for its explicit answer or cancellation.
+        if (start_token and not retain_dashboard_pending
+                and _start_context_owned(start_token)):
+            _abort_pre_session_start(start_token, "aborted")
 
 @socketio.on('save_api_keys')
 def handle_save_api_keys(data):
@@ -4197,32 +4774,26 @@ def handle_save_api_keys(data):
 
 @socketio.on('new_session')
 def handle_new_session(data):
-    if active_session["running"] or active_session.get("finalizing"):
-        emit('routing_action', {'type': 'error', 'message': 'Stop the current session before starting a new one.' if active_session["running"] else 'Session is finalizing (writing records) — wait for completion before resetting.'})
-        return
-    active_session["transcript"] = []
-    active_session["tag_sequence"] = []
-    active_session["signal_sequence"] = []
-    active_session["challenge_events"] = []
-    active_session["unreviewed_cycles"] = []
-    active_session["errors"] = []
-    active_session["cycle"] = 0
-    active_session["artifacts"] = []
-    active_session["start_time"] = None
-    active_session["end_time"] = None
-    active_session["knowtext_version"] = None
-    active_session["waiting_for_input"] = False
-    active_session["input_type"] = None
-    active_session["human_input_value"] = None
-    active_session["session_ledger"] = []
-    active_session["parietal_navigate_outputs"] = []
-    active_session["parietal_adjudicate_rulings"] = []
-    active_session["rejected_claims"] = []
-    active_session["results_board"] = []
-    active_session["contract"] = []
-    active_session["close_refusal_count"] = 0
-    active_session["start_fresh"] = False
-    active_session["distillation_method"] = "failed"
+    cancel_token = None
+    with _start_context_lock:
+        if active_session["running"] or active_session.get("finalizing"):
+            emit('routing_action', {'type': 'error', 'message': 'Stop the current session before starting a new one.' if active_session["running"] else 'Session is finalizing (writing records) — wait for completion before resetting.'})
+            return
+        start_context = active_session.get("_start_context") or {}
+        if (start_context and start_context.get("state") !=
+                "awaiting_dashboard_answers"):
+            emit('routing_action', {'type': 'error',
+                'message': 'Session start is still processing — wait for PRE_SESSION to finish.'})
+            return
+        if start_context:
+            # A dashboard cancellation is terminal. Preserve its PRE_SESSION
+            # calls first, then clear the idle UI state atomically with release.
+            cancel_token = start_context.get("token")
+        else:
+            _reset_idle_session_state()
+    if cancel_token:
+        _abort_pre_session_start(
+            cancel_token, "dashboard_cancelled", reset_after=True)
     knowtext = load_file(CONFIG["knowtext_path"]) or ""
     version = knowtext.split("\n")[0].strip() if knowtext else "none"
     emit('session_reset', {
@@ -4235,12 +4806,34 @@ def handle_pre_session_answer(data):
     if active_session["running"]:
         emit('routing_action', {'type': 'error', 'message': 'Session already running'})
         return
-    raw_objective = active_session.get("_pre_session_objective", "")
     answers = data.get('answers', '').strip()
-    start_fresh = active_session.get("start_fresh", False)
+    start_token = ((active_session.get("_start_context") or {}).get("token"))
+    if not start_token:
+        emit('routing_action', {'type': 'error',
+            'message': 'No pending session-start context for these answers.'})
+        return
+    continuation = _consume_dashboard_start(start_token)
+    if not continuation:
+        emit('routing_action', {'type': 'error',
+            'message': 'PRE_SESSION answers were already consumed or cancelled.'})
+        return
+    raw_objective = continuation.get("objective", "")
+    start_fresh = continuation.get("start_fresh", False)
     def answer_then_start():
-        objective, contract = run_pre_session_with_answers(raw_objective, answers)
-        run_session_loop(objective, start_fresh=start_fresh, contract=contract)
+        try:
+            objective, contract = run_pre_session_with_answers(
+                raw_objective, answers)
+            run_session_loop(objective, start_fresh=start_fresh,
+                             contract=contract, start_token=start_token)
+        except Exception as exc:
+            socketio.emit('routing_action', {'type': 'error',
+                'message': ("PRE_SESSION answer continuation aborted after "
+                            f"{type(exc).__name__}; cycle-zero evidence will be preserved.")})
+            _abort_pre_session_start(start_token, "answer_exception")
+        finally:
+            if _start_context_owned(start_token):
+                _abort_pre_session_start(start_token,
+                                         "answer_continuation_aborted")
     thread = threading.Thread(target=answer_then_start)
     thread.daemon = True
     thread.start()

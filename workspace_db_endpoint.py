@@ -167,6 +167,22 @@ def receive_session():
         return jsonify({"error": "session_id required"}), 400
 
     try:
+        # A completed session is one immutable ingest unit. The transaction
+        # prevents a failed response from leaving a partial session that a
+        # retry could then duplicate or corrupt.
+        db.begin_transaction()
+        existing_session = db.connect().execute(
+            "SELECT session_id FROM sessions WHERE session_id = ?",
+            (session_id,),
+        ).fetchone()
+        if existing_session:
+            db.commit_transaction()
+            return jsonify({
+                "status": "already_recorded",
+                "session_id": session_id,
+                "idempotent_replay": True,
+            }), 200
+
         user_id = _get_or_create_user(db)
         project_id, branch_id = _get_or_create_project(
             db, user_id, project_name, branch_name)
@@ -220,6 +236,8 @@ def receive_session():
                 turn_number=turn.get("turn_number", 0),
                 role=turn.get("role", ""),
                 content=turn.get("content", ""),
+                raw_content=turn.get("raw_content"),
+                raw_content_sha256=turn.get("raw_content_sha256"),
                 tag=turn.get("tag"),
                 friction_signal=turn.get("friction_signal"),
             )
@@ -249,8 +267,38 @@ def receive_session():
             )
 
         # ── Insert challenge events ─────────────────────────────────────
+        # New payloads carry exact structured records. The legacy string list
+        # remains accepted; on a new payload, any raw-only operational event is
+        # still retained without duplicating its structured sibling.
+        structured_events = data.get("challenge_events", [])
+        structured_raw = set()
+        for event in structured_events:
+            if not isinstance(event, dict):
+                continue
+            raw_event = event.get("raw_event")
+            if raw_event:
+                structured_raw.add(raw_event)
+            db.insert_challenge_event(
+                session_id=session_id,
+                user_id=user_id,
+                cycle_number=event.get("cycle_number", 0),
+                challenged_claim=event.get("challenged_claim", ""),
+                grounds=event.get("grounds", ""),
+                ruling=event.get("ruling", "UNKNOWN"),
+                ruling_justification=event.get("ruling_justification"),
+                ruling_model=event.get("ruling_model"),
+                resolution_cycles=event.get("resolution_cycles"),
+                sequence_number=event.get("sequence_number"),
+                adjudication_channel=event.get("adjudication_channel"),
+                raw_event=raw_event,
+                capture_version=event.get("capture_version"),
+                preserve_exact=True,
+            )
+
         raw_events = data.get("challenge_events_raw", [])
         for event_str in raw_events:
+            if event_str in structured_raw:
+                continue
             cycle_m = re.search(r'Cycle (\d+):', event_str)
             cycle_num = int(cycle_m.group(1)) if cycle_m else 0
             ruling = "UNKNOWN"
@@ -266,15 +314,58 @@ def receive_session():
                 challenged_claim="",  # raw events don't separate this
                 grounds="",
                 ruling=ruling,
-                ruling_justification=sanitize(event_str[:500]),
+                ruling_justification=event_str,
+                raw_event=event_str,
+                capture_version="legacy",
+                preserve_exact=True,
             )
+
+        # ── Insert exact model-call envelopes ───────────────────────────
+        for envelope in data.get("model_call_envelopes", []):
+            if not isinstance(envelope, dict):
+                continue
+            envelope = dict(envelope)
+            envelope["session_id"] = session_id
+            db.insert_model_call_envelope(envelope, user_id=user_id)
+
+        # ── Insert the non-secret session reproducibility manifest ──────
+        manifest = data.get("reproducibility_manifest")
+        if isinstance(manifest, dict):
+            manifest = dict(manifest)
+            manifest["session_id"] = session_id
+            db.insert_reproducibility_manifest(manifest, user_id=user_id)
+
+        # ── Persist adjudication-driven session-ledger dispositions ─────
+        capture_version = ((manifest or {}).get("capture_version")
+                           if isinstance(manifest, dict) else None) or "legacy"
+        for sequence, entry in enumerate(data.get("expunged_ledger", []), 1):
+            if not isinstance(entry, dict):
+                entry = {"summary": str(entry)}
+            source_entry = entry.get("source_entry")
+            if not isinstance(source_entry, dict):
+                # Legacy payloads used the ledger entry itself as the audit row.
+                source_entry = {
+                    "cycle": entry.get("cycle"),
+                    "summary": entry.get("summary"),
+                }
+            db.insert_retraction_event({
+                "session_id": session_id,
+                "sequence_number": sequence,
+                "source_cycle": entry.get("source_cycle", entry.get("cycle")),
+                "ruling_cycle": entry.get(
+                    "ruling_cycle", entry.get("expunged_by_ruling_cycle")),
+                "claim_text": entry.get("claim_text", entry.get("summary")),
+                "disposition": entry.get("disposition", "EXPUNGED"),
+                "source_entry": source_entry,
+                "capture_version": capture_version,
+            }, user_id=user_id)
 
         # ── Insert behavioral observations ──────────────────────────────
         for obs in data.get("behavioral_observations", []):
             obs["user_id"] = user_id
             db.insert_behavioral_observation(obs)
 
-        return jsonify({
+        result = {
             "status": "ok",
             "session_id": session_id,
             "project_id": project_id,
@@ -283,9 +374,17 @@ def receive_session():
             "artifacts_written": len(data.get("artifacts", [])),
             "observations_written": len(
                 data.get("behavioral_observations", [])),
-        }), 200
+            "challenge_records_written": len(structured_events) + len([
+                event for event in raw_events if event not in structured_raw]),
+            "model_calls_written": len(data.get("model_call_envelopes", [])),
+            "retractions_written": len(data.get("expunged_ledger", [])),
+            "manifest_written": bool(manifest),
+        }
+        db.commit_transaction()
+        return jsonify(result), 200
 
     except Exception as e:
+        db.rollback_transaction()
         import traceback
         error_detail = traceback.format_exc()
         print(f"Session write error: {error_detail}")

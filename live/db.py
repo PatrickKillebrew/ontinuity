@@ -21,6 +21,8 @@ import sqlite3
 import json
 import uuid
 import re
+import threading
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
 
@@ -28,7 +30,7 @@ from typing import Optional, Dict, Any, List
 # SCHEMA VERSION
 # Increment when tables or columns change.
 # ─────────────────────────────────────────────
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"
 
 
 def now_utc() -> str:
@@ -243,6 +245,8 @@ CREATE TABLE IF NOT EXISTS session_transcripts (
     -- 'model_a', 'model_b', 'model_c', 'parietal', 'projenius',
     -- 'human', 'system', 'routing_client'
     content           TEXT,
+    raw_content       TEXT,
+    raw_content_sha256 TEXT,
     tag               TEXT,
     -- CONTINUE, CHALLENGE, CHECKPOINT, SESSION_END, ALIGNMENT_NEEDED
     friction_signal   INTEGER,
@@ -362,6 +366,10 @@ CREATE TABLE IF NOT EXISTS challenge_events (
     -- 0 means ruled in same cycle, NULL means unresolved
     fork_branch_created   TEXT REFERENCES branches(branch_id),
     -- populated if PURSUE_BOTH created a new branch
+    sequence_number       INTEGER,
+    adjudication_channel  TEXT,
+    raw_event             TEXT,
+    capture_version       TEXT,
     created_at            TEXT NOT NULL
 );
 
@@ -430,6 +438,71 @@ CREATE TABLE IF NOT EXISTS intake_sessions (
     completed_at      TEXT
 );
 
+-- ── 17. MODEL CALL ENVELOPES ────────────────────────────────────────────────
+-- Immutable raw evidence for every in-session provider or external-seat call.
+-- Full URLs, request headers, and credentials are deliberately never stored.
+CREATE TABLE IF NOT EXISTS model_call_envelopes (
+    call_id               TEXT PRIMARY KEY,
+    session_id            TEXT NOT NULL REFERENCES sessions(session_id),
+    user_id               TEXT NOT NULL REFERENCES users(user_id),
+    sequence_number       INTEGER NOT NULL,
+    cycle_number          INTEGER NOT NULL,
+    role                  TEXT NOT NULL,
+    model_string          TEXT,
+    provider_format       TEXT,
+    endpoint_host         TEXT,
+    system_prompt         TEXT NOT NULL,
+    system_prompt_sha256  TEXT NOT NULL,
+    messages_json         TEXT NOT NULL,
+    messages_sha256       TEXT NOT NULL,
+    response_text         TEXT,
+    response_sha256       TEXT,
+    status                TEXT NOT NULL,
+    started_at            TEXT NOT NULL,
+    ended_at              TEXT,
+    capture_version       TEXT NOT NULL,
+    created_at            TEXT NOT NULL
+);
+
+-- ── 18. SESSION REPRODUCIBILITY MANIFESTS ──────────────────────────────────
+-- One non-secret manifest per session. Configured labels are not authenticated
+-- occupant identity; external identity remains explicitly unverified until B1/B2.
+CREATE TABLE IF NOT EXISTS session_reproducibility_manifests (
+    session_id                 TEXT PRIMARY KEY REFERENCES sessions(session_id),
+    user_id                    TEXT NOT NULL REFERENCES users(user_id),
+    capture_version            TEXT NOT NULL,
+    schema_version             TEXT NOT NULL,
+    started_by                 TEXT,
+    instance                   TEXT,
+    code_revision              TEXT,
+    code_revision_status       TEXT NOT NULL,
+    code_revision_source       TEXT,
+    frozen_contract_json       TEXT NOT NULL,
+    frozen_contract_sha256     TEXT NOT NULL,
+    prompt_files_json          TEXT NOT NULL,
+    prompt_files_sha256        TEXT NOT NULL,
+    role_config_json           TEXT NOT NULL,
+    external_occupant_identity TEXT,
+    external_occupant_status   TEXT NOT NULL,
+    created_at                 TEXT NOT NULL
+);
+
+-- ── 19. RETRACTION EVENTS ──────────────────────────────────────────────────
+-- Append-only disposition of session-ledger entries expunged by adjudication.
+CREATE TABLE IF NOT EXISTS retraction_events (
+    retraction_id         TEXT PRIMARY KEY,
+    session_id            TEXT NOT NULL REFERENCES sessions(session_id),
+    user_id               TEXT NOT NULL REFERENCES users(user_id),
+    sequence_number       INTEGER NOT NULL,
+    source_cycle          INTEGER,
+    ruling_cycle          INTEGER,
+    claim_text            TEXT,
+    disposition           TEXT NOT NULL,
+    source_entry_json     TEXT NOT NULL,
+    capture_version       TEXT NOT NULL,
+    created_at            TEXT NOT NULL
+);
+
 """
 
 # ─────────────────────────────────────────────
@@ -491,6 +564,19 @@ CREATE INDEX IF NOT EXISTS idx_intake_user
 CREATE INDEX IF NOT EXISTS idx_intake_project
     ON intake_sessions(project_id);
 
+CREATE INDEX IF NOT EXISTS idx_model_calls_session
+    ON model_call_envelopes(session_id, sequence_number);
+CREATE INDEX IF NOT EXISTS idx_retractions_session
+    ON retraction_events(session_id, sequence_number);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_challenge_evidence
+    ON challenge_events(session_id, sequence_number,
+                        adjudication_channel, capture_version)
+    WHERE sequence_number IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_model_call_evidence
+    ON model_call_envelopes(session_id, sequence_number, capture_version);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_retraction_evidence
+    ON retraction_events(session_id, sequence_number, capture_version);
+
 """
 
 
@@ -509,6 +595,8 @@ class OntinuityDB:
     def __init__(self, db_path: str = "ontinuity.db"):
         self.db_path = db_path
         self._conn = None
+        self._transaction_depth = 0
+        self._transaction_lock = threading.RLock()
 
     def connect(self) -> sqlite3.Connection:
         if self._conn is None:
@@ -527,10 +615,57 @@ class OntinuityDB:
             self._conn.close()
             self._conn = None
 
+    def _commit(self):
+        """Commit ordinary calls, but defer commits inside an atomic ingest."""
+        if self._transaction_depth == 0:
+            self.connect().commit()
+
+    def begin_transaction(self):
+        """Begin a serialized outer transaction for one complete ingest."""
+        self._transaction_lock.acquire()
+        try:
+            if self._transaction_depth != 0:
+                raise RuntimeError("nested manual transaction is not supported")
+            self.connect().execute("BEGIN IMMEDIATE")
+            self._transaction_depth = 1
+        except Exception:
+            self._transaction_lock.release()
+            raise
+
+    def commit_transaction(self):
+        if self._transaction_depth != 1:
+            raise RuntimeError("no outer transaction to commit")
+        try:
+            self.connect().commit()
+        finally:
+            self._transaction_depth = 0
+            self._transaction_lock.release()
+
+    def rollback_transaction(self):
+        if self._transaction_depth != 1:
+            return
+        try:
+            self.connect().rollback()
+        finally:
+            self._transaction_depth = 0
+            self._transaction_lock.release()
+
+    @contextmanager
+    def transaction(self):
+        """Serialize and atomically commit or roll back a complete operation."""
+        self.begin_transaction()
+        try:
+            yield self.connect()
+            self.commit_transaction()
+        except Exception:
+            self.rollback_transaction()
+            raise
+
     def init(self):
         """Create all tables and indexes. Safe to call on existing database."""
         conn = self.connect()
         conn.executescript(DDL)
+        self._apply_additive_migrations()
         conn.executescript(INDEXES)
         conn.commit()
         self._record_schema_version()
@@ -549,9 +684,36 @@ class OntinuityDB:
                    (version_id, version, applied_at, notes)
                    VALUES (?, ?, ?, ?)""",
                 (new_id(), SCHEMA_VERSION, now_utc(),
-                 "Initial sixteen-table schema.")
+                 "Additive raw-evidence preservation for challenges, model calls, manifests, and retractions.")
             )
             conn.commit()
+
+    def _apply_additive_migrations(self):
+        """Idempotently add nullable evidence columns without rewriting history."""
+        conn = self.connect()
+        existing = {
+            row["name"] for row in
+            conn.execute("PRAGMA table_info(challenge_events)").fetchall()
+        }
+        additions = {
+            "sequence_number": "INTEGER",
+            "adjudication_channel": "TEXT",
+            "raw_event": "TEXT",
+            "capture_version": "TEXT",
+        }
+        for column, declaration in additions.items():
+            if column not in existing:
+                conn.execute(
+                    f"ALTER TABLE challenge_events ADD COLUMN {column} {declaration}")
+        transcript_existing = {
+            row["name"] for row in
+            conn.execute("PRAGMA table_info(session_transcripts)").fetchall()
+        }
+        for column in ("raw_content", "raw_content_sha256"):
+            if column not in transcript_existing:
+                conn.execute(
+                    f"ALTER TABLE session_transcripts ADD COLUMN {column} TEXT")
+        conn.commit()
 
     # ── INSERT HELPERS ─────────────────────────────────────────────────────
 
@@ -570,7 +732,7 @@ class OntinuityDB:
                VALUES (?, ?, ?, ?, ?, ?)""",
             (user_id, display_name, email, plan, flags, now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return user_id
 
     def insert_model(self, model_string: str, provider: str,
@@ -587,7 +749,7 @@ class OntinuityDB:
                 "UPDATE model_registry SET last_seen = ? WHERE model_id = ?",
                 (now_utc(), existing["model_id"])
             )
-            self.connect().commit()
+            self._commit()
             return existing["model_id"]
         model_id = new_id()
         self.connect().execute(
@@ -598,7 +760,7 @@ class OntinuityDB:
             (model_id, model_string, provider, model_family,
              parameter_count, context_window, now_utc(), now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return model_id
 
     def insert_project(self, user_id: str, name: str,
@@ -610,7 +772,7 @@ class OntinuityDB:
                VALUES (?, ?, ?, ?, 'active', ?)""",
             (project_id, user_id, name, description, now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return project_id
 
     def insert_branch(self, project_id: str, user_id: str,
@@ -629,7 +791,7 @@ class OntinuityDB:
              parent_branch_id, fork_origin_session, fork_origin_cycle,
              now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return branch_id
 
     def insert_session(self, session_data: Dict[str, Any]) -> str:
@@ -709,13 +871,15 @@ class OntinuityDB:
                 "created_at": s.get("created_at", now_utc()),
             }
         )
-        self.connect().commit()
+        self._commit()
         return s["session_id"]
 
     def insert_transcript_turn(self, session_id: str, cycle_number: int,
                                 turn_number: int, role: str, content: str,
                                 tag: str = None,
-                                friction_signal: int = None) -> str:
+                                friction_signal: int = None,
+                                raw_content: str = None,
+                                raw_content_sha256: str = None) -> str:
         turn_id = new_id()
         clean = sanitize(content) or ""
         word_count = len(clean.split())
@@ -723,14 +887,16 @@ class OntinuityDB:
         self.connect().execute(
             """INSERT INTO session_transcripts (
                 turn_id, session_id, cycle_number, turn_number,
-                role, content, tag, friction_signal,
+                role, content, raw_content, raw_content_sha256,
+                tag, friction_signal,
                 word_count, token_estimate, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (turn_id, session_id, cycle_number, turn_number,
-             role, clean, tag, friction_signal,
+             role, clean, raw_content, raw_content_sha256,
+             tag, friction_signal,
              word_count, token_estimate, now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return turn_id
 
     def insert_artifact(self, session_id: str, user_id: str,
@@ -748,7 +914,7 @@ class OntinuityDB:
              len(clean.encode("utf-8")) if clean else 0,
              now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return artifact_id
 
     def insert_knowtext_version(self, session_id: str, branch_id: str,
@@ -777,7 +943,7 @@ class OntinuityDB:
              fields.get("Climate Notes"),
              distillation_method, now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return version_id
 
     def insert_established_result(self, project_id: str, branch_id: str,
@@ -885,21 +1051,109 @@ class OntinuityDB:
                                 grounds: str, ruling: str,
                                 ruling_justification: str = None,
                                 ruling_model: str = None,
-                                resolution_cycles: int = None) -> str:
+                                resolution_cycles: int = None,
+                                sequence_number: int = None,
+                                adjudication_channel: str = None,
+                                raw_event: str = None,
+                                capture_version: str = None,
+                                preserve_exact: bool = False) -> str:
         event_id = new_id()
+        preserve = (lambda value: value) if preserve_exact else sanitize
         self.connect().execute(
-            """INSERT INTO challenge_events (
+            """INSERT OR IGNORE INTO challenge_events (
                 event_id, session_id, user_id, cycle_number,
                 challenged_claim, grounds, ruling, ruling_justification,
-                ruling_model, resolution_cycles, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                ruling_model, resolution_cycles, sequence_number,
+                adjudication_channel, raw_event, capture_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (event_id, session_id, user_id, cycle_number,
-             sanitize(challenged_claim), sanitize(grounds), ruling,
-             sanitize(ruling_justification), ruling_model,
-             resolution_cycles, now_utc())
+             preserve(challenged_claim), preserve(grounds), ruling,
+             preserve(ruling_justification), ruling_model,
+             resolution_cycles, sequence_number, adjudication_channel,
+             raw_event, capture_version, now_utc())
         )
-        self.connect().commit()
+        self._commit()
         return event_id
+
+    def insert_model_call_envelope(self, envelope: Dict[str, Any],
+                                   user_id: str) -> str:
+        call_id = new_id()
+        messages_json = json.dumps(
+            envelope.get("messages", []), ensure_ascii=False,
+            sort_keys=True, separators=(",", ":"))
+        self.connect().execute(
+            """INSERT OR IGNORE INTO model_call_envelopes (
+                call_id, session_id, user_id, sequence_number, cycle_number,
+                role, model_string, provider_format, endpoint_host,
+                system_prompt, system_prompt_sha256,
+                messages_json, messages_sha256,
+                response_text, response_sha256, status,
+                started_at, ended_at, capture_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (call_id, envelope.get("session_id"), user_id,
+             envelope.get("sequence_number"), envelope.get("cycle_number", 0),
+             envelope.get("role"), envelope.get("model"),
+             envelope.get("provider_format"), envelope.get("endpoint_host"),
+             envelope.get("system_prompt") or "",
+             envelope.get("system_prompt_sha256"), messages_json,
+             envelope.get("messages_sha256"), envelope.get("response"),
+             envelope.get("response_sha256"), envelope.get("status"),
+             envelope.get("started_at"), envelope.get("ended_at"),
+             envelope.get("capture_version"), now_utc())
+        )
+        self._commit()
+        return call_id
+
+    def insert_reproducibility_manifest(self, manifest: Dict[str, Any],
+                                        user_id: str):
+        revision = manifest.get("code_revision") or {}
+        self.connect().execute(
+            """INSERT OR IGNORE INTO session_reproducibility_manifests (
+                session_id, user_id, capture_version, schema_version,
+                started_by, instance, code_revision, code_revision_status,
+                code_revision_source, frozen_contract_json,
+                frozen_contract_sha256, prompt_files_json,
+                prompt_files_sha256, role_config_json,
+                external_occupant_identity, external_occupant_status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (manifest.get("session_id"), user_id,
+             manifest.get("capture_version"), manifest.get("schema_version"),
+             manifest.get("started_by"), manifest.get("instance"),
+             revision.get("value"), revision.get("status", "UNKNOWN"),
+             revision.get("source_env"),
+             json.dumps(manifest.get("frozen_contract", []), ensure_ascii=False,
+                        sort_keys=True, separators=(",", ":")),
+             manifest.get("frozen_contract_sha256"),
+             json.dumps(manifest.get("prompt_files", []), ensure_ascii=False,
+                        sort_keys=True, separators=(",", ":")),
+             manifest.get("prompt_files_sha256"),
+             json.dumps(manifest.get("role_config", {}), ensure_ascii=False,
+                        sort_keys=True, separators=(",", ":")),
+             manifest.get("external_occupant_identity"),
+             manifest.get("external_occupant_status", "UNVERIFIED"), now_utc())
+        )
+        self._commit()
+
+    def insert_retraction_event(self, event: Dict[str, Any],
+                                user_id: str) -> str:
+        retraction_id = new_id()
+        source_entry = event.get("source_entry", event)
+        self.connect().execute(
+            """INSERT OR IGNORE INTO retraction_events (
+                retraction_id, session_id, user_id, sequence_number,
+                source_cycle, ruling_cycle, claim_text, disposition,
+                source_entry_json, capture_version, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (retraction_id, event.get("session_id"), user_id,
+             event.get("sequence_number"), event.get("source_cycle"),
+             event.get("ruling_cycle"), event.get("claim_text"),
+             event.get("disposition", "EXPUNGED"),
+             json.dumps(source_entry, ensure_ascii=False, sort_keys=True,
+                        separators=(",", ":")),
+             event.get("capture_version"), now_utc())
+        )
+        self._commit()
+        return retraction_id
 
     def insert_behavioral_observation(self, obs: Dict[str, Any]) -> str:
         observation_id = new_id()
@@ -942,7 +1196,7 @@ class OntinuityDB:
                 now_utc()
             )
         )
-        self.connect().commit()
+        self._commit()
         return observation_id
 
     def insert_intake_session(self, user_id: str, participant_name: str,

@@ -118,6 +118,17 @@ Create a durable specimen store and runner. Consolidate:
 **Serves:** RC-6; prerequisite to measurement  
 **State:** BLOCKED BY B2-B4
 
+**Bounded early lane B5-P — raw-evidence preservation:** INDEPENDENTLY REVIEWED.
+Because absent telemetry cannot be reconstructed later, an additive,
+provider-neutral capture candidate may proceed without waiting for B2-B4. It
+preserves exact structured challenges, adjudication-driven retractions,
+model-call envelopes, and a non-secret reproducibility manifest while leaving
+gate behavior, analytics, identity claims, UI, deployment, and historical rows
+unchanged. Contract: `live/RESEARCH_PRESERVATION_CONTRACT.md`. This lane is not
+live until commit, deployment, and a deliberately challenged specimen succeed.
+Independent review, code tests, and additive/idempotent migration proof are
+complete on the candidate branch; those results do not establish live status.
+
 Build only the missing joins required to traverse one complete artifact chain:
 
 - session execution persistence;
