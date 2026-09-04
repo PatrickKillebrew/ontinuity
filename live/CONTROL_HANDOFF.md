@@ -1,8 +1,15 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-04 by successor Control (`chatgpt-work:gpt-5.6-sol`) — B0 authenticated baseline complete; drift preserved before correction.
+# Updated 2026-09-04 by successor Control (`chatgpt-work:gpt-5.6-sol`) — closing after B0 recovery, parallel candidates, and a challenged Researcher specimen.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the queue head.
 
 ## STATE AT FOLD
+- AUTHENTICATED B0 COMPLETE on `origin/main` at `7abadca`; the first specimen reports `DRIFT`. It is a truthful baseline, not a claim that repo/Railway/box are reconciled.
+- Three local candidate branches are preserved and are NOT live: B1 `codex/b1-scoped-identity` at `a31ffe1`; B3 `codex/b3-fail-closed-completion` at its post-close tip; Governor `codex/governor-observability` at `5e3310d`.
+- HARDER RESEARCHER LAP COMPLETE: `2026-09-04_18-55-18`, 11 cycles, 13 turns, 2 artifacts, receipt `350`. Challenger raised a formal Challenge at cycle 10; Parietal UPHELD; Researcher retracted the unsupported source-intent-as-live-proof inference; corrected output was accepted at cycle 11.
+- FAILED ATTEMPT PRESERVED: `2026-09-04_18-32-59`, `incomplete_model_dead`, one cycle, receipt `349`; no Challenge. Receipt means persisted, not semantically successful.
+- NEW EMPIRICAL SEAMS: Challenge row omitted claim/grounds; `adversarial_catch_count` stayed zero despite Challenge+UPHOLD; deployed session schema lacked source-defined `end_reason`. Route these through B3/B5; do not invent another block.
+- Comparative claim remains bounded: this lap demonstrates improved epistemic behavior in one observed case, not general superiority. Formal comparison remains B8 after integrity/evidence instrumentation.
+- CLOSE-STATE CAVEAT: a fresh authenticated curl check was attempted at close, but the ChatGPT execution environment canceled outbound access before any HTTP exchange and would not permit escalation. Current MAIN/FARM/mailbox cleanliness is `UNKNOWN`; re-run the close-state probe first in the next network-capable seat. The last observed MAIN state after the successful lap was idle, but that is historical evidence, not a fresh close verification.
 - PLATFORM SUCCESSION PROVED: a fresh ChatGPT Work conversation inherited Control through the existing corpus/boot and 19-op HTTPS courier, then occupied the external Researcher seat in the real engine. No OpenAI-specific engine rebuild or bridge was required.
 - Evidence pair: `2026-09-03_14-13-03` failed closed as `incomplete_model_dead` (3 cycles) when the retired Cerebras Challenger returned 404; after a staffing-only change to `cerebras:gemma-4-31b`, `2026-09-03_14-35-29` completed in 2 cycles through contract, independent challenge, close review, and extraction.
 - MAIN engine healthy and idle after the lap. Challenger remains `cerebras:gemma-4-31b`; Parietal remains `cerebras:gpt-oss-120b` (distinct models; verify lineage constraints before future changes).
@@ -61,7 +68,7 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
-**CURRENT CONTROLLING ACTION (2026-09-04): open B1 capability-admission design and dispatch the preserved B3 candidate for independent review.** B0 is complete at `live/ONTINUITY_1_0_BASELINE.md`; the read-only reporter and first specimen are in `live/tools/release_baseline.py` and `live/baselines/2026-09-04_b0.json`. Its result is `DRIFT`: FARM lacks `/diag/version`; box `file_server.py`, `db.py`, and `workspace_db_endpoint.py` differ from Git; one mailbox proposal lease is expired. Do not correct those observations before the B0 record lands. B1 is the primary design lane. B3 remains branch `codex/b3-fail-closed-completion` at `bff526b…`; the authoring Control seat must not review-and-deploy its own bytes.
+**CURRENT CONTROLLING ACTION (2026-09-04): rerun the documented authenticated curl close-state checks from a network-capable seat; if MAIN/FARM are idle and no orphaned mailbox claim exists, dispatch the exact post-close tip of `codex/b3-fail-closed-completion` to an independent non-author seat for review.** B0 is already committed on `origin/main` at `7abadca`. If the reviewer edits B3, authorship transfers and a different seat must review. If the reviewer signs the exact bytes cleanly, that signer may run the already-authorized install/deploy and live museum. Preserve B1 (`a31ffe1`) and Governor (`5e3310d`) unchanged until their own review blocks; neither is live merely because a branch exists.
 
 **HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).

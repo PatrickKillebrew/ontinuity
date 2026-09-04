@@ -1042,3 +1042,44 @@ single next action now names Phase 0. Conversation record:
 Reconcile every pending punch item against deployed code, receipts, and later rulings; remove stale
 and duplicate entries from pending; map real remainder to RC-1..RC-10 or post-1.0/horizon/discard;
 then select the first dependency-bound build.
+
+## B0 RECOVERED WHOLE + CHALLENGED OPENAI RESEARCHER — 2026-09-04
+
+**BUILT / PRESERVED**
+- Authenticated B0 baseline landed on `origin/main` at `7abadca`: human report, machine JSON specimen, read-only reporter, tests, board/handoff reconciliation. Result `DRIFT`; no correction mixed into observation.
+- Exhaustive pre-baseline audit covered 226 tracked files plus doctrine/history/worker/corpus/spec lineage. It recovered Intake vs Design vs Researcher modes, Shepherd, Governor lineage, the worker pool, correction-authorship transfer, and the corpus close as parts of the institution—not optional context.
+- Three local candidates remain separate and not-live: B1 `a31ffe1`; B3 branch post-close tip; Governor `5e3310d`.
+- B3 candidate covers earned completion, `end_reason`, fail-closed defaults/triggers, terminated/extraction exits, structured provider failures, empty Anthropic/Gemini output, and 18 local museum tests. It still requires independent review and live installation/acceptance.
+
+**RESEARCHER SPECIMEN**
+- `2026-09-04_18-32-59`: `incomplete_model_dead`, 1 cycle, no Challenge, receipt `349`. Failure retained.
+- `2026-09-04_18-55-18`: `complete`, 11 cycles, 13 turns, 2 artifacts, receipt `350`. Cycle 10 Challenge -> Parietal `UPHOLD` -> Researcher retraction/correction -> cycle 11 acceptance.
+- Narrow earned claim: the harness improved epistemic behavior in this observed case by preventing an unsupported inference from surviving into the accepted deliverable. General superiority remains unproved until B8 matched evaluation.
+
+**LEARNED**
+- Mailbox lifecycle is THE work path, not one optional integration. Work not claimed/proposed/reviewed/signed/acknowledged through the durable path cannot count as Ontinuity work or become trustworthy Governor state.
+- Operator agreement governs intent before dispatch. Independent workers govern whether exact bytes satisfy that agreement. A clean non-author signer may deploy; an editing reviewer becomes author and must return the correction for another review.
+- Agent workers can reduce manual nudging but hide intermediate work from the operator. Governor is therefore observability infrastructure, not decoration and not a second model runtime. It should render durable mailbox/evidence state without consuming provider-model API calls.
+- The corpus-prescribed `curl`/vault/courier route worked; reaching first for a generic Python HTTP client repeated priors-over-record drift. Future admission should mechanically require retrieval/reproduction of the documented method before operational authority.
+- The challenged session exposed B5 evidence loss: its Challenge row retained the ruling but not claim/grounds, and `adversarial_catch_count` stayed zero. It also confirmed deployed schema drift relevant to B3: no `end_reason` column yet.
+
+**REVERSED / CORRECTED**
+- "B0 is complete after visible runtime inventory" -> false. Whole-system closure required exhaustive files, semantic components, foundational why, history/rulings, worker authority, and corpus continuity before the authenticated live snapshot meant anything.
+- "Workers may use the mailbox lifecycle if integrated" -> false. The lifecycle is constitutional and exclusive for durable work.
+- "Source code enforcing signer/caller equality proves live deployment behavior" -> false. Source intent and deployed evidence are separate categories; this unsupported inference triggered the Challenge and was retracted.
+- "A successful write receipt proves a successful research result" -> false. Receipt `349` proves failed-session persistence only.
+- "One challenged success proves Ontinuity generally beats a frontier model" -> false. It proves a mechanism and one specimen; B8 owns general measurement.
+
+**CLOSE CHECKS**
+- Punch/board reconciled: B0 DONE; B1/B3/Governor candidates explicitly not live; B3/B5 empirical seams recorded; B8 still not started.
+- Conversation record: `live/conversations/2026-09-04_release-baseline-workers-and-challenged-researcher.md`.
+- Manual currency: no runtime operation changed in this narrative arc; existing manual already documents the prescribed curl/courier path and close ritual. No manual edit required.
+- Contract-doc currency: no worker loop, operation, deploy invariant, identity contract, or boot packet changed in live code. No worker packet/paradigm/rubric edit claimed.
+- Provenance: B0 on `origin/main` at `7abadca`; B1/B3/Governor local candidates named above; no box source changed; no `commit_self` required.
+- Secrets: committed close files contain no credential values or operator IPs.
+- Live-state verification attempted through the documented authenticated `curl` path. The ChatGPT execution environment canceled the outbound request before any HTTP exchange and disallowed escalation. MAIN/FARM/mailbox cleanliness is therefore `UNKNOWN` at close; the last observed MAIN-idle state after the successful Researcher lap is historical evidence only. Next network-capable seat must rerun this check before mutation.
+
+**NEXT**
+First rerun the documented authenticated curl close-state checks from a network-capable seat. If MAIN/FARM are idle and no orphaned mailbox claim exists, dispatch the exact post-close B3 branch tip to an independent non-author reviewer. Clean signer may install/deploy and run the live B3 museum under the operator's prior authorization; correction transfers authorship and requires another reviewer. Preserve B1 and Governor for their own review blocks.
+
+**CROSS-REF:** `7abadca`; B1 `a31ffe1`; Governor `5e3310d`; B3 post-close tip; sessions `2026-09-04_18-32-59` and `2026-09-04_18-55-18`; receipts `349`, `350`; conversation record above.

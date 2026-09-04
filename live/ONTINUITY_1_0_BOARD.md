@@ -84,8 +84,9 @@ Full commercial multi-tenancy is POST-1.0 unless the outside-operator test prove
 ### B3 — Make session completion fail closed
 
 **Serves:** RC-4  
-**State:** IN PROGRESS — first fail-closed persistence candidate built locally;
-independent review and live verification outstanding. See
+**State:** IN PROGRESS — fail-closed persistence candidate committed on local
+branch `codex/b3-fail-closed-completion`; independent review, installation, and
+live verification outstanding. See
 `B3_FAIL_CLOSED_COMPLETION.md`.
 
 Consolidates:
@@ -133,6 +134,12 @@ Build only the missing joins required to traverse one complete artifact chain:
 The previous standalone JSONL human-signoff-ledger proposal is superseded unless the existing database/receipt chain cannot satisfy RC-6.
 
 **Acceptance:** an unfamiliar reviewer can walk objective -> frozen contract -> turns/tools/rulings -> work product -> implementation -> review/correction -> signoff -> exact deployed bytes, and reverse the path from artifact to objective.
+
+**Observed specimen (2026-09-04, not acceptance):** session
+`2026-09-04_18-55-18` produced a formal Challenge and Parietal `UPHOLD`, but the
+persisted Challenge row omitted the challenged claim and grounds, the session's
+`adversarial_catch_count` remained zero, and the deployed session schema lacked
+the source-defined `end_reason`. These are concrete B3/B5 seams, not a new block.
 
 ### B6 — Reconcile and reproduce the installation
 
@@ -278,12 +285,17 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 Start the two first build lanes selected by the completed B0:
 
-1. **B1 — Operator-approved capability admission:** design from the existing
-   threat audit and live courier boundary; do not distribute another master
-   credential.
-2. **B3 — Fail-closed completion:** send branch
-   `codex/b3-fail-closed-completion` at `bff526b…` to an independent seat for
-   review. The authoring Control seat must not deploy those bytes.
+1. **B3 — Fail-closed completion:** send branch
+   `codex/b3-fail-closed-completion` at its post-close tip to an independent
+   non-author seat for exact-byte review. If clean, the signer—not the
+   author—runs the authorized install/deploy and live museum.
+2. **B1 — Operator-approved capability admission:** preserve candidate branch
+   `codex/b1-scoped-identity` at `a31ffe1`; dispatch it through its own
+   independent review block after B3 is moving.
+
+Governor observability candidate `codex/governor-observability` at `5e3310d` is
+also preserved but remains unreviewed/uninstalled. Branch existence is not live
+state.
 
 B0 detected FARM and box drift. Preserve that observation; reconcile it under
 B6 rather than silently mixing correction into the baseline.

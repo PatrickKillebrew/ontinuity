@@ -1,6 +1,8 @@
 # ONTINUITY 1.0 — B3 FAIL-CLOSED COMPLETION
 
-**State:** IN PROGRESS — candidate implemented locally; not reviewed, pushed, or deployed
+**State:** IN PROGRESS — candidate committed on local branch
+`codex/b3-fail-closed-completion`; not independently reviewed, pushed, installed,
+or deployed
 
 **Release condition:** RC-4 — Fail-closed completion
 
@@ -141,11 +143,11 @@ migration, and writer default. They do not claim a production deployment.
   endpoints, burn-in fix proposals 1 and 4, and the 1.0 release board.
 - **Change made:** fail-closed classifier, persisted reason, safe defaults,
   termination/extraction outcomes, and museum tests.
-- **Test result:** PASS locally (10 test methods/specimens plus compilation and
+- **Test result:** PASS locally (18 test methods/specimens plus compilation and
   diff validation).
 - **New debt:** none hidden; outstanding integration and runtime distinctions
   are listed above.
 - **State left:** local candidate only; no production configuration, database,
   Railway service, box install, or deployment changed.
-- **Next dependency:** independent review, then timeout/malformed runtime
-  differentiation and endpoint integration test before deployment authorization.
+- **Next dependency:** independent exact-byte review, endpoint integration test,
+  authenticated box install, controlled deployment, and live acceptance.
