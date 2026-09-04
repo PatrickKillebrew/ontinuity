@@ -1600,7 +1600,7 @@ def record_model_failure(role, kind, detail=""):
 def model_failure_kind(exc):
     if isinstance(exc, http_requests.exceptions.Timeout):
         return "timeout"
-    if isinstance(exc, (KeyError, ValueError, TypeError)):
+    if isinstance(exc, (KeyError, IndexError, ValueError, TypeError)):
         return "malformed_response"
     return "provider_error"
 

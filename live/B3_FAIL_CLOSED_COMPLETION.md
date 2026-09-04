@@ -66,7 +66,8 @@ Additional changes:
   inference from error strings: timeout, malformed response, rate limit,
   configuration, and generic provider failure are distinguished;
 - successful Anthropic and Gemini responses with empty or whitespace-only text
-  are rejected in their provider adapters and recorded as malformed responses;
+  or structurally empty output arrays are rejected in their provider adapters
+  and recorded as malformed responses;
 - a Researcher timeout or malformed response receives its own incomplete status;
   Challenger failures retain the integrity status
   `incomplete_challenger_dead` while `end_reason` records the specific cause;
@@ -78,7 +79,7 @@ No historical session row is rewritten by this candidate.
 
 ## 4. MUSEUM RESULT
 
-Fifteen local test methods pass:
+Eighteen local test methods pass:
 
 - certified close;
 - requested completion without close;
@@ -91,6 +92,9 @@ Fifteen local test methods pass:
 - malformed-response status;
 - Anthropic empty-output rejection;
 - Gemini empty-output rejection;
+- Anthropic empty `content` array rejection;
+- Gemini empty `candidates` array rejection;
+- Gemini candidate with an empty `parts` array rejection;
 - missing-extraction status;
 - fresh-schema default and `end_reason` presence;
 - existing-schema additive migration;
