@@ -13,10 +13,11 @@ Valence Mapping:
 NO CHANGE
 
 Delta Log:
-Established that the table `write_receipts` contains 27 rows, verified by the query `SELECT COUNT(*) AS receipts FROM write_receipts` which returned `{"columns": ["receipts"], "rows": [[27]]}`.
+- Established that the table `write_receipts` contains 27 rows, verified by the query `SELECT COUNT(*) AS receipts FROM write_receipts` which returned `{"columns": ["receipts"], "rows": [[27]]}`.
+- Adopted clean‑reviewer landing and deployment as the Ontinuity 1.0 target rule: the author may commit candidate bytes to an isolated branch, but a different seat must review that exact tree.
 
 Correction History:
-NO CHANGE
+- Cycle 10: RULING UPHOLD – The challenged claim asserting live‑database evidence of an identity‑binding deployment rule was invalidated because `operations_ledger` shows only `diag-key` callers for deploy and `seat_mailbox` shows per‑worker mailbox activity, contradicting the claim.
 
 Climate Notes:
-The session experienced low friction (signal 0) throughout, proceeded smoothly, and completed the deliverable without conflict.
+The session experienced a shift from low friction (signal 0) to moderate friction (signal 2) after two UPHOLD rulings introduced conflict with prior ledger entries, indicating some drift but overall progress remained positive.
