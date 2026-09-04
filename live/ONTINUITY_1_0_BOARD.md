@@ -33,7 +33,7 @@ Work proceeds top to bottom. A later block may begin early only when it cannot c
 ### B0 — Establish the live release baseline
 
 **Serves:** RC-7; prerequisite to every build  
-**State:** PARTIAL — repository/public baseline recorded in `live/ONTINUITY_1_0_BASELINE.md`; authenticated live fields remain
+**State:** COMPLETE — authenticated baseline recorded; result `DRIFT`
 
 Create a machine-readable and human-readable manifest of:
 
@@ -274,11 +274,17 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Finish the authenticated observations for **B0 — Establish the live release baseline**.
+Start the two first build lanes selected by the completed B0:
 
-The repository/public half is recorded in `live/ONTINUITY_1_0_BASELINE.md`. Public `ontinuity.org` serves the current gate-and-contract homepage and Boundary De-Identifier. Railway MAIN/FARM revisions, box installed-file hashes, schema state, and live courier/model configuration still require authenticated evidence. The present ChatGPT Work surface could reach GitHub and the public site but not the Railway hostname/API; that limitation is recorded rather than treated as an Ontinuity outage. Run the already-existing reads from an allowed network surface and append the results; do not infer them from July documentation.
+1. **B1 — Operator-approved capability admission:** design from the existing
+   threat audit and live courier boundary; do not distribute another master
+   credential.
+2. **B3 — Fail-closed completion:** send branch
+   `codex/b3-fail-closed-completion` at `bff526b…` to an independent seat for
+   review. The authoring Control seat must not deploy those bytes.
 
-When B0 closes, select B1 and B3 as the first two build lanes. No other historical punch item outranks them.
+B0 detected FARM and box drift. Preserve that observation; reconcile it under
+B6 rather than silently mixing correction into the baseline.
 
 ---
 
