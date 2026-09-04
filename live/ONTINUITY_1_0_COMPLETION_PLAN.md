@@ -246,6 +246,7 @@ Unless a release test establishes otherwise:
 - Notarian product line
 - Every Governor visualization
 - Generalized autonomous operation across arbitrary domains
+- Courier protocol standardization, deterministic client, streaming, telemetry export, and A2A/MCP/CloudEvents compatibility (`live/POST_1_0_COURIER_EVOLUTION.md`)
 - Lifetime-ground-truth or trustless cross-institution horizon work
 - Completion of every historical punch-list item
 

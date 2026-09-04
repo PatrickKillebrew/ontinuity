@@ -1042,3 +1042,17 @@ single next action now names Phase 0. Conversation record:
 Reconcile every pending punch item against deployed code, receipts, and later rulings; remove stale
 and duplicate entries from pending; map real remainder to RC-1..RC-10 or post-1.0/horizon/discard;
 then select the first dependency-bound build.
+
+## FOLD — post-1.0 courier evolution parked without moving the finish line — 2026-09-04
+
+**OPERATOR RULING**
+Document the courier improvements discovered during architectural evaluation and work on them only after the current Ontinuity 1.0 finish line.
+
+**PRESERVED**
+- `live/POST_1_0_COURIER_EVOLUTION.md` records the courier as the portable constitutional narrow waist, not a workaround awaiting replacement.
+- B1 identity-bound, short-lived capabilities remain inside 1.0 because RC-2/RC-3 already require them.
+- Versioned schemas, replay/idempotency safety, end-to-end trace export, a deterministic provider-neutral client, Governor SSE, and A2A/MCP/CloudEvents/OpenTelemetry compatibility are parked post-1.0 unless an existing release acceptance test fails without one.
+- Future façades may translate into the mailbox lifecycle; they may not create a parallel work path or source of truth.
+
+**STATE LEFT**
+Documentation only. No runtime, mailbox, provider, credential, deployment, or current release-block dependency changed. The controlling next action remains B1/B3 as ordered by `live/ONTINUITY_1_0_BOARD.md`.

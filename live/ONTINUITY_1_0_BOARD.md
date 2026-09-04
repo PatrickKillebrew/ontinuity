@@ -247,6 +247,7 @@ Package three review requests rather than asking anyone to evaluate the entire w
 - broad Governor visualization and convenience controls;
 - Notarian product line;
 - generalized autonomous operation across arbitrary domains;
+- courier evolution beyond B1: versioned schemas, idempotency, deterministic client, Governor event streaming, telemetry export, and standards-compatible façades (`live/POST_1_0_COURIER_EVOLUTION.md`);
 - standalone Gemini corpus-standard validation;
 - wide interface polish unrelated to B9 transfer.
 
