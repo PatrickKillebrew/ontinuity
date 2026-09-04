@@ -52,6 +52,7 @@ get_effective_config precedence (app.py ~195): base CONFIG (empty for model_a) �
 - In AUTONOMOUS (mailbox/farm) sessions there is no human: MODAL_TIMEOUT_AUTONOMOUS_S = 90s self-resolves it (app.py ~1707-1761), so a modal becomes a 90-second self-clearing CHECKPOINT, not a question. This is why the operator rarely SEES a modal during farm runs — they fire and clear without you. (Open clarity item: rename the autonomous "human_input modal" to "escalation checkpoint" — it's a misnomer in that context.)
 
 ## KEY ENDPOINTS / ACCESS (read-only diag via Railway relay — survives the firewall)
+- ChatGPT Work admission check: code/shell networking is a separate capability from browser/web access. Before diagnosing Railway, confirm Settings -> Data controls -> Work network access -> Allow public internet access is ON. A pre-HTTP DNS/host/network-policy denial is `WORK_EGRESS_DENIED`, not a Railway outage or bad key. Do not switch to Python HTTP clients; rerun the corpus-prescribed curl after the setting is enabled. Browser reachability proves only that the public page is reachable, not that authenticated hands are live. Prefer `X-Diag-Key` over a `diag_key` URL parameter so credentials do not enter URLs.
 - Corpus query (read-only SELECT): https://web-production-7eaf8.up.railway.app/diag/api/query?diag_key=KEY&sql=...
 - Engine state: /diag/engine?diag_key=KEY  -> running, waiting_for_input, cycle, started_by
 - Engine event log: /diag/console?diag_key=KEY  (this is where a write FAILURE shows, e.g. ConnectTimeout)

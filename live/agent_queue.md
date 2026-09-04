@@ -1042,3 +1042,18 @@ single next action now names Phase 0. Conversation record:
 Reconcile every pending punch item against deployed code, receipts, and later rulings; remove stale
 and duplicate entries from pending; map real remainder to RC-1..RC-10 or post-1.0/horizon/discard;
 then select the first dependency-bound build.
+
+## FOLD — ChatGPT Work Railway admission failure resolved — 2026-09-04
+
+**OBSERVED**
+- The corpus-prescribed curl path initially failed before DNS/HTTP because ChatGPT Work command networking had public internet access disabled. No HTTP status existed, so this was not evidence of a Railway outage, 403, or invalid credential.
+- The separate browser surface reached the MAIN public cockpit successfully. That established split capability surfaces: browser reachability does not establish authenticated command hands.
+
+**CORRECTION + PROOF**
+- Official platform control identified and enabled: Settings -> Data controls -> Work network access -> Allow public internet access.
+- The same corpus-prescribed curl then reached MAIN. The header-authenticated `__probe__` returned the designed HTTP 403 plus the actual 19-op live courier allowlist: backup_db, bootstrap_gate, commit_file, commit_self, deploy, mailbox_ack, mailbox_fetch, mailbox_peek, mailbox_purge, mailbox_reclaim, mailbox_send, read_file, read_journal, read_repo, register_egress, restart_workspace, seed_tenant, write_file, you_there.
+- `CONTROL_QUICKBOOT.md` and `OPERATING_MANUAL.md` now classify the pre-HTTP failure as `WORK_EGRESS_DENIED`, forbid client-shopping (Python/urllib/httpx) around the corpus method, and require the same documented curl to be retried after admission is enabled.
+- The probe example now carries `DIAG_KEY` in `X-Diag-Key`, which `app.py` accepts, rather than placing it in the URL.
+
+**BOUNDARY**
+This is a platform admission correction, not a new MCP/adapter layer and not an Ontinuity architecture change. The July 20 corpus reversal remains controlling: existing HTTPS hands + mailbox are the portable interface.
