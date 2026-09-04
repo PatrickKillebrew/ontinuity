@@ -1,6 +1,11 @@
 import unittest
 
-from completion import classify_completion, model_failure_outcome
+from completion import (
+    classify_completion,
+    extract_anthropic_text,
+    extract_gemini_text,
+    model_failure_outcome,
+)
 
 
 class CompletionMuseum(unittest.TestCase):
@@ -70,6 +75,30 @@ class CompletionMuseum(unittest.TestCase):
         self.assertEqual(
             model_failure_outcome("model_b", "timeout"),
             ("incomplete_challenger_dead", "challenger_timeout"),
+        )
+
+    def test_anthropic_success_without_output_is_malformed(self):
+        for text in ("", "   "):
+            with self.subTest(text=repr(text)):
+                with self.assertRaisesRegex(ValueError, "Anthropic returned empty text"):
+                    extract_anthropic_text({"content": [{"text": text}]})
+        self.assertEqual(
+            extract_anthropic_text({"content": [{"text": "answer"}]}),
+            "answer",
+        )
+
+    def test_gemini_success_without_output_is_malformed(self):
+        for text in ("", "   "):
+            with self.subTest(text=repr(text)):
+                with self.assertRaisesRegex(ValueError, "Gemini returned empty text"):
+                    extract_gemini_text({
+                        "candidates": [{"content": {"parts": [{"text": text}]}}]
+                    })
+        self.assertEqual(
+            extract_gemini_text({
+                "candidates": [{"content": {"parts": [{"text": "answer"}]}}]
+            }),
+            "answer",
         )
 
 

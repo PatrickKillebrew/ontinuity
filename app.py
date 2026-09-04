@@ -9,7 +9,12 @@ Install dependencies first:
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import threading
-from completion import classify_completion, model_failure_outcome
+from completion import (
+    classify_completion,
+    extract_anthropic_text,
+    extract_gemini_text,
+    model_failure_outcome,
+)
 import os
 import json
 import re
@@ -1688,7 +1693,7 @@ def call_anthropic_format(endpoint_config, system_prompt, messages, role, max_to
         )
         response.raise_for_status()
         data = response.json()
-        return data["content"][0]["text"]
+        return extract_anthropic_text(data)
     except Exception as e:
         active_session["errors"].append(f"API error: {str(e)}")
         record_model_failure(role, model_failure_kind(e), e)
@@ -1723,7 +1728,7 @@ def call_gemini_native(endpoint_config, system_prompt, messages, role, max_token
         response = http_requests.post(url, headers=headers, json=body, timeout=120)
         response.raise_for_status()
         data = response.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        return extract_gemini_text(data)
     except Exception as e:
         active_session["errors"].append(f"Gemini API error: {str(e)}")
         record_model_failure(role, model_failure_kind(e), e)

@@ -55,3 +55,19 @@ def model_failure_outcome(role, failure_kind):
     if role == "model_a":
         return "incomplete_model_dead", f"researcher_{kind}"
     return "incomplete_challenger_dead", f"{seat}_{kind}"
+
+
+def extract_anthropic_text(payload):
+    """Return Anthropic text or raise when a successful response has no output."""
+    text = payload["content"][0]["text"]
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("Anthropic returned empty text")
+    return text
+
+
+def extract_gemini_text(payload):
+    """Return Gemini text or raise when a successful response has no output."""
+    text = payload["candidates"][0]["content"]["parts"][0]["text"]
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("Gemini returned empty text")
+    return text

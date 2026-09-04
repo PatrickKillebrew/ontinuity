@@ -65,6 +65,8 @@ Additional changes:
 - provider failures retain a structured cause instead of requiring later
   inference from error strings: timeout, malformed response, rate limit,
   configuration, and generic provider failure are distinguished;
+- successful Anthropic and Gemini responses with empty or whitespace-only text
+  are rejected in their provider adapters and recorded as malformed responses;
 - a Researcher timeout or malformed response receives its own incomplete status;
   Challenger failures retain the integrity status
   `incomplete_challenger_dead` while `end_reason` records the specific cause;
@@ -76,7 +78,7 @@ No historical session row is rewritten by this candidate.
 
 ## 4. MUSEUM RESULT
 
-Thirteen local test methods pass:
+Fifteen local test methods pass:
 
 - certified close;
 - requested completion without close;
@@ -87,6 +89,8 @@ Thirteen local test methods pass:
 - operator stop;
 - timeout status;
 - malformed-response status;
+- Anthropic empty-output rejection;
+- Gemini empty-output rejection;
 - missing-extraction status;
 - fresh-schema default and `end_reason` presence;
 - existing-schema additive migration;
