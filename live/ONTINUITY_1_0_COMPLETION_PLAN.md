@@ -246,6 +246,7 @@ Unless a release test establishes otherwise:
 - Notarian product line
 - Every Governor visualization
 - Generalized autonomous operation across arbitrary domains
+- Courier protocol standardization, deterministic client, streaming, telemetry export, and A2A/MCP/CloudEvents compatibility (`live/POST_1_0_COURIER_EVOLUTION.md`)
 - Lifetime-ground-truth or trustless cross-institution horizon work
 - Completion of every historical punch-list item
 
@@ -268,9 +269,23 @@ Progress is measured by release conditions passing, not commits, corpus volume, 
 
 ## 8. IMMEDIATE NEXT ACTION
 
-Run **Phase 0: Resolve the record**. The current resolved punch list still contains completed, retired, duplicated, and superseded items under pending headings. Produce the dependency-ordered 1.0 board before choosing a build.
+**Phase 0 is complete.** B0 preserved the authenticated baseline and its honest
+`DRIFT` result at `7abadca`; the resolved punch list and
+`ONTINUITY_1_0_BOARD.md` now provide the dependency-ordered release view.
 
-Do not begin the credential broker, provenance repair, or another test lap until the board shows which item comes first and why.
+Resume the first two preserved runtime lanes in the board's order:
+
+1. Independently review B1 branch `codex/b1-scoped-identity` at `a31ffe1`
+   against the mailbox threat audit and RC-2 acceptance tests, including removal
+   of the caller-selected bootstrap canonical-count boundary.
+2. Where review ownership remains distinct, reconcile B3 branch
+   `codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send
+   the exact successor bytes to a different non-author reviewer before any
+   deploy or live museum.
+
+B5-P evidence preservation is operational; the comparative plan remains
+proposed, unfrozen, and unrun. Branch existence or local tests do not make B1 or
+B3 live.
 
 ---
 

@@ -1,7 +1,8 @@
 # ONTINUITY RESEARCH PRESERVATION CONTRACT
 
 **Release lane:** B5-P — bounded evidence preservation before measurement  
-**Status:** implementation contract; live status requires the evidence in Section 5
+**Status:** LIVE — Section 5 acceptance completed 2026-09-05
+**Capture boundary:** session `2026-09-05_09-37-00`, write receipt `351`
 **Capture version:** `ontinuity-research-evidence/1.0`  
 **Database schema version:** `1.1.0`
 
@@ -205,6 +206,41 @@ Before these bytes can be called live:
 
 The first ten are code-level acceptance for B5-P. The eleventh is the live
 specimen required before the capture boundary is declared operational.
+
+### 5.1 Operational acceptance record
+
+- Independent correction/review commit:
+  `33267533e78515857d71d0c6b53a93f298ad6fe7`.
+- Railway deployment `2561a8e1-7426-4a54-ab84-1710dce91d41` reached
+  `SUCCESS` at that exact revision; the engine manifest later recorded the
+  same observed code revision.
+- The box installed the reviewed `db.py` and `workspace_db_endpoint.py` bytes,
+  restarted cleanly, passed SQLite integrity, retained all 327 pre-boundary
+  sessions, and preserved the 22 pre-existing table counts checked before the
+  specimen. Installed SHA-256 digests were
+  `3a265211a45f1cfe394316288f76473fe39fb60ff55acc31292ffcd6e0049a8e`
+  and `2125b2953b66c3ab583fba947b34d4c49e2f1ea5471da37d8f97f595c25608d0`.
+- The code-level suite passed 33 of 33 tests, including legacy ingest,
+  migration/idempotency, atomic rollback, pre-session failure, long Unicode,
+  secret-canary, exact-hash, and recovered-box-behavior cases.
+- The deliberately challenged live specimen completed normally in three
+  cycles. It persisted six transcript turns, fourteen model-call envelopes,
+  one structured challenge, one append-only retraction, one reproducibility
+  manifest, three behavioral observations, two artifacts, and receipt `351`.
+- The specimen recorded one Challenge, one `UPHOLD`, and one adversarial catch.
+  The Researcher retracted the unsupported 50-percent inference and separated
+  evidence-capture capability from comparative-performance proof.
+- All six transcript digests, all 42 per-call system/messages/response digests,
+  and both stored manifest digests were independently recomputed from returned
+  database content and matched. The available mailbox, diagnostic, Railway,
+  and GitHub credentials were absent from the reconstructed evidence payloads.
+
+The legacy `artifacts.content` path remains a normalized work-product view: in
+this specimen it converted Unicode em dashes to ASCII `--`. The exact submitted
+closing response remains preserved, digest-matched, in model-call envelope 14.
+The clean artifact and forensic raw envelope are therefore distinct records;
+immutable artifact revision/digest joins remain deferred under B5/B6 rather
+than being falsely claimed by B5-P.
 
 ## 6. DEFERRED WORK
 

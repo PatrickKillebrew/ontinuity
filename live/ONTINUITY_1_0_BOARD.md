@@ -16,7 +16,7 @@
 | RC-3 Honest provenance | PARTIAL / BLOCKER | Authorship/deploy lineage exists, but external Researcher sessions retain the historical Claude occupant string. Bind actual occupant to authenticated identity. |
 | RC-4 Fail-closed integrity | PARTIAL / BLOCKER | September model-death lap persisted incomplete, but certification-by-default and complete abnormal-exit museum coverage remain unresolved. |
 | RC-5 Independent authority | PARTIAL / BLOCKER | No-self routing and deploy gate exist. Authenticated identities and must-refuse tests across correction/review/signoff/deploy remain required. |
-| RC-6 Complete evidence chain | PARTIAL / BLOCKER | Commits, receipts, folds, session records, and operations ledger exist, but execution, operator-input, review-finding, and external-occupant seams remain. |
+| RC-6 Complete evidence chain | PARTIAL / BLOCKER | B5-P raw capture is operational from session `2026-09-05_09-37-00` / receipt `351`; operator-input, review/signoff/deploy joins, external-occupant identity, and immutable artifact/deployment joins remain. |
 | RC-7 Reproducible system | FAIL / BLOCKER | Repo, Railway, and box can drift; no clean-install proof or canonical release manifest exists. |
 | RC-8 Comparative evidence | NOT STARTED | Freeze protocol and run matched single-model/Ontinuity evaluation after integrity instrumentation is trustworthy. |
 | RC-9 Outside-operator transfer | NOT STARTED | Run only after a reproducible installation and minimum operator surface exist. |
@@ -52,7 +52,7 @@ Create a machine-readable and human-readable manifest of:
 ### B1 — Operator-approved capability admission
 
 **Serves:** RC-2; prerequisite to authenticated RC-3 and RC-5  
-**State:** READY AFTER B0
+**State:** CANDIDATE BUILT; AWAITING INDEPENDENT REVIEW
 
 Supersedes and consolidates:
 
@@ -65,9 +65,12 @@ Supersedes and consolidates:
 
 Build the smallest admission flow: a seat requests entry; the operator approves; the engine issues a short-lived identity-bound capability with an operation allowlist. Master credentials remain server-side. Seat and lineage are derived from the capability, not accepted from request bodies.
 
-**Acceptance:** allowed read succeeds; excluded operation fails; altered seat identity fails; capability expires; operator can revoke it; no master credential appears in transcript, URL, command argument, application log, or receipt.
+**Acceptance:** allowed read succeeds; excluded operation fails; altered seat identity fails; capability expires; operator can revoke it; no master credential appears in transcript, URL, command argument, application log, or receipt. Bootstrap orientation derives its canonical courier surface server-side; a caller cannot select the count against which it is certified.
 
 Full commercial multi-tenancy is POST-1.0 unless the outside-operator test proves it necessary.
+
+Preserved candidate: branch `codex/b1-scoped-identity`, tip `a31ffe1`.
+Branch existence is not acceptance or live behavior.
 
 ### B2 — Bind occupant and action provenance
 
@@ -84,7 +87,7 @@ Full commercial multi-tenancy is POST-1.0 unless the outside-operator test prove
 ### B3 — Make session completion fail closed
 
 **Serves:** RC-4  
-**State:** READY AFTER B0; may run alongside B1 design
+**State:** CANDIDATE BUILT; AWAITING REBASE AND INDEPENDENT REVIEW
 
 Consolidates:
 
@@ -96,6 +99,11 @@ Consolidates:
 - product silent-failure findings that can falsely imply completion.
 
 **Acceptance:** only the certified close path writes `complete`. Museum specimens cover normal close, Researcher death, Challenger death, operator stop, timeout, malformed response, and missing extraction; every case persists an honest status and `end_reason` without waiting unnecessarily for an absent external seat.
+
+Preserved candidate: branch `codex/b3-fail-closed-completion`, tip
+`12dea5e`. Its runtime bytes still require reconciliation onto current `main`,
+independent exact-byte review, deployment, and the live museum. Branch existence
+is not acceptance or live behavior.
 
 ### B4 — Formalize the museum and authority tests
 
@@ -118,7 +126,7 @@ Create a durable specimen store and runner. Consolidate:
 **Serves:** RC-6; prerequisite to measurement  
 **State:** BLOCKED BY B2-B4
 
-**Bounded early lane B5-P — raw-evidence preservation:** RELEASE CORRECTION IN REVIEW.
+**Bounded early lane B5-P — raw-evidence preservation:** LIVE; ACCEPTANCE COMPLETE.
 Because absent telemetry cannot be reconstructed later, an additive,
 provider-neutral capture may proceed without waiting for B2-B4. It
 preserves exact structured challenges, adjudication-driven retractions,
@@ -130,9 +138,19 @@ exposed useful source that existed only on the box. The box was restored from
 its exact automatic history with 327 sessions intact. A combined correction
 now preserves the query route, write receipts, session executions, behavioral
 fields, Knowtext default, and stable database path alongside the new evidence
-capture. This lane is not live until the combined bytes pass independent
-review, deployment/installed-hash verification, and a deliberately challenged
-specimen.
+capture. Combined correction commit `3326753` passed independent review, a
+33/33 code-level suite, Railway and box installed-byte verification, and SQLite
+integrity/preservation checks. Deliberately challenged session
+`2026-09-05_09-37-00` then closed normally in three cycles under receipt `351`:
+six exact transcript companions, fourteen complete model-call envelopes, one
+structured Challenge/`UPHOLD`, one append-only retraction, one reproducibility
+manifest, three behavioral observations, and two artifacts. All 50 stored
+digests independently reproduced (six transcript, 42 per-call, two manifest),
+and the available credentials were absent from the evidence payloads. This
+satisfies all eleven acceptance items in
+`live/RESEARCH_PRESERVATION_CONTRACT.md` and declares the capture boundary
+operational. It does not satisfy the remainder of B5 or establish a comparative
+reliability result.
 
 Build only the missing joins required to traverse one complete artifact chain:
 
@@ -151,7 +169,7 @@ The previous standalone JSONL human-signoff-ledger proposal is superseded unless
 ### B6 — Reconcile and reproduce the installation
 
 **Serves:** RC-7  
-**State:** BLOCKED BY B0; final proof follows B1-B5
+**State:** BASELINED BY B0; final proof follows B1-B5
 
 Consolidates:
 
@@ -222,7 +240,6 @@ Package three review requests rather than asking anyone to evaluate the entire w
 - mailbox result-channel correlation and purge;
 - current Parietal configuration and September Challenger replacement;
 - public current-system synthesis and homepage modernization;
-- Governor worker-status read route and page deployment, subject to B0 live verification.
 
 ### Retired, rejected, or superseded — do not build
 
@@ -244,6 +261,7 @@ Package three review requests rather than asking anyone to evaluate the entire w
 | Museum formalization; close/open gates; signoff/reject guard | B4 |
 | Execution log; catches; operator inputs; review lifecycle; cycle IDs | B5 |
 | Portable tenant; The Package; drift; backup; active-surface cleanup | B6 |
+| Governor worker-status/cockpit consolidation candidate (`codex/governor-observability` at `5e3310d`; not live) | B6; minimum observation needed for B9 |
 | Worker boot tuning and cross-vendor boot tests | B7 |
 | Friction/behavioral comparison and burn-in evidence | B8 |
 | Minimum onboarding and operator surface | B9 |
@@ -263,6 +281,7 @@ Package three review requests rather than asking anyone to evaluate the entire w
 - broad Governor visualization and convenience controls;
 - Notarian product line;
 - generalized autonomous operation across arbitrary domains;
+- courier evolution beyond B1: versioned schemas, idempotency, deterministic client, Governor event streaming, telemetry export, and standards-compatible façades (`live/POST_1_0_COURIER_EVOLUTION.md`);
 - standalone Gemini corpus-standard validation;
 - wide interface polish unrelated to B9 transfer.
 
@@ -290,14 +309,17 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Start the two first build lanes selected by the completed B0:
+Resume the two first build lanes selected by the completed B0 now that B5-P's
+irreplaceable-evidence boundary is operational:
 
-1. **B1 — Operator-approved capability admission:** design from the existing
-   threat audit and live courier boundary; do not distribute another master
-   credential.
-2. **B3 — Fail-closed completion:** send branch
-   `codex/b3-fail-closed-completion` at `bff526b…` to an independent seat for
-   review. The authoring Control seat must not deploy those bytes.
+1. **B1 — Operator-approved capability admission:** send candidate branch
+   `codex/b1-scoped-identity` at `a31ffe1` through independent review against
+   the existing threat audit and live courier boundary; do not distribute
+   another master credential.
+2. **B3 — Fail-closed completion:** reconcile branch
+   `codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send
+   the exact resulting bytes to an independent seat for review and the live
+   museum. The authoring Control seat must not deploy its own bytes.
 
 B0 detected FARM and box drift. Preserve that observation; reconcile it under
 B6 rather than silently mixing correction into the baseline.

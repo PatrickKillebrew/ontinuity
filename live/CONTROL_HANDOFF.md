@@ -1,8 +1,28 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-04 by successor Control (`chatgpt-work:gpt-5.6-sol`) — B0 authenticated baseline complete; drift preserved before correction.
-# Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the queue head.
+# Updated 2026-09-05 by successor Control (`chatgpt-work:gpt-5.6-sol`) — B0 complete; B5-P raw-evidence boundary operational after challenged live proof.
+# Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
 ## STATE AT FOLD
+- B0 is complete at commit `7abadca`; its authenticated read-only report
+  honestly returned `DRIFT`. The original observation remains the baseline even
+  where later work repaired part of the observed box divergence.
+- B5-P is LIVE at reviewed commit `3326753`. Railway and the separately
+  installed box bytes were verified, the 33/33 code suite passed, and challenged
+  session `2026-09-05_09-37-00` / receipt `351` satisfied the eleventh acceptance
+  item. The database holds six exact transcript companions, fourteen model-call
+  envelopes, one structured Challenge/`UPHOLD`, one `EXPUNGED` retraction, one
+  reproducibility manifest, three behavioral observations, and two artifacts.
+  All 50 stored digests independently reproduced; available credentials were
+  absent from the returned evidence payloads.
+- B5-P preserves evidence; it does not prove that Ontinuity reduces fabrication
+  by any percentage. The deliberately asserted 50-percent inference was caught,
+  upheld, retracted, and replaced with a falsifiable paired-control plan at
+  `live/experiment/B5P_LIVE_2026-09-05_COMPARATIVE_TEST_PLAN.md`. That plan has
+  not been run.
+- Preserved candidates remain non-live: B1 branch
+  `codex/b1-scoped-identity` at `a31ffe1`; B3 branch
+  `codex/b3-fail-closed-completion` at `12dea5e`; Governor branch
+  `codex/governor-observability` at `5e3310d`.
 - PLATFORM SUCCESSION PROVED: a fresh ChatGPT Work conversation inherited Control through the existing corpus/boot and 19-op HTTPS courier, then occupied the external Researcher seat in the real engine. No OpenAI-specific engine rebuild or bridge was required.
 - Evidence pair: `2026-09-03_14-13-03` failed closed as `incomplete_model_dead` (3 cycles) when the retired Cerebras Challenger returned 404; after a staffing-only change to `cerebras:gemma-4-31b`, `2026-09-03_14-35-29` completed in 2 cycles through contract, independent challenge, close review, and extraction.
 - MAIN engine healthy and idle after the lap. Challenger remains `cerebras:gemma-4-31b`; Parietal remains `cerebras:gpt-oss-120b` (distinct models; verify lineage constraints before future changes).
@@ -15,6 +35,18 @@
 - Laptop seat (laptop_seat.py on the HP, C:\donkeycar\) ALIVE and processing tasks (done-marking).
 - Credentials: LLaves keys live and in use; pre-public risk accepted by operator. Rotation = launch
   hygiene, not a current blocker.
+- ChatGPT Work access rule: first admit command networking in Settings -> Data
+  controls -> Work network access. Use the documented curl and one narrowly
+  scoped credential-bearing remote request per tool call. A DNS/host/policy
+  denial before HTTP is `WORK_EGRESS_DENIED`, not evidence about Railway or the
+  credential. Browser reachability is observation only, not authenticated hands.
+- Independent close review corrected worker-corpus drift: `WORKER_MANUAL.md`,
+  both boot packets, and the rubric/paradigm role summaries now match the live
+  19-op courier, provider-neutral identity placeholders, header auth,
+  latest-fold orientation, and the settled signer-deploys two-party chain. The
+  same review found the bootstrap gate's
+  repository defaults stale at 12/15 versus live 19 with a caller override;
+  that remains OPEN and an overridden pass is not mechanical orientation.
 
 ## WHAT SHIPPED THIS SHIFT — THE MAILBOX FIX (root-cause, deployed, proven)
 THE BUG (fully diagnosed): the seat_mailbox is a TASK-DISTRIBUTION queue (atomic claim + lease so
@@ -61,7 +93,17 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
-**CURRENT CONTROLLING ACTION (2026-09-04): open B1 capability-admission design and dispatch the preserved B3 candidate for independent review.** B0 is complete at `live/ONTINUITY_1_0_BASELINE.md`; the read-only reporter and first specimen are in `live/tools/release_baseline.py` and `live/baselines/2026-09-04_b0.json`. Its result is `DRIFT`: FARM lacks `/diag/version`; box `file_server.py`, `db.py`, and `workspace_db_endpoint.py` differ from Git; one mailbox proposal lease is expired. Do not correct those observations before the B0 record lands. B1 is the primary design lane. B3 remains branch `codex/b3-fail-closed-completion` at `bff526b…`; the authoring Control seat must not review-and-deploy its own bytes.
+**CURRENT CONTROLLING ACTION (2026-09-05): resume B1 and B3 from their
+preserved candidates now that B5-P is operational.** First send B1 branch
+`codex/b1-scoped-identity` at `a31ffe1` to an independent reviewer against the
+mailbox threat audit and B1 acceptance tests, including removal of the
+caller-controlled bootstrap canonical-count boundary. In parallel only where review
+ownership stays distinct, reconcile B3 branch
+`codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send the
+exact resulting bytes to a non-author reviewer and run the live museum after
+signoff. Do not represent either branch as live from local tests or branch
+existence. B0's original `DRIFT` record stays immutable; remaining canonical
+installation reconciliation belongs to B6.
 
 **HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).

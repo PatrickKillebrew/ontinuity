@@ -1042,3 +1042,84 @@ single next action now names Phase 0. Conversation record:
 Reconcile every pending punch item against deployed code, receipts, and later rulings; remove stale
 and duplicate entries from pending; map real remainder to RC-1..RC-10 or post-1.0/horizon/discard;
 then select the first dependency-bound build.
+
+## FOLD — ChatGPT Work Railway admission failure resolved — 2026-09-04
+
+**OBSERVED**
+- The corpus-prescribed curl path initially failed before DNS/HTTP because ChatGPT Work command networking had public internet access disabled. No HTTP status existed, so this was not evidence of a Railway outage, 403, or invalid credential.
+- The separate browser surface reached the MAIN public cockpit successfully. That established split capability surfaces: browser reachability does not establish authenticated command hands.
+
+**CORRECTION + PROOF**
+- Official platform control identified and enabled: Settings -> Data controls -> Work network access -> Allow public internet access.
+- The same corpus-prescribed curl then reached MAIN. The header-authenticated `__probe__` returned the designed HTTP 403 plus the actual 19-op live courier allowlist: backup_db, bootstrap_gate, commit_file, commit_self, deploy, mailbox_ack, mailbox_fetch, mailbox_peek, mailbox_purge, mailbox_reclaim, mailbox_send, read_file, read_journal, read_repo, register_egress, restart_workspace, seed_tenant, write_file, you_there.
+- `CONTROL_QUICKBOOT.md` and `OPERATING_MANUAL.md` now classify the pre-HTTP failure as `WORK_EGRESS_DENIED`, forbid client-shopping (Python/urllib/httpx) around the corpus method, and require the same documented curl to be retried after admission is enabled.
+- The probe example now carries `DIAG_KEY` in `X-Diag-Key`, which `app.py` accepts, rather than placing it in the URL.
+
+**BOUNDARY**
+This is a platform admission correction, not a new MCP/adapter layer and not an Ontinuity architecture change. The July 20 corpus reversal remains controlling: existing HTTPS hands + mailbox are the portable interface.
+
+## FOLD — post-1.0 courier evolution parked without moving the finish line — 2026-09-04
+
+**OPERATOR RULING**
+Document the courier improvements discovered during architectural evaluation and work on them only after the current Ontinuity 1.0 finish line.
+
+**PRESERVED**
+- `live/POST_1_0_COURIER_EVOLUTION.md` records the courier as the portable constitutional narrow waist, not a workaround awaiting replacement.
+- B1 identity-bound, short-lived capabilities remain inside 1.0 because RC-2/RC-3 already require them.
+- Versioned schemas, replay/idempotency safety, end-to-end trace export, a deterministic provider-neutral client, Governor SSE, and A2A/MCP/CloudEvents/OpenTelemetry compatibility are parked post-1.0 unless an existing release acceptance test fails without one.
+- Future façades may translate into the mailbox lifecycle; they may not create a parallel work path or source of truth.
+
+**STATE LEFT**
+Documentation only. No runtime, mailbox, provider, credential, deployment, or current release-block dependency changed. The controlling next action remains B1/B3 as ordered by `live/ONTINUITY_1_0_BOARD.md`.
+
+## FOLD — B5-P challenged research-preservation proof — 2026-09-05
+
+**RELEASE CONDITION**
+- RC-6 / B5-P: prove that a live Researcher session can be challenged, corrected, closed, and reconstructed from durable evidence without relying on the chat transcript or operator memory.
+
+**CLAIM TESTED**
+- The research-preservation substrate can retain the exact evidence needed to reconstruct a challenged Ontinuity session: raw role transcripts, model-call envelopes, challenge and ruling, explicit retraction, reproducibility manifest, artifacts, and close receipt.
+- This specimen did **not** test the separate comparative claim that Ontinuity reduces fabrication by at least 50 percent versus the same frontier model acting alone. A protocol is proposed but has not yet passed its preregistration freeze and has not been run; see `live/experiment/B5P_LIVE_2026-09-05_COMPARATIVE_TEST_PLAN.md`.
+
+**EVIDENCE OBSERVED**
+- Reviewed runtime commit: `33267533e78515857d71d0c6b53a93f298ad6fe7`.
+- Railway deployment `2561a8e1-7426-4a54-ab84-1710dce91d41` reached SUCCESS at that exact commit; the deployed `app.py` blob was `35502fd0ef1324cd819934615a05ccff4dab0e2f` (263,487 bytes).
+- Box install wrote `db.py` SHA-256 `3a265211a45f1cfe394316288f76473fe39fb60ff55acc31292ffcd6e0049a8e` and `workspace_db_endpoint.py` SHA-256 `2125b2953b66c3ab583fba947b34d4c49e2f1ea5471da37d8f97f595c25608d0`; restart, health, and SQLite integrity checks were clean.
+- Existing history survived the install: all 22 sampled table counts were unchanged and 327 prior sessions remained.
+- Live specimen session `2026-09-05_09-37-00` completed normally in three cycles. One unsupported numerical claim triggered one Priority 4 Challenger event, one Parietal UPHOLD ruling, and one explicit Researcher retraction/correction before the closing gate admitted the result.
+- Close receipt `351` recorded `outcome=ok`, six transcripts, two artifacts, and the clean work product.
+- Durable evidence added 6 transcripts, 1 challenge, 3 behavioral observations, 14 model-call envelopes, 1 reproducibility manifest, 1 retraction, 2 artifacts, and 1 receipt.
+- All 6 transcript hashes, all 42 model-envelope component hashes, and both manifest hashes recomputed correctly: 50 of 50 verified digests.
+- Exact-value scans found no MAILBOX_KEY, DIAG_KEY, Railway token, or GitHub token in the downloaded specimen evidence.
+
+**CHANGE MADE**
+- Preserved the proof, boundaries, operational acceptance record, and current release state in the research contract, board, handoff, manual, punch list, queue, experiment plan, and conversation record.
+- Imported the already-authored ChatGPT Work network-admission correction and post-1.0 courier-evolution ruling so the same failure is not rediscovered and the 1.0 finish line is not expanded.
+- Independent close review rejected the first documentation bytes rather than signing through three defects: unfrozen comparative work was called preregistered, three lines failed the whitespace gate, and the worker manual remained at 17 operations while live/Control held 19. The first two were corrected; the full worker corpus was then reread, both worker packets/manual were reconciled to the already-settled provider-neutral, 19-op, signer-deploys lifecycle, and ambiguous Control/Worker role summaries in the rubric and paradigm were aligned to the same rule.
+- A later independent review rejected the successor bytes before landing because the worker packet still counted four tests after defining five and because current Control instructions retained a second stale layer: provider-specific `/home/claude` paths and trailer, query-string diagnostic credentials, queue-head orientation, a retired firewall explanation, a future-mailbox claim, generic Control-deploy wording, and an Oracle process already shelved by the resolved punch list. Control corrected the current worker and Control entry points together. The resulting instruction contract uses the existing curl/HTTPS courier with `X-Diag-Key`, full-document reads, the latest queue-tail fold, provider/model/instance provenance, distinct operator-versus-host-platform admission, and the already-settled clean-non-author-signer landing rule. No runtime capability changed.
+- A successor review was stopped when its dispatched bytes changed and made no commit. Before stopping it caught two more ambiguous current phrases: the rubric's undefined "Operator-Signoff token" and the worker manual's `propose/commit` wording for a task author. They now name the real mailbox proposal + distinct-seat signoff + deploy gate, preserve the shared-key/B1 identity ceiling, and state that an author stages/proposes but never commits or deploys its own bytes.
+- The next exact-byte review rejected another roadmap-currentness defect before signing: `ONTINUITY_1_0_COMPLETION_PLAN.md` still ordered Phase 0 and prohibited B1 after B0/Phase 0 completed, while `THE_PARADIGM.md` still named broad API-worker/self-hosted-Control migration as the current frontier despite the board deferring automatic large worker populations beyond 1.0. The current plan now selects B1 review plus distinct-owner B3 reconciliation; structural bootstrap remains release work, while broad auto-spawn, Control migration, and model-tiering are post-1.0 directions unless evidence promotes them. No runtime behavior changed and no rejected hash was committed.
+- A final forward-surface scan reconciled three related residues: the resolved punch-list plan entry still called Phase 0 immediate; B6 still said it was blocked by completed B0; and the board represented the Governor worker panel as deployed while the handoff records only candidate branch `5e3310d`. The resolved view now selects B1/B3, B6 is baselined by B0, and the non-live Governor candidate is assigned to B6/minimum B9 observability. Historical Governor-first folds remain history rather than current deployment evidence.
+- No new runtime behavior was authored in this close; the runtime under proof remains the independently reviewed B5-P commit above.
+
+**TEST RESULT**
+- B5-P runtime suite: 33 of 33 tests passed.
+- Live challenged specimen: PASS for evidence capture and reconstruction.
+- Comparative fabrication-reduction claim: NOT TESTED / no performance conclusion permitted.
+
+**NEW OR REMAINING DEBT**
+- The legacy clean `artifacts.content` representation normalizes Unicode em dashes to two hyphens. The exact original survives in the final model-call envelope and verified hash, so reconstruction is possible, but immutable artifact digests and stronger artifact-to-call joins remain B5/B6 debt.
+- `session_executions` was not populated by this external-mailbox specimen; its manifest correctly records external occupant identity as unverified pending B1/B2.
+- B1 identity-bound scoped capability admission and B3 fail-closed completion remain candidate branches awaiting independent reconciliation/review.
+- The paired comparative test plan remains intentionally unrun.
+- ChatGPT Work public-network admission remains a platform prerequisite separate from Ontinuity operator authorization.
+- Bootstrap mechanical orientation remains OPEN: repository defaults are 12/15 operations versus live 19 and the caller can override the canonical count. The manual packet is required until B1/B6 provides one server-derived, reviewed, live-proved value.
+
+**STATE LEFT**
+- B5-P is operationally accepted at the reviewed runtime commit. No earlier corpus history, deployed behavior, or database rows were removed or rewritten.
+- The worker contract did not change semantically; stale worker instructions were corrected to match it. The two-party gate remains: the author of exact bytes cannot be their clean reviewer/deployer, and the clean signer lands only the exact reviewed version through admitted capabilities.
+- The last successful engine read after the specimen was idle and the latest mailbox read returned turn 5 with `waiting:false`. A later `/diag/engine` repeat was cancelled by the ChatGPT Work host before execution/HTTP; no client substitution or retry was made, and it supplies no contrary Railway state. This close changes documentation only.
+- Final close still requires a clean independent review of these documentation bytes plus repository commit/readback.
+
+**NEXT**
+- Independently review and reconcile B1, then independently rebase/review B3 in the dependency order recorded by `live/ONTINUITY_1_0_BOARD.md`.
