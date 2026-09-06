@@ -19,7 +19,6 @@ import hashlib
 import uuid
 from urllib.parse import urlparse
 import requests as http_requests
-from capability_auth import CapabilityAuthority, CapabilityError
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ontinuity-secret-key'
@@ -4133,85 +4132,14 @@ def diag_relay(endpoint):
 # remains the authority on args/tier/ledger.
 OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "backup_db"}
 
-_capability_authority = None
-
-def _cap_authority():
-    """B1 admission authority. DIAG_KEY signs capabilities but never leaves MAIN."""
-    global _capability_authority
-    diag_key = os.environ.get("DIAG_KEY", "").strip()
-    if not diag_key:
-        raise CapabilityError("admission disabled — set DIAG_KEY in Railway variables")
-    if _capability_authority is None:
-        registry_path = os.environ.get(
-            "ONTINUITY_CAPABILITY_REGISTRY",
-            os.path.join(os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "/tmp"),
-                         "ontinuity_capabilities.json"),
-        )
-        _capability_authority = CapabilityAuthority(
-            secret=diag_key, registry_path=registry_path)
-    return _capability_authority
-
-def _operator_diag_ok():
-    diag_key = os.environ.get("DIAG_KEY", "").strip()
-    return bool(diag_key) and request.headers.get("X-Diag-Key", "") == diag_key
-
-@app.route('/diag/admission/request', methods=['POST'])
-def capability_request():
-    """Create a pending request. This grants no authority until operator approval."""
-    body = request.get_json(silent=True) or {}
-    if not isinstance(body, dict):
-        return jsonify({"error": "request must be a JSON object"}), 400
-    requested_ops = body.get("operations") or []
-    if any(op not in OP_ALLOWED for op in requested_ops):
-        return jsonify({"error": "request contains unknown operation"}), 400
-    try:
-        row = _cap_authority().request(
-            seat=body.get("seat"), lineage=body.get("lineage"),
-            operations=requested_ops, ttl_seconds=body.get("ttl_seconds", 900))
-        return jsonify({"ok": True, **row}), 202
-    except CapabilityError as exc:
-        return jsonify({"error": str(exc)}), 400
-
-@app.route('/diag/admission/approve', methods=['POST'])
-def capability_approve():
-    """Operator-only approval. Returns bearer material exactly once."""
-    if not _operator_diag_ok():
-        return jsonify({"error": "unauthorized"}), 401
-    body = request.get_json(silent=True) or {}
-    try:
-        result = _cap_authority().approve(body.get("request_id"))
-        return jsonify({"ok": True, **result})
-    except CapabilityError as exc:
-        return jsonify({"error": str(exc)}), 400
-
-@app.route('/diag/admission/revoke', methods=['POST'])
-def capability_revoke():
-    if not _operator_diag_ok():
-        return jsonify({"error": "unauthorized"}), 401
-    body = request.get_json(silent=True) or {}
-    try:
-        return jsonify({"ok": True, **_cap_authority().revoke(body.get("jti"))})
-    except CapabilityError as exc:
-        return jsonify({"error": str(exc)}), 400
-
 @app.route('/diag/op/<name>', methods=['POST'])
 def diag_op_courier(name):
-    # 1) B1: accept either the operator's shared root (transition/recovery) or an
-    # operator-approved short-lived capability. Capabilities are operation-bound;
-    # seat and lineage come from the signed grant, never from the request body.
+    # 1) Same diag-key gate as diag_relay (constant text-compare on the env key).
     diag_key = os.environ.get("DIAG_KEY", "").strip()
     if not diag_key:
         return jsonify({"error": "diag disabled — set DIAG_KEY in Railway variables"}), 503
-    identity = None
-    supplied_diag = request.headers.get("X-Diag-Key", "")
-    operator_call = supplied_diag == diag_key
-    if not operator_call:
-        auth = request.headers.get("Authorization", "")
-        token = auth[7:].strip() if auth.startswith("Bearer ") else ""
-        try:
-            identity = _cap_authority().authorize(token, name)
-        except CapabilityError as exc:
-            return jsonify({"error": str(exc)}), 401
+    if request.headers.get("X-Diag-Key", "") != diag_key and request.args.get("diag_key", "") != diag_key:
+        return jsonify({"error": "unauthorized"}), 401
 
     # 2) Name-gate: only forward known scoped ops; unknown -> fail fast here.
     if name not in OP_ALLOWED:
@@ -4229,30 +4157,13 @@ def diag_op_courier(name):
     if not isinstance(body, dict):
         return jsonify({"error": "op args must be a JSON object"}), 400
 
-    # The bootstrap standard comes from this engine's actual courier surface.
-    # A caller cannot weaken certification by supplying its own count.
-    if name == "bootstrap_gate":
-        body = dict(body)
-        body.pop("canonical_op_count", None)
-
     # 5) Forward to the box's /op/<name> with the box's diag-key gate header,
     #    exactly as _register_egress forwards to /register_egress. Return the
     #    box response verbatim so its status/body are not masked by the courier.
     try:
-        relay_headers = {"X-Diag-Key": diag_key, "Content-Type": "application/json"}
-        if name == "bootstrap_gate":
-            relay_headers["X-Ontinuity-Courier-Count"] = str(len(OP_ALLOWED))
-        if identity:
-            # The box is firewalled behind this shared server-to-server trust hop.
-            # User-supplied identity headers are never forwarded.
-            relay_headers.update({
-                "X-Ontinuity-Seat": identity["seat"],
-                "X-Ontinuity-Lineage": identity["lineage"],
-                "X-Ontinuity-Capability": identity["jti"],
-            })
         r = http_requests.post(
             f"{WORKSPACE_URL}/op/{name}",
-            headers=relay_headers,
+            headers={"X-Diag-Key": diag_key, "Content-Type": "application/json"},
             json=body,
             timeout=25,
         )

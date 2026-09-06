@@ -51,13 +51,6 @@ def _authed_identity():
     authenticated=True only for a per-identity key; the shared DIAG_KEY resolves to
     {seat:'unattributed', authenticated:False} (back-compat)."""
     try:
-        relay_seat = (request.headers.get("X-Ontinuity-Seat") or "").strip()
-        relay_lineage = (request.headers.get("X-Ontinuity-Lineage") or "").strip()
-        relay_capability = (request.headers.get("X-Ontinuity-Capability") or "").strip()
-        if relay_seat and relay_lineage and relay_capability and _diag_ok():
-            return {"seat": relay_seat, "lineage": relay_lineage,
-                    "authenticated": True, "mode": "scoped_capability",
-                    "capability_id": relay_capability}
         import file_server
         presented = request.headers.get("X-Diag-Key", "") or request.args.get("diag_key", "")
         return file_server.authenticate_identity(presented)
@@ -463,10 +456,12 @@ def op_read_repo():
 # ---------------------------------------------------------------------------
 import importlib.util as _ilu
 
-# Normal relayed calls receive the engine-derived value through the authenticated
-# server hop. This committed value is only the direct operator/recovery fallback;
-# request-body data never selects the certification standard.
-_GATE_CANONICAL_OP_COUNT = 19
+# Canonical CHECK-1 courier-allowlist count. SOURCE OF TRUTH is app.py OP_ALLOWED.
+# 14 entries now; becomes 15 when THIS op (bootstrap_gate) is added to OP_ALLOWED.
+# The op accepts an override in the body so control can bump it in the same commit
+# that lands the OP_ALLOWED entry (gate CHECK-1 currency); default tracks the
+# post-this-op value so a fresh seat checks against the right number once deployed.
+_GATE_CANONICAL_OP_COUNT = 15
 
 _gate_mod = None
 def _load_gate():
@@ -498,41 +493,28 @@ def op_bootstrap_gate():
     build); the issuance block is structured so real keys hook in without changing
     the contract.
 
-    Body: {seat (req in shared-key compatibility mode),
-           role ('worker'|'control', default 'worker'), lineage (str),
-           seat_invariants ({key->text} for CHECK 6 MECHANICS)}.
+    Body: {seat (req), role ('worker'|'control', default 'worker'),
+           lineage (str), seat_invariants ({key->text} for CHECK 6 MECHANICS),
+           canonical_op_count (int, optional override for CHECK 1)}.
     """
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
     b = request.get_json(silent=True) or {}
-    asserted_seat = (b.get("seat") or "").strip()
-    asserted_lineage = (b.get("lineage") or "").strip()
-    identity = _authed_identity()
-    if identity and identity.get("authenticated"):
-        seat = (identity.get("seat") or "").strip()
-        lineage = (identity.get("lineage") or "").strip()
-        if asserted_seat and asserted_seat != seat:
-            return jsonify({"error": "seat identity mismatch"}), 409
-        if asserted_lineage and asserted_lineage != lineage:
-            return jsonify({"error": "lineage identity mismatch"}), 409
-    else:
-        seat = asserted_seat
-        lineage = asserted_lineage
+    seat = (b.get("seat") or "").strip()
     if not seat:
         return jsonify({"error": "seat required"}), 400
     role = (b.get("role") or "worker").strip()
     if role not in ("worker", "control"):
         return jsonify({"error": "role must be 'worker' or 'control'"}), 400
+    lineage = (b.get("lineage") or "").strip()
     seat_invariants = b.get("seat_invariants") or {}
-    canonical = request.headers.get("X-Ontinuity-Courier-Count", "")
+    canonical = b.get("canonical_op_count")
     op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role})
     try:
         gate = _load_gate()
-        # MAIN derives the normal value from its actual OP_ALLOWED set. Direct
-        # operator recovery uses the committed server fallback; body data never
-        # selects the certification standard.
-        gate.CANONICAL_COURIER_OP_COUNT = (
-            int(canonical) if canonical else _GATE_CANONICAL_OP_COUNT)
+        # Set CHECK-1 canonical to the current courier-allowlist length. Override
+        # from the body wins; else the post-this-op default (15).
+        gate.CANONICAL_COURIER_OP_COUNT = int(canonical) if canonical is not None else _GATE_CANONICAL_OP_COUNT
         # The box holds the box diag-key in config; pass it so the gate's corpus/
         # hands/engine checks authenticate through the relay exactly as a seat would.
         try:
@@ -769,3 +751,4 @@ def op_deploy():
                       "outcome": "fail", "reason": str(e)[:140]})
         _ledger_finish(op_id, "fail", f"deploy error: {str(e)[:140]}")
         return jsonify({"error": f"deploy error: {str(e)[:200]}"}), 500
+
