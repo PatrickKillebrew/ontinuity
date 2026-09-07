@@ -36,7 +36,7 @@ Endpoints:
 """
 
 import json
-import os, json, glob, uuid, difflib, secrets, subprocess, threading, platform, urllib.parse
+import os, json, glob, uuid, difflib, secrets, subprocess, threading, platform, urllib.parse, urllib.request
 from datetime import datetime, timezone
 from functools import wraps
 from flask import Flask, request, jsonify, render_template_string
@@ -50,6 +50,14 @@ except ImportError:
     print("[SERVER] workspace_db_endpoint.py not found — database endpoints disabled.")
 
 app = Flask(__name__)
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
 
 if DB_INTEGRATION:
     app.register_blueprint(db_blueprint)
@@ -1200,7 +1208,7 @@ def search():
             "Accept-Encoding": "gzip",
             "X-Subscription-Token": brave_key
         })
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with _NO_REDIRECT_OPENER.open(req, timeout=15) as resp:
             import gzip
             raw = resp.read()
             if resp.headers.get("Content-Encoding") == "gzip":
@@ -1248,10 +1256,10 @@ _GOV_BOUNDARY = "2026-06-08_0"
 def _gov_diag(base, path, params):
     cfg = load_config()
     dk = cfg.get("diag_key", "")
-    p = dict(params); p["diag_key"] = dk
-    url = f"{base}{path}?{_ug_parse.urlencode(p)}"
+    url = f"{base}{path}?{_ug_parse.urlencode(dict(params))}"
+    req = _ug_req.Request(url, headers={"X-Diag-Key": dk})
     try:
-        return json.loads(_ug_req.urlopen(url, timeout=4).read().decode())
+        return json.loads(_NO_REDIRECT_OPENER.open(req, timeout=4).read().decode())
     except Exception as e:
         return {"error": str(e)}
 
@@ -1607,5 +1615,3 @@ if __name__ == "__main__":
     brave_key = os.environ.get("BRAVE_API_KEY", "").strip()
     print(f"[SERVER] Brave Search: {'configured' if brave_key else 'not configured (set BRAVE_API_KEY env var)'}")
     app.run(host=host, port=port, debug=False)
-
-

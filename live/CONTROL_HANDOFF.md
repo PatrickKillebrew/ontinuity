@@ -1,5 +1,5 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-05 by successor Control (`chatgpt-work:gpt-5.6-sol`) — B0 complete; B5-P raw-evidence boundary operational after challenged live proof.
+# Updated 2026-09-07 by successor Control (`chatgpt-work:gpt-5.6-sol`) — corrected B1 candidate assembled locally on the rollback tree; uncommitted, rejected three times and corrected, awaiting fourth review, and not live.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
 ## STATE AT FOLD
@@ -19,8 +19,16 @@
   upheld, retracted, and replaced with a falsifiable paired-control plan at
   `live/experiment/B5P_LIVE_2026-09-05_COMPARATIVE_TEST_PLAN.md`. That plan has
   not been run.
-- Preserved candidates remain non-live: B1 branch
-  `codex/b1-scoped-identity` at `a31ffe1`; B3 branch
+- The previous seven-file B1 candidate was rejected by integration review and
+  rolled back. Its capability/identity core was salvaged into corrected local
+  branch `codex/b1-corrected` on rollback commit `3476ed8`. The corrected
+  candidate is uncommitted, has no clean review, and is not live. Its exact file boundary
+  is enumerated in `live/B1_INSTALL_MANIFEST.json`. The earlier pre-second-pass
+  bytes passed 92 bounded tests; those results are not attributed to the revised
+  bytes. The prior freeze passed all 111 then-current tests in bounded
+  invocations using the existing project test environment, plus
+  Python/JavaScript syntax and diff hygiene.
+  Other preserved non-live candidates: B3 branch
   `codex/b3-fail-closed-completion` at `12dea5e`; Governor branch
   `codex/governor-observability` at `5e3310d`.
 - PLATFORM SUCCESSION PROVED: a fresh ChatGPT Work conversation inherited Control through the existing corpus/boot and 19-op HTTPS courier, then occupied the external Researcher seat in the real engine. No OpenAI-specific engine rebuild or bridge was required.
@@ -40,13 +48,47 @@
   scoped credential-bearing remote request per tool call. A DNS/host/policy
   denial before HTTP is `WORK_EGRESS_DENIED`, not evidence about Railway or the
   credential. Browser reachability is observation only, not authenticated hands.
-- Independent close review corrected worker-corpus drift: `WORKER_MANUAL.md`,
-  both boot packets, and the rubric/paradigm role summaries now match the live
-  19-op courier, provider-neutral identity placeholders, header auth,
-  latest-fold orientation, and the settled signer-deploys two-party chain. The
-  same review found the bootstrap gate's
-  repository defaults stale at 12/15 versus live 19 with a caller override;
-  that remains OPEN and an overridden pass is not mechanical orientation.
+- The corrected local B1 candidate now derives the bootstrap operation count
+  from the server allowlist, removes the caller override, reads the latest
+  bounded queue fold, requires capability proof, refuses authenticated
+  redirects, and validates all engine booleans. These corrections are local
+  evidence only until independent review and an authorized exact-byte cutover.
+- A second local boundary pass caught and corrected three omissions before
+  review: the standalone gate fallback/spec still described 12 operations; the
+  running box Governor path is embedded in `live/box/file_server.py`, not loaded
+  from the separate source fragment; and mailbox ACK-generated results lacked
+  derived author columns. The manifest now includes the real box server and
+  explicit resident/tombstone actions. This is still author-side local work.
+- The first independent review reproduced the manifest and 107-test evidence but
+  rejected five release defects: stale board/plan candidate targets, unsafe
+  `read_repo` path/ref interpolation, a capability response that asked for a
+  forbidden GitHub token, stale global self-asserted-identity wording, and no
+  mechanically ordered cutover. Those findings are corrected locally. The same
+  correction also aligns mailbox review eligibility with the canonical distinct-
+  seat rule and clarifies that Control has five read groups covering six files.
+  Because these are author-side corrections, a new clean review is required.
+- The second independent review confirmed all five first-review blockers were
+  corrected and independently reproduced 111 tests, but rejected three new
+  release defects: MAIN timed out a `you_there` relay before the box's long-poll
+  cap; `live/control_loop.py` referenced the removed `DIAG` variable at direct
+  startup; and the bootstrap specification overclaimed corpus, hands, and engine
+  facts and still described a now-closed manual gap. It also identified a
+  malformed `../name` repository-slug edge case. The local correction gives the
+  long poll a bounded transport margin, makes the helper provider-neutral and
+  capability-fail-clean, makes the specification match the runnable exactly,
+  tightens slug validation, and updates stale legacy-auth comments. A third
+  clean review is required; the second REJECT remains part of the evidence.
+  The refrozen correction passes all 114 current tests plus Python compilation,
+  extracted MAIN JavaScript syntax, manifest integrity/coverage, JSON parsing,
+  and diff hygiene. Those are still author-side results, not acceptance.
+- The third independent review reproduced the exact freeze, all 114 tests, and
+  every prior correction, but rejected one remaining spec/runtime mismatch:
+  CHECK 6 computed per-invariant coverage and manual-ratification findings yet
+  returned only a summary on success. The runnable now returns a stable finding
+  object for every processed invariant on both success and failure, with an
+  end-to-end assertion of all four successful findings. The stale gate comment
+  and board rejection count are also corrected. These new author-side bytes
+  require a fourth clean review.
 
 ## WHAT SHIPPED THIS SHIFT — THE MAILBOX FIX (root-cause, deployed, proven)
 THE BUG (fully diagnosed): the seat_mailbox is a TASK-DISTRIBUTION queue (atomic claim + lease so
@@ -93,17 +135,20 @@ engine + write_file/restart for the box, under direct operator instruction (syst
 autonomous worker work).
 
 ## THE SINGLE NEXT ACTION
-**CURRENT CONTROLLING ACTION (2026-09-05): resume B1 and B3 from their
-preserved candidates now that B5-P is operational.** First send B1 branch
-`codex/b1-scoped-identity` at `a31ffe1` to an independent reviewer against the
-mailbox threat audit and B1 acceptance tests, including removal of the
-caller-controlled bootstrap canonical-count boundary. In parallel only where review
-ownership stays distinct, reconcile B3 branch
-`codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send the
-exact resulting bytes to a non-author reviewer and run the live museum after
-signoff. Do not represent either branch as live from local tests or branch
-existence. B0's original `DRIFT` record stays immutable; remaining canonical
-installation reconciliation belongs to B6.
+**CURRENT CONTROLLING ACTION (2026-09-07): independently review the exact
+manifest-defined corrected B1 candidate on `codex/b1-corrected`.** It is based
+on rollback commit `3476ed8`, is uncommitted, has been rejected three times and
+corrected locally, and is not live. The next disposition must come from a fourth
+clean reviewer. The
+review must cover the capability/admission boundary, operator approval and
+revocation surface, bootstrap mechanics, active credential-bearing callers,
+boot packets, public removals and private-transfer receipt, and every hash in
+`live/B1_INSTALL_MANIFEST.json`. Only after a clean review and explicit operator
+authorization may the exact reviewed bytes be committed, transitioned,
+deployed, or installed and the Control/Worker capability boots proved. Credential
+rotation is deferred launch/cutover hygiene by operator ruling and is not a
+current B1 review gate. Do not resume B3 until this B1 review disposition is
+durably recorded. B0's original `DRIFT` record stays immutable.
 
 **HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).

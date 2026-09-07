@@ -1123,3 +1123,104 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
 
 **NEXT**
 - Independently review and reconcile B1, then independently rebase/review B3 in the dependency order recorded by `live/ONTINUITY_1_0_BOARD.md`.
+
+## FOLD — corrected B1 candidate recovered on rollback tree — 2026-09-07
+
+**OBSERVED**
+- The earlier seven-file B1 candidate passed its narrow tests but omitted real bootstrap, active-service, operator-approval, capability-scope, admission-bound, boot-packet, install-manifest, and integration boundaries. It was rolled back and must not be redeployed unchanged.
+- The public Keyboard Helper material had already been transferred to the private intake repository; `live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md` preserves the authenticated destination and exact readback hashes.
+
+**CHANGE MADE LOCALLY**
+- Salvaged the capability/identity core onto local branch `codex/b1-corrected` at rollback base `3476ed8` and narrowed initial model access to the certifiable B1 operation set.
+- Added bounded, expiring admission requests; operator inspection, approval, and revocation in the existing MAIN interface; identity-derived courier and mailbox behavior; corrected bootstrap mechanics; capability-only Control and Worker boot packets; header-only active callers; public-secret regression checks; Keyboard Helper public removals; and an exact install/removal manifest.
+- A second author-side boundary pass caught the standalone gate's stale 12-op fallback/spec, the real Governor runtime embedded in `live/box/file_server.py`, missing ACK-reply author columns, silent registry reset on corruption, redirect-following credential callers, an unbounded model request/mail body, unrestricted capability `read_repo`, the installed alert-target drift, and an omitted laptop retirement action. Those are corrected locally and covered by the expanded manifest/regression checks; they were not live-system observations or independent review.
+- `live/B1_INSTALL_MANIFEST.json` defines the candidate boundary. The candidate is uncommitted, unreviewed, and not live. No commit, push, deploy, box write, service restart, or credential rotation occurred.
+- Operator ruling: current credential risk is accepted before public launch. Rotation remains later launch/cutover hygiene, not the current B1 review gate.
+
+**TEST RESULT**
+- The pre-second-pass candidate passed 59 focused B1 tests and 33 legacy baseline tests: 92 of 92. The second pass changed runtime and test bytes, so that result is historical evidence and is not claimed for the revised candidate.
+- The revised candidate passes all 107 current tests in bounded invocations: 43 dependency-free checks plus 64 Flask-dependent capability, mailbox, courier, and research-preservation checks in the existing project test environment. Python compilation, extracted MAIN JavaScript syntax, manifest hashes, and `git diff --check` also pass locally with warnings treated as errors where supported.
+- This is author-side local evidence, not independent review or live-transition proof.
+
+**STATE LEFT**
+- MAIN and FARM remain on rollback commit `3476ed8`; no live state was changed.
+- The exact local candidate awaits clean review. The prior `a31ffe1` candidate is superseded and is not the review target.
+
+**NEXT**
+- Independently review the exact `live/B1_INSTALL_MANIFEST.json` candidate; only after a clean disposition and explicit operator authorization may its exact bytes be committed or transitioned and the Control/Worker capability boots proved.
+
+## FOLD — first independent B1 review rejected and corrected locally — 2026-09-07
+
+**RELEASE CONDITION**
+- RC-2 / B1: operator-approved, short-lived, identity-bound capabilities with no model-held master credential and a reproducible transition boundary.
+
+**INDEPENDENT DISPOSITION**
+- REJECT. The reviewer independently reproduced the rollback base, all 36 then-current hashes, four removals, complete candidate boundary, 107/107 tests, compilation, JavaScript syntax, JSON, and diff hygiene.
+- Five release blockers remained: the board and completion plan named the superseded B1 candidate; capability `read_repo` allowed unsafe path/ref interpolation; its success response told a model to supply a forbidden GitHub token; paradigm/rubric ceilings still globally called identity self-asserted; and the manifest lacked a mechanically ordered box-to-engine cutover.
+
+**CHANGE MADE LOCALLY AFTER REJECTION**
+- The board and completion plan now identify `codex/b1-corrected` at rollback base `3476ed8` and explicitly exclude the superseded candidate as a review/deployment target.
+- `read_repo` now validates repository-relative traversal-free paths, owner/name repository slugs, and simple safe refs; URL-encodes each component; and tells capability callers that authenticated reads are operator-recovery-only.
+- Paradigm and rubric now distinguish capability-authenticated derived identity from the legacy/operator shared-root recovery ceiling.
+- The manifest and manual now prescribe eight ordered fail-stop steps: preflight, backward-compatible box install, box proof, active-service install, MAIN deploy, FARM deploy, capability proofs, and laptop retirement.
+- The same correction aligns mailbox review eligibility with the existing distinct-seat deploy rule so two distinct seats may review despite shared provider/model lineage, and clarifies Control's five read groups cover six files.
+
+**TEST RESULT**
+- 111 current tests pass in bounded local invocations with warnings treated as errors. Manifest hashes, exact changed-file coverage, deletion base hashes, Python compilation, extracted MAIN JavaScript syntax, JSON parsing, and `git diff --check` pass after the correction.
+- This is author-side correction evidence. It does not reverse or replace the independent REJECT and is not a clean sign-off.
+
+**STATE LEFT**
+- Candidate remains local, uncommitted, unreviewed after correction, and not live. MAIN, FARM, box, laptop, services, and credentials were not changed.
+
+**NEXT**
+- Send the refreshed exact `live/B1_INSTALL_MANIFEST.json` bytes to a new clean independent reviewer; only a clean disposition may advance to an explicitly authorized commit/cutover.
+
+## FOLD — second independent B1 review rejected and corrected locally — 2026-09-07
+
+**RELEASE CONDITION**
+- RC-2 / B1: the exact candidate must survive independent review across the full engine, box, active-service, bootstrap, and operator boundary.
+
+**INDEPENDENT DISPOSITION**
+- REJECT. The second reviewer confirmed every first-review blocker was corrected, independently reproduced all 111 then-current tests, and verified the manifest boundary and hashes.
+- Three release blockers remained: MAIN's fixed 25-second courier timeout could abandon a box `you_there` request that legitimately waits 60–90 seconds and later claims a message; `live/control_loop.py` still referenced the deleted `DIAG` name at direct startup; and `live/specs/verified_bootstrap_gate.md` promised corpus activity timestamps, a generic `ok:true` hands envelope, and engine fields the runnable does not return. The specification also called the implemented no-self-poll manual probe a known gap.
+- One concrete nonblocking hardening finding was accepted: the repository-slug validator admitted `../name`. Several source comments also still described scoped identity as waiting for future per-identity keys even though B1 capabilities already derive identity at MAIN.
+
+**CHANGE MADE LOCALLY AFTER REJECTION**
+- MAIN now reserves a bounded 100-second relay timeout for the box's 90-second `you_there` cap plus transport margin; all other courier operations retain 25 seconds. Regression tests assert both sides of that distinction.
+- `live/control_loop.py` now checks `ONTINUITY_CAPABILITY` at direct startup and places its configurable seen-state under `XDG_STATE_HOME` or `/tmp`, with no provider-specific home path. A subprocess regression proves missing capability produces structured JSON instead of `NameError`.
+- The bootstrap specification now states the runnable's exact query, returned facts, boolean engine contract, capability-versus-direct hands paths, implemented manual ratification, and current candidate status without claiming unimplemented fields.
+- Repository slugs now require an alphanumeric first character in both owner and name, rejecting dot-segment components, and scoped-versus-legacy identity comments match current behavior.
+
+**TEST RESULT**
+- All 114 current tests pass in one bounded local invocation with warnings treated as errors, including the new timeout, helper-entrypoint, and slug cases. Python compilation, extracted MAIN JavaScript syntax, JSON parsing, exact manifest hashes and changed-file coverage, public-removal base hashes, and `git diff --check` also pass.
+- This is author-side correction evidence. It does not reverse either independent REJECT and is not a clean sign-off.
+
+**STATE LEFT**
+- Candidate remains local, uncommitted, without a clean review, and not live. No engine, box, laptop, service, repository remote, or credential state changed.
+
+**NEXT**
+- Send these unchanged, manifest-frozen bytes to a third clean independent reviewer; only a clean disposition may advance to an explicitly authorized commit/cutover.
+
+## FOLD — third independent B1 review rejected and corrected locally — 2026-09-07
+
+**RELEASE CONDITION**
+- RC-2 / B1: the manifest-bound bootstrap specification and runnable must expose the same audit contract on both pass and failure paths.
+
+**INDEPENDENT DISPOSITION**
+- REJECT. The third reviewer independently matched both freeze fingerprints, all 37 unique required-file hashes, all four removal proofs, the complete candidate boundary, all 114 tests, compilation, JavaScript syntax, JSON, and diff hygiene. Every first- and second-review correction remained valid.
+- One release blocker remained: CHECK 6 computed per-invariant token coverage and manual ratification but discarded those findings on success, while the manifest-bound specification promised them as the returned fact.
+- Nonblocking currency findings were a stale gate comment saying the implemented no-self-poll manual probe was absent and the board's headline counting only the first rejection.
+
+**CHANGE MADE LOCALLY AFTER REJECTION**
+- CHECK 6 now returns a stable JSON object on success with `role`, `summary`, and all four `findings`; each finding exposes `key`, `reproduced`, `coverage`, `manual_ratified`, and `pass`. The failure path returns the same finding structure through its first failure.
+- The current-candidate end-to-end test now asserts all four successful findings, their keys, coverage threshold, manual ratification, and pass state. The specification documents that exact structure, and the stale comment and board headline are corrected.
+
+**TEST RESULT**
+- All 114 current tests pass in one bounded local invocation with warnings treated as errors, including the successful CHECK 6 evidence assertions. Python compilation, extracted MAIN JavaScript syntax, JSON parsing, exact manifest hashes and changed-file coverage, public-removal base hashes, and `git diff --check` also pass.
+- This is author-side correction evidence. It does not reverse any independent REJECT and is not a clean sign-off.
+
+**STATE LEFT**
+- Candidate remains local, uncommitted, without a clean review, and not live. No engine, box, laptop, service, repository remote, or credential state changed.
+
+**NEXT**
+- Send these unchanged, manifest-frozen bytes to a fourth clean independent reviewer; only a clean disposition may advance to an explicitly authorized commit/cutover.

@@ -21,11 +21,17 @@ BOUNDARY = "2026-06-08_0"
 PORT = 8770
 DIAG = os.environ.get("DIAG_KEY") or input("Paste DIAG_KEY (stays in this process only): ").strip()
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
+
 def _diag(base, path, params):
-    params = dict(params); params["diag_key"] = DIAG
-    url = f"{base}{path}?{urllib.parse.urlencode(params)}"
+    url = f"{base}{path}?{urllib.parse.urlencode(dict(params))}"
+    req = urllib.request.Request(url, headers={"X-Diag-Key": DIAG})
     try:
-        return json.loads(urllib.request.urlopen(url, timeout=30).read().decode())
+        return json.loads(_NO_REDIRECT_OPENER.open(req, timeout=30).read().decode())
     except Exception as e:
         return {"error": str(e)}
 
@@ -75,7 +81,7 @@ _GOV_POOL_SEATS = ("any_worker",)  # the shared pool target, shown as a lane not
 #   _GOV_RETIRED_SEATS — hard override: these never show, even if recently active.
 _GOV_ACTIVE_SEATS = ("worker11", "worker22")   # <-- the live workers; edit as you scale
 _GOV_RETIRED_SEATS = ("worker2", "worker4", "worker-review", "control-seat",
-                      "kb_ipad", "kb_laptop", "operator")
+                      "operator")
 _GOV_ROSTER_WINDOW_H = 48  # backstop window (hours) for an unlisted but recent seat
 
 def _gov_workers_data():

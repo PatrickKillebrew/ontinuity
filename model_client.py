@@ -68,7 +68,9 @@ def _call_openai_format(url, api_key, model, system_prompt, messages, max_tokens
     delays = retries + [None]
     for attempt, delay in enumerate(delays):
         try:
-            r = _requests.post(url, headers=headers, data=_json.dumps(body), timeout=120)
+            r = _requests.post(
+                url, headers=headers, data=_json.dumps(body), timeout=120,
+                allow_redirects=False)
             if r.status_code == 429:
                 if delay is None:
                     raise ModelClientError("Rate limit — max retries exceeded.", status=429)
@@ -100,7 +102,9 @@ def _call_anthropic_format(url, api_key, model, system_prompt, messages, max_tok
     delays = retries + [None]
     for attempt, delay in enumerate(delays):
         try:
-            r = _requests.post(url, headers=headers, data=_json.dumps(body), timeout=120)
+            r = _requests.post(
+                url, headers=headers, data=_json.dumps(body), timeout=120,
+                allow_redirects=False)
             if r.status_code == 429:
                 if delay is None:
                     raise ModelClientError("Rate limit — max retries exceeded.", status=429)
@@ -132,7 +136,9 @@ def _call_gemini_native(url, api_key, model, system_prompt, messages, max_tokens
     delays = retries + [None]
     for attempt, delay in enumerate(delays):
         try:
-            r = _requests.post(endpoint, headers=headers, data=_json.dumps(body), timeout=120)
+            r = _requests.post(
+                endpoint, headers=headers, data=_json.dumps(body), timeout=120,
+                allow_redirects=False)
             if r.status_code == 429:
                 if delay is None:
                     raise ModelClientError("Rate limit — max retries exceeded.", status=429)

@@ -9,15 +9,21 @@ _GOV_MAIN = "https://web-production-7eaf8.up.railway.app"
 _GOV_FARM = "https://ontinuity-farm-production.up.railway.app"
 _GOV_BOUNDARY = "2026-06-08_0"
 
+class _GovNoRedirect(_ug_req.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+_GOV_OPENER = _ug_req.build_opener(_GovNoRedirect)
+
 def _gov_diag(base, path, params):
     cfg = load_config()
     dk = cfg.get("diag_key", "")
-    p = dict(params); p["diag_key"] = dk
-    url = f"{base}{path}?{_ug_parse.urlencode(p)}"
+    url = f"{base}{path}?{_ug_parse.urlencode(dict(params))}"
+    req = _ug_req.Request(url, headers={"X-Diag-Key": dk})
     try:
         # short timeout: this server is single-threaded and the Governor polls
         # every 6s; a slow upstream must fail fast or polls stack and saturate it.
-        return json.loads(_ug_req.urlopen(url, timeout=4).read().decode())
+        return json.loads(_GOV_OPENER.open(req, timeout=4).read().decode())
     except Exception as e:
         return {"error": str(e)}
 
@@ -76,7 +82,7 @@ _GOV_POOL_SEATS = ("any_worker",)  # the shared pool target, shown as a lane not
 #   _GOV_RETIRED_SEATS — hard override: these never show, even if recently active.
 _GOV_ACTIVE_SEATS = ("worker11", "worker22")   # <-- the live workers; edit as you scale
 _GOV_RETIRED_SEATS = ("worker2", "worker4", "worker-review", "control-seat",
-                      "kb_ipad", "kb_laptop", "operator")
+                      "operator")
 _GOV_ROSTER_WINDOW_H = 48  # backstop window (hours) for an unlisted but recent seat
 
 def _gov_workers_data():

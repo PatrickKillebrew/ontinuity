@@ -1,4 +1,4 @@
-"""
+r"""
 ONTINUITY GITHUB SYNC
 =====================
 Pushes files to the PatrickKillebrew/ontinuity GitHub repo.
@@ -23,7 +23,7 @@ from github import Github, GithubException
 # CONFIGURATION — set your token before first run
 # -----------------------------------------
 
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "").strip()
 REPO_NAME    = "PatrickKillebrew/ontinuity"
 
 # -----------------------------------------
@@ -62,6 +62,9 @@ def get_github_path(local_path):
 # -----------------------------------------
 
 def push_file(local_path):
+    if not GITHUB_TOKEN:
+        print("[SYNC] GITHUB_TOKEN is not configured")
+        return
     if not os.path.exists(local_path):
         print(f"[SYNC] File not found: {local_path}")
         return
@@ -115,6 +118,9 @@ def push_file(local_path):
 # -----------------------------------------
 
 if __name__ == "__main__":
+    if not GITHUB_TOKEN:
+        print("[SYNC] GITHUB_TOKEN is not configured")
+        sys.exit(1)
     if len(sys.argv) < 2:
         print("[SYNC] No file path provided")
         print("[SYNC] Usage: python push_to_github.py <filepath>")

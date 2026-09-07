@@ -275,9 +275,11 @@ Progress is measured by release conditions passing, not commits, corpus volume, 
 
 Resume the first two preserved runtime lanes in the board's order:
 
-1. Independently review B1 branch `codex/b1-scoped-identity` at `a31ffe1`
-   against the mailbox threat audit and RC-2 acceptance tests, including removal
-   of the caller-selected bootstrap canonical-count boundary.
+1. Independently review the exact `live/B1_INSTALL_MANIFEST.json` candidate on
+   `codex/b1-corrected`, based on rollback commit `3476ed8`, against the mailbox
+   threat audit and RC-2 acceptance tests. This must be a fourth clean review:
+   three earlier freezes were independently rejected and corrected locally. The superseded
+   `codex/b1-scoped-identity` candidate is not a review or deployment target.
 2. Where review ownership remains distinct, reconcile B3 branch
    `codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send
    the exact successor bytes to a different non-author reviewer before any

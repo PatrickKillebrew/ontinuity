@@ -43,19 +43,33 @@ import json, os, urllib.request, urllib.parse
 from datetime import datetime, timezone
 
 ENGINE = "https://web-production-7eaf8.up.railway.app"
-DIAG = (open("/home/claude/diagkey.txt").read().strip()
-        if os.path.exists("/home/claude/diagkey.txt")
-        else os.environ.get("DIAG_KEY", ""))
+CAPABILITY = os.environ.get("ONTINUITY_CAPABILITY", "").strip()
 
-SEEN_FILE = "/home/claude/control_loop_seen.json"   # msg_ids already surfaced this arc
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
+
+SEEN_FILE = os.environ.get(
+    "ONTINUITY_CONTROL_SEEN_FILE",
+    os.path.join(os.environ.get("XDG_STATE_HOME", "/tmp"),
+                 "ontinuity_control_loop_seen.json"),
+)
 
 
 def _op(name, body):
-    url = f"{ENGINE}/diag/op/{name}?diag_key={DIAG}"
+    if not CAPABILITY:
+        raise RuntimeError("ONTINUITY_CAPABILITY is not configured")
+    url = f"{ENGINE}/diag/op/{name}"
     data = json.dumps(body).encode()
-    req = urllib.request.Request(url, data=data,
-                                 headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=90) as r:   # 90 = you_there cap
+    req = urllib.request.Request(
+        url, data=data,
+        headers={"Content-Type": "application/json",
+                 "Authorization": "Bearer " + CAPABILITY}, method="POST")
+    with _NO_REDIRECT_OPENER.open(req, timeout=90) as r:  # 90 = you_there cap
         return json.loads(r.read().decode())
 
 
@@ -104,8 +118,7 @@ def claim_review_work(wait_seconds=75):
     """you_there for a claimable REVIEW item (proposal awaiting sign-off) addressed
     to control. Returns the claimed message or None. NOSELF-1 guarantees control is
     never handed its own proposal."""
-    return _op("you_there", {"seat": "control",
-                             "roles": ["control", "any_reviewer"],
+    return _op("you_there", {"roles": ["any_reviewer"],
                              "wait_seconds": min(wait_seconds, 90)}).get("message")
 
 
@@ -143,7 +156,7 @@ def reset_seen():
 
 
 if __name__ == "__main__":
-    if not DIAG:
-        print(json.dumps({"error": "no DIAG key (diagkey.txt or DIAG_KEY env)"}))
+    if not CAPABILITY:
+        print(json.dumps({"error": "ONTINUITY_CAPABILITY is not configured"}))
     else:
         print(json.dumps(triage(mark_surfaced=False), indent=2))

@@ -52,7 +52,7 @@ Create a machine-readable and human-readable manifest of:
 ### B1 — Operator-approved capability admission
 
 **Serves:** RC-2; prerequisite to authenticated RC-3 and RC-5  
-**State:** CANDIDATE BUILT; AWAITING INDEPENDENT REVIEW
+**State:** CORRECTED CANDIDATE; THREE INDEPENDENT REVIEWS REJECTED; AWAITING FOURTH CLEAN REVIEW
 
 Supersedes and consolidates:
 
@@ -69,8 +69,17 @@ Build the smallest admission flow: a seat requests entry; the operator approves;
 
 Full commercial multi-tenancy is POST-1.0 unless the outside-operator test proves it necessary.
 
-Preserved candidate: branch `codex/b1-scoped-identity`, tip `a31ffe1`.
-Branch existence is not acceptance or live behavior.
+Current candidate: branch `codex/b1-corrected`, based on rollback commit
+`3476ed8`; the exact uncommitted boundary is `live/B1_INSTALL_MANIFEST.json`.
+The superseded `codex/b1-scoped-identity` candidate must not be reviewed or
+deployed. Three independent reviews rejected successive candidate freezes; the
+second found a courier/box long-poll timeout mismatch, a stale Control helper
+entrypoint, and a bootstrap specification that overclaimed its runnable. The
+third found that successful CHECK 6 discarded per-invariant audit findings the
+specification promised. Those defects are corrected locally and require a
+fourth clean review. Branch
+existence, local tests, and author-side correction are not acceptance or live
+behavior.
 
 ### B2 — Bind occupant and action provenance
 
@@ -312,10 +321,13 @@ Package three review requests rather than asking anyone to evaluate the entire w
 Resume the two first build lanes selected by the completed B0 now that B5-P's
 irreplaceable-evidence boundary is operational:
 
-1. **B1 — Operator-approved capability admission:** send candidate branch
-   `codex/b1-scoped-identity` at `a31ffe1` through independent review against
-   the existing threat audit and live courier boundary; do not distribute
-   another master credential.
+1. **B1 — Operator-approved capability admission:** send the exact manifest-
+   defined candidate on `codex/b1-corrected`, based on rollback commit
+   `3476ed8`, through a new independent review against the existing threat audit
+   and live courier boundary; do not distribute another master credential. Two
+   independent reviews have rejected successive freezes. The current author-
+   side correction covers all three review dispositions and must go to a fourth clean
+   reviewer rather than being treated as accepted.
 2. **B3 — Fail-closed completion:** reconcile branch
    `codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send
    the exact resulting bytes to an independent seat for review and the live

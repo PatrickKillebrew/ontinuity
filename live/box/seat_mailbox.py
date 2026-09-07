@@ -46,18 +46,37 @@ _KINDS = {"task", "proposal", "review_finding", "signoff", "result", "note", "qu
 # from_lineage): the explicit author stamp wins; absent it, the sender is the author
 # (true for a node self-sending its own proposal).
 _REVIEWABLE_KINDS = {"proposal", "review_finding", "signoff"}
+_MAX_MAIL_BODY_BYTES = 32768
+
+
+def _json_object():
+    value = request.get_json(silent=True)
+    return value if isinstance(value, dict) else None
+
+
+def _text_field(body, name, max_length=200):
+    value = body.get(name)
+    if value is None:
+        return ""
+    if not isinstance(value, str):
+        raise ValueError(f"{name} must be a string")
+    value = value.strip()
+    if len(value) > max_length:
+        raise ValueError(f"{name} is too long")
+    return value
 
 def _noself_predicate(seat, lineage):
     """SQL fragment + params that EXCLUDE reviewable items authored by this seat.
-    A row is excluded iff: kind is reviewable AND (author_seat==seat OR author_lineage==lineage).
+    A row is excluded iff its kind is reviewable and author_seat equals seat.
+    Distinct seats remain distinct parties even when they use the same provider/model
+    lineage; the deploy gate enforces the same seat-based two-party rule.
     Non-reviewable items (task/result/note) are never excluded by this filter.
-    Returns (sql_fragment, params). lineage may be empty -> only the seat match applies."""
+    Returns (sql_fragment, params). ``lineage`` is retained for caller compatibility."""
     rk = ",".join("?" for _ in _REVIEWABLE_KINDS)
     # NOT ( reviewable AND own-authored )
-    frag = (f" AND NOT ( kind IN ({rk}) AND ( "
-            f"COALESCE(author_seat, from_seat) = ? "
-            f"OR (? != '' AND COALESCE(author_lineage, from_lineage) = ?) ) )")
-    params = list(_REVIEWABLE_KINDS) + [seat, (lineage or ""), (lineage or "")]
+    frag = (f" AND NOT ( kind IN ({rk}) AND "
+            f"COALESCE(author_seat, from_seat) = ? )")
+    params = list(_REVIEWABLE_KINDS) + [seat]
     return frag, params
 
 
@@ -149,17 +168,17 @@ def _diag_ok():
 # Reuse the operations-ledger helpers from file_server so mailbox ops are
 # audited on the SAME spine as every other scoped op (no separate audit path).
 def _caller_seat(default="diag-key"):
-    """CALLER-1: the seat name to stamp into operations_ledger.caller.
-    Pulled from the request body's seat/from_seat field the worker already sends.
-    HONESTY CAVEAT: this is a SELF-ASSERTED, TRUSTED-NOT-AUTHENTICATED seat name.
-    The shared diag key proves 'a keyholder called', NOT 'this seat called' — any
-    keyholder can put any seat string here (see live/specs/mailbox_threat_audit.md,
-    SECAUDIT-1 Q1/Q4). It becomes authenticated only when per-identity keys land and
-    the gate DERIVES the seat from the key instead of reading it from the body.
-    Until then caller is an honest label of who CLAIMS to be acting, not proof.
-    Falls back to the auth-method label 'diag-key' when no seat is in the body
-    (e.g. box_ops read/write, which carry no seat)."""
+    """The seat name stamped into operations_ledger.caller.
+
+    Scoped capability calls carry a seat derived by MAIN and relayed over the
+    authenticated server hop. Direct legacy/operator shared-root calls may still
+    use a self-asserted body seat and therefore remain an honest label rather than
+    identity proof. Falls back to the auth-method label when no seat is present.
+    """
     try:
+        relay_seat = (request.headers.get("X-Ontinuity-Seat") or "").strip()
+        if relay_seat:
+            return "seat:" + relay_seat
         b = request.get_json(silent=True) or {}
         s = (b.get("seat") or b.get("from_seat") or "").strip()
         return ("seat:" + s) if s else default
@@ -168,25 +187,64 @@ def _caller_seat(default="diag-key"):
 
 
 def _authed_identity():
-    """KEYS-2: the AUTHENTICATED identity from WHICH key called (file_server registry).
-    Returns {seat, lineage, authenticated, mode} or None. authenticated=True only for a
-    per-identity key; the shared DIAG_KEY -> {seat:'unattributed', authenticated:False}."""
+    """Return authenticated identity from MAIN's scoped relay or key registry.
+
+    The shared diagnostic root alone remains unattributed.
+    """
     try:
+        # B1: MAIN authenticates the short-lived capability and forwards only
+        # derived identity over the existing DIAG_KEY-authenticated, firewalled
+        # server-to-server hop. A capability holder never receives DIAG_KEY.
+        relay_seat = (request.headers.get("X-Ontinuity-Seat") or "").strip()
+        relay_lineage = (request.headers.get("X-Ontinuity-Lineage") or "").strip()
+        relay_capability = (request.headers.get("X-Ontinuity-Capability") or "").strip()
+        if relay_seat and relay_lineage and relay_capability and _diag_ok():
+            return {"seat": relay_seat, "lineage": relay_lineage,
+                    "authenticated": True, "mode": "scoped_capability",
+                    "capability_id": relay_capability}
         import file_server
-        presented = request.headers.get("X-Diag-Key", "") or request.args.get("diag_key", "")
+        presented = request.headers.get("X-Diag-Key", "")
         return file_server.authenticate_identity(presented)
     except Exception:
         return None
 
 
 def _trusted_seat(body_seat, body_lineage=None):
-    """KEYS-2 chokepoint: the (seat, lineage) to TRUST. Per-identity key -> the
-    key-derived identity (body IGNORED). Shared-key mode -> the body field (honest-
-    but-asserted, CALLER-1 semantics). Returns (seat, lineage, authenticated)."""
+    """Identity chokepoint. Authenticated relay/key identity wins and the body is
+    ignored; legacy/operator shared-root mode uses the asserted body identity.
+    Returns (seat, lineage, authenticated).
+    """
     ident = _authed_identity()
     if ident and ident.get("authenticated"):
         return ident.get("seat"), ident.get("lineage"), True
     return (body_seat or "").strip() or None, (body_lineage or "").strip() or None, False
+
+
+def _trusted_roles(seat, requested_roles, authenticated):
+    """Return the broadcast roles this authenticated seat may claim.
+
+    Roles are routing authority, not identity labels.  In shared-key compatibility
+    mode they remain honor-system inputs.  A scoped capability, however, must not
+    turn an arbitrary body-supplied role into authority to claim another seat's
+    queue.  The current live role vocabulary grants workers ``any_worker`` and
+    Control ``any_reviewer``; exact-seat delivery is always supplied separately by
+    ``seat`` and therefore never needs to appear in ``roles``.
+    """
+    if not isinstance(requested_roles, list):
+        return None, "roles must be a list"
+    roles = list(dict.fromkeys(str(role).strip() for role in requested_roles
+                               if str(role).strip()))
+    if not authenticated:
+        return roles, None
+    allowed = set()
+    if (seat or "").startswith("worker"):
+        allowed.add("any_worker")
+    if seat == "control":
+        allowed.add("any_reviewer")
+    denied = [role for role in roles if role not in allowed]
+    if denied:
+        return None, "authenticated identity is not authorized for requested roles"
+    return roles, None
 
 
 def _ledger(op, status_or_none, *, begin=False, **kw):
@@ -205,15 +263,50 @@ def _ledger(op, status_or_none, *, begin=False, **kw):
 def mailbox_send():
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    b = request.get_json(silent=True) or {}
-    from_seat = (b.get("from_seat") or "").strip()
-    to_seat   = (b.get("to_seat") or "").strip()
-    kind      = (b.get("kind") or "note").strip()
+    b = _json_object()
+    if b is None:
+        return jsonify({"error": "request must be a JSON object"}), 400
+    try:
+        body_from_seat = _text_field(b, "from_seat", 80)
+        body_lineage = _text_field(b, "from_lineage", 160)
+        to_seat = _text_field(b, "to_seat", 80)
+        kind = _text_field(b, "kind", 40) or "note"
+        requested_author = _text_field(b, "author_seat", 80)
+        requested_author_lineage = _text_field(b, "author_lineage", 160)
+        block_id = _text_field(b, "block_id", 200) or None
+        ref = _text_field(b, "ref", 500) or None
+        depends_on = _text_field(b, "depends_on", 200) or None
+        reply_to = _text_field(b, "reply_to", 200) or None
+        corr_id = _text_field(b, "corr_id", 200) or None
+        confidence = _text_field(b, "confidence", 40) or None
+        citations = (json.dumps(b["citations"])
+                     if isinstance(b.get("citations"), (list, dict))
+                     else (_text_field(b, "citations", 4000) or None))
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     body      = b.get("body")
+    from_seat, from_lineage, authenticated = _trusted_seat(
+        body_from_seat, body_lineage)
+    if authenticated and body_from_seat and body_from_seat != from_seat:
+        return jsonify({"error": "from_seat does not match authenticated identity"}), 409
     if not from_seat or not to_seat or body is None:
         return jsonify({"error": "from_seat, to_seat, body required"}), 400
+    if len(str(body).encode("utf-8")) > _MAX_MAIL_BODY_BYTES:
+        return jsonify({"error": "mailbox body is too large"}), 413
     if kind not in _KINDS:
         return jsonify({"error": f"kind must be one of {sorted(_KINDS)}"}), 400
+    # B1 attribution rule: an authenticated capability may only create records as
+    # its server-derived actor. Dispatching another actor's candidate uses ref/body
+    # pointers; it never rewrites the authenticated author columns. Delegated
+    # authorship can be added later only as a separately approved capability scope.
+    if authenticated and ((requested_author and requested_author != from_seat) or
+                          (requested_author_lineage and
+                           requested_author_lineage != from_lineage)):
+        return jsonify({"error": "author identity does not match authenticated identity"}), 409
+    author_seat = (from_seat if authenticated
+                   else (requested_author or from_seat))
+    author_lineage = (from_lineage if authenticated
+                      else (requested_author_lineage or body_lineage or None))
     msg_id = str(uuid.uuid4())
     op_id = _ledger("mailbox_send", None, begin=True,
                     args={"from": from_seat, "to": to_seat, "kind": kind})
@@ -222,19 +315,14 @@ def mailbox_send():
         c.execute("""INSERT INTO seat_mailbox
             (msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,status,created_at,reply_to,author_seat,author_lineage,corr_id,citations,confidence)
             VALUES (?,?,?,?,?,?,?,?,?, 'queued', ?, ?, ?, ?, ?, ?, ?)""",
-            (msg_id, from_seat, (b.get("from_lineage") or "").strip() or None, to_seat, kind,
-             (b.get("block_id") or "").strip() or None, (b.get("ref") or "").strip() or None,
-             (b.get("depends_on") or "").strip() or None, str(body), _now(),
-             (b.get("reply_to") or "").strip() or None,
-             (b.get("author_seat") or from_seat).strip() or None,
-             (b.get("author_lineage") or (b.get("from_lineage") or "")).strip() or None,
+            (msg_id, from_seat, from_lineage, to_seat, kind,
+             block_id, ref, depends_on, str(body), _now(), reply_to,
+             author_seat, author_lineage,
              # ORACLE-1: correlation + grounding columns. corr_id is a plain string; citations
              # is serialized to JSON text if a list/dict is passed (else stored as-is); confidence
              # is a short enum string. All nullable -> absent for non-Oracle messages.
-             (b.get("corr_id") or "").strip() or None,
-             (json.dumps(b["citations"]) if isinstance(b.get("citations"), (list, dict))
-              else ((b.get("citations") or "").strip() or None)),
-             (b.get("confidence") or "").strip() or None))
+             corr_id,
+             citations, confidence))
         c.commit(); c.close()
         _ledger("mailbox_send", "ok", op_id=op_id, result=msg_id)
         return jsonify({"ok": True, "msg_id": msg_id})
@@ -250,20 +338,31 @@ def mailbox_fetch():
     first so a dead worker's block returns to the queue."""
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    b = request.get_json(silent=True) or {}
-    seat, _lin, _authed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2: key-derived if authenticated
+    b = _json_object()
+    if b is None:
+        return jsonify({"error": "request must be a JSON object"}), 400
+    try:
+        body_seat = _text_field(b, "seat", 80)
+        body_lineage = _text_field(b, "lineage", 160)
+        block = _text_field(b, "block_id", 200)
+        reply_to = _text_field(b, "reply_to", 200)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    seat, _lin, _authed = _trusted_seat(body_seat, body_lineage)  # KEYS-2: key-derived if authenticated
     seat = seat or ""
     if not seat:
         return jsonify({"error": "seat required"}), 400
     # roles this seat will accept broadcast on (e.g. a worker accepts 'any_worker')
-    roles = b.get("roles") or []
-    block = (b.get("block_id") or "").strip()
+    roles, role_error = _trusted_roles(seat, b.get("roles") or [], _authed)
+    if role_error:
+        return jsonify({"error": role_error}), 403
     # CORRELATED FETCH: if reply_to is given, claim the specific result replying to
     # that task id (lets a requester pull *its own* result directly instead of
     # draining the whole queue oldest-first). If newest=true, claim newest-first.
-    reply_to = (b.get("reply_to") or "").strip()
     newest = bool(b.get("newest"))
     kinds = b.get("kinds") or None  # ORACLE-1: optional per-call kind filter; absent -> no kind restriction (prior behavior)
+    if kinds is not None and not isinstance(kinds, list):
+        return jsonify({"error": "kinds must be a list"}), 400
     targets = [seat] + [str(r) for r in roles]
     op_id = _ledger("mailbox_fetch", None, begin=True, args={"seat": seat, "roles": roles})
     try:
@@ -326,51 +425,71 @@ def mailbox_ack():
     """Mark a claimed message done; optionally post a reply in the same call."""
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    b = request.get_json(silent=True) or {}
-    msg_id = (b.get("msg_id") or "").strip()
+    b = _json_object()
+    if b is None:
+        return jsonify({"error": "request must be a JSON object"}), 400
+    try:
+        msg_id = _text_field(b, "msg_id", 200)
+        body_seat = _text_field(b, "seat", 80)
+        body_lineage = _text_field(b, "lineage", 160)
+        from_lineage = _text_field(b, "from_lineage", 160)
+        ref = _text_field(b, "ref", 500) or None
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     if not msg_id:
         return jsonify({"error": "msg_id required"}), 400
+    reply = b.get("reply")
+    if reply is not None and len(str(reply).encode("utf-8")) > _MAX_MAIL_BODY_BYTES:
+        return jsonify({"error": "mailbox reply is too large"}), 413
     # HARDEN-1 (SECAUDIT-1 rec): a seat may only ack a block IT claimed. The caller
     # names its seat; we reject acking a block whose claimed_by != that seat. PARTIAL
-    # hardening: the seat name in the body is still SELF-ASSERTED (one shared DIAG_KEY),
-    # so this assumes honest seat names. The full fix is per-identity keys (then the
-    # claimed_by check becomes cryptographically attributable, not name-trust). Until
-    # keys land, claimed_by-scoping stops accidental/cross cross-acks, not a forger.
-    seat, _lin, _authed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2: key-derived if authenticated, else body
+    # Scoped capability calls ignore the body seat and use MAIN-derived identity.
+    # Direct legacy/operator shared-root calls retain asserted-seat compatibility;
+    # for those calls this check prevents accidental cross-acks, not forgery.
+    seat, _lin, _authed = _trusted_seat(body_seat, body_lineage)  # KEYS-2: key-derived if authenticated, else body
     seat = seat or ""
     op_id = _ledger("mailbox_ack", None, begin=True, args={"msg_id": msg_id, "seat": seat})
     try:
         c = _mb_conn()
-        # Guard: if a seat is named, the block must have been claimed BY that seat.
+        # Authenticated ownership is exact: a scoped actor may acknowledge only a
+        # block whose claim is already held by that server-derived seat.  NULL is
+        # not ownership.  Shared-key compatibility retains the earlier asserted-
+        # seat behavior until the master key is retired.
         if seat:
             owner = c.execute("SELECT claimed_by, status FROM seat_mailbox WHERE msg_id=?", (msg_id,)).fetchone()
             if owner is None:
                 c.close(); _ledger("mailbox_ack", "fail", op_id=op_id, result="no such msg")
                 return jsonify({"error": "no such msg_id"}), 404
-            if owner[0] is not None and owner[0] != seat:
+            if (_authed and owner[0] != seat) or (not _authed and owner[0] is not None and owner[0] != seat):
                 c.close(); _ledger("mailbox_ack", "fail", op_id=op_id,
                                    result=f"claimed_by={owner[0]} != seat={seat}")
                 return jsonify({"error": "cannot ack a block you did not claim",
                                 "claimed_by": owner[0], "seat": seat}), 403
-            cur = c.execute("UPDATE seat_mailbox SET status='done', done_at=? "
-                            "WHERE msg_id=? AND status!='done' AND (claimed_by=? OR claimed_by IS NULL)",
-                            (_now(), msg_id, seat))
+            if _authed:
+                cur = c.execute("UPDATE seat_mailbox SET status='done', done_at=? "
+                                "WHERE msg_id=? AND status!='done' AND claimed_by=?",
+                                (_now(), msg_id, seat))
+            else:
+                cur = c.execute("UPDATE seat_mailbox SET status='done', done_at=? "
+                                "WHERE msg_id=? AND status!='done' AND (claimed_by=? OR claimed_by IS NULL)",
+                                (_now(), msg_id, seat))
         else:
             cur = c.execute("UPDATE seat_mailbox SET status='done', done_at=? WHERE msg_id=? AND status!='done'",
                             (_now(), msg_id))
         acked = cur.rowcount
         reply_id = None
-        reply = b.get("reply")
         if reply is not None:
             orig = c.execute("SELECT from_seat,to_seat,block_id,from_lineage FROM seat_mailbox WHERE msg_id=?", (msg_id,)).fetchone()
             if orig:
                 reply_id = str(uuid.uuid4())
                 # reply goes BACK to the original sender, from the original recipient
                 c.execute("""INSERT INTO seat_mailbox
-                    (msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,status,created_at,reply_to)
-                    VALUES (?,?,?,?, 'result', ?, ?, NULL, ?, 'queued', ?, ?)""",
-                    (reply_id, orig[1], (b.get("from_lineage") or "").strip() or None, orig[0],
-                     orig[2], (b.get("ref") or "").strip() or None, str(reply), _now(), msg_id))
+                    (msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,depends_on,body,status,created_at,reply_to,author_seat,author_lineage)
+                    VALUES (?,?,?,?, 'result', ?, ?, NULL, ?, 'queued', ?, ?, ?, ?)""",
+                    (reply_id, seat or orig[1], (_lin if _authed else from_lineage) or None, orig[0],
+                     orig[2], ref, str(reply), _now(), msg_id,
+                     seat or orig[1],
+                     (_lin if _authed else from_lineage) or None))
         c.commit(); c.close()
         _ledger("mailbox_ack", "ok", op_id=op_id, result=f"acked={acked} reply={reply_id}")
         return jsonify({"ok": True, "acked": acked, "reply_id": reply_id})
@@ -384,13 +503,34 @@ def mailbox_peek():
     """Read-only inspection. No claim, no state change."""
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    b = request.get_json(silent=True) or {}
+    b = _json_object()
+    if b is None:
+        return jsonify({"error": "request must be a JSON object"}), 400
+    try:
+        body_seat = _text_field(b, "seat", 80)
+        body_lineage = _text_field(b, "lineage", 160)
+        from_seat_filter = _text_field(b, "from_seat", 80)
+        status_filter = _text_field(b, "status", 40)
+        block_filter = _text_field(b, "block_id", 200)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    seat, _lin, authenticated = _trusted_seat(body_seat, body_lineage)
+    if authenticated:
+        requested_seat = (b.get("seat") or "").strip()
+        if requested_seat and requested_seat != seat:
+            return jsonify({"error": "cannot inspect another seat's mailbox"}), 403
+        if from_seat_filter:
+            return jsonify({"error": "authenticated seat may not inspect by another sender"}), 403
+        b["seat"] = seat
     where, params = [], []
     if b.get("seat"):     where.append("to_seat=?");   params.append(b["seat"].strip())
-    if b.get("from_seat"):where.append("from_seat=?"); params.append(b["from_seat"].strip())
-    if b.get("status"):   where.append("status=?");    params.append(b["status"].strip())
-    if b.get("block_id"): where.append("block_id=?");  params.append(b["block_id"].strip())
-    limit = max(1, min(int(b.get("limit", 20)), 100))
+    if from_seat_filter:   where.append("from_seat=?"); params.append(from_seat_filter)
+    if status_filter:      where.append("status=?");    params.append(status_filter)
+    if block_filter:       where.append("block_id=?");  params.append(block_filter)
+    try:
+        limit = max(1, min(int(b.get("limit", 20)), 100))
+    except (TypeError, ValueError):
+        return jsonify({"error": "limit must be an integer"}), 400
     sql = "SELECT msg_id,from_seat,from_lineage,to_seat,kind,block_id,ref,body,status,created_at,claimed_by,lease_until,done_at,corr_id,citations,confidence FROM seat_mailbox"
     if where: sql += " WHERE " + " AND ".join(where)
     sql += " ORDER BY created_at DESC LIMIT ?"; params.append(limit)
@@ -413,10 +553,16 @@ def mailbox_purge():
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
     b = request.get_json(silent=True) or {}
-    seat = (b.get("seat") or "").strip()
+    requested_seat = (b.get("seat") or "").strip()
+    seat, _lin, authenticated = _trusted_seat(requested_seat, b.get("lineage"))
+    seat = seat or ""
+    if authenticated and requested_seat and requested_seat != seat:
+        return jsonify({"error": "cannot purge another seat's mailbox"}), 403
     if not seat:
         return jsonify({"error": "seat required"}), 400
     purge_all = bool(b.get("all"))
+    if authenticated and purge_all:
+        return jsonify({"error": "all=true requires operator authority"}), 403
     kinds = b.get("kinds") or (None if purge_all else ["result", "note"])
     older = b.get("older_than_secs")
     where = ["to_seat=?"]; params = [seat]
@@ -454,11 +600,16 @@ def mailbox_reclaim():
     # seat's OWN expired claims are returned to the queue. The unscoped global sweep
     # (a coordinator returning ALL stalled blocks) now requires an explicit all=true,
     # so a casual reclaim can't yank another seat's in-flight (if-expired) work by
-    # default. PARTIAL: seat name is self-asserted until per-identity keys land —
-    # this assumes honest seat names; keys make claimed_by attributable.
-    seat, _lin, _authed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2
+    # default. Scoped calls use derived identity; direct legacy/operator recovery
+    # retains the historical self-asserted-seat limitation.
+    requested_seat = (b.get("seat") or "").strip()
+    seat, _lin, _authed = _trusted_seat(requested_seat, b.get("lineage"))  # KEYS-2
     seat = seat or ""
     sweep_all = bool(b.get("all"))
+    if _authed and requested_seat and requested_seat != seat:
+        return jsonify({"error": "cannot reclaim another seat's claims"}), 403
+    if _authed and sweep_all:
+        return jsonify({"error": "all=true requires operator authority"}), 403
     op_id = _ledger("mailbox_reclaim", None, begin=True, args={"seat": seat, "all": sweep_all})
     try:
         c = _mb_conn()
@@ -573,15 +724,26 @@ def you_there():
     ends the turn, the shepherd re-enters in a fresh one."""
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    b = request.get_json(silent=True) or {}
-    seat, _ylin, _yauthed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2
+    b = _json_object()
+    if b is None:
+        return jsonify({"error": "request must be a JSON object"}), 400
+    try:
+        body_seat = _text_field(b, "seat", 80)
+        body_lineage = _text_field(b, "lineage", 160)
+        block = _text_field(b, "block_id", 200)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    seat, _ylin, _yauthed = _trusted_seat(body_seat, body_lineage)  # KEYS-2
     seat = seat or ""
     if not seat:
         return jsonify({"error": "seat required"}), 400
-    roles = b.get("roles") or []
-    block = (b.get("block_id") or "").strip()
+    roles, role_error = _trusted_roles(seat, b.get("roles") or [], _yauthed)
+    if role_error:
+        return jsonify({"error": role_error}), 403
     kinds = b.get("kinds") or None  # ORACLE-1: per-call kind override (e.g. ["question"]/["answer"]); None -> _WORK_KINDS
-    lineage = (_ylin or b.get("lineage") or "").strip()  # KEYS-2: trusted lineage if authenticated
+    if kinds is not None and not isinstance(kinds, list):
+        return jsonify({"error": "kinds must be a list"}), 400
+    lineage = (_ylin or body_lineage or "").strip()  # KEYS-2: trusted lineage if authenticated
     try:
         wait_seconds = int(b.get("wait_seconds", _YT_WAIT_DEFAULT))
     except (TypeError, ValueError):

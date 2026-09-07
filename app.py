@@ -17,8 +17,10 @@ import datetime
 import time
 import hashlib
 import uuid
+import secrets
 from urllib.parse import urlparse
 import requests as http_requests
+from capability_auth import CapabilityAuthority, CapabilityError
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ontinuity-secret-key'
@@ -37,7 +39,7 @@ def _logging_emit(event, *args, **kwargs):
         try:
             p = args[0] if args else {}
             _console_buffer.append({
-                "t": datetime.datetime.utcnow().strftime("%H:%M:%S"),
+        "t": datetime.datetime.now(datetime.timezone.utc).strftime("%H:%M:%S"),
                 "event": event,
                 "type": (p or {}).get("type", ""),
                 "message": ((p or {}).get("message") or (p or {}).get("questions") or (p or {}).get("context") or "")[:500]})
@@ -948,7 +950,8 @@ def write_session_to_workspace():
                 f"{WORKSPACE_URL}/api/session",
                 json=payload,
                 headers=headers,
-                timeout=30
+                timeout=30,
+                allow_redirects=False,
             )
             if response.status_code == 200:
                 print("[WORKSPACE WRITE] SUCCESS — 200 from workspace", flush=True)
@@ -1006,7 +1009,8 @@ def github_pull_knowtext():
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28"
         }
-        response = http_requests.get(url, headers=headers, timeout=30)
+        response = http_requests.get(
+            url, headers=headers, timeout=30, allow_redirects=False)
         if response.status_code == 200:
             data = response.json()
             content = base64.b64decode(data["content"]).decode("utf-8")
@@ -1037,7 +1041,8 @@ def github_push_knowtext():
             "X-GitHub-Api-Version": "2022-11-28"
         }
         # Get current file SHA (required for update)
-        get_response = http_requests.get(url, headers=headers, timeout=30)
+        get_response = http_requests.get(
+            url, headers=headers, timeout=30, allow_redirects=False)
         sha = get_response.json().get("sha", "") if get_response.status_code == 200 else ""
         encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
         body = {
@@ -1047,7 +1052,9 @@ def github_push_knowtext():
         }
         if sha:
             body["sha"] = sha
-        put_response = http_requests.put(url, headers=headers, json=body, timeout=30)
+        put_response = http_requests.put(
+            url, headers=headers, json=body, timeout=30,
+            allow_redirects=False)
         if put_response.status_code in (200, 201):
             socketio.emit('routing_action', {'type': 'distillation', 'message': 'Knowtext committed to GitHub.'})
             return True
@@ -1091,13 +1098,16 @@ def github_push_erl():
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28"
         }
-        get_response = http_requests.get(url, headers=headers, timeout=30)
+        get_response = http_requests.get(
+            url, headers=headers, timeout=30, allow_redirects=False)
         sha = get_response.json().get("sha", "") if get_response.status_code == 200 else ""
         encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
         body = {"message": f"ERL update - {timestamp()}", "content": encoded, "branch": GITHUB_BRANCH}
         if sha:
             body["sha"] = sha
-        put_response = http_requests.put(url, headers=headers, json=body, timeout=30)
+        put_response = http_requests.put(
+            url, headers=headers, json=body, timeout=30,
+            allow_redirects=False)
         if put_response.status_code in (200, 201):
             socketio.emit('routing_action', {'type': 'distillation', 'message': 'ERL committed to GitHub.'})
             return True
@@ -1536,7 +1546,8 @@ def call_workspace_search(query, context=""):
             f"{WORKSPACE_URL}/search",
             json=payload,
             headers=headers,
-            timeout=20
+            timeout=20,
+            allow_redirects=False,
         )
         if response.status_code == 200:
             data = response.json()
@@ -1560,7 +1571,8 @@ def call_workspace_run(command):
             f"{WORKSPACE_URL}/run",
             json=payload,
             headers=headers,
-            timeout=60
+            timeout=60,
+            allow_redirects=False,
         )
         if response.status_code == 200:
             return response.json()
@@ -1597,7 +1609,7 @@ def get_workspace_whitelist():
         r = http_requests.post(f"{WORKSPACE_URL}/run",
                                json={"command": "__whitelist_probe__"},
                                headers={"Content-Type": "application/json", "X-API-Key": api_key},
-                               timeout=10)
+                               timeout=10, allow_redirects=False)
         if r.status_code == 403:
             cmds = r.json().get("safe_commands", [])
             if cmds:
@@ -1698,7 +1710,9 @@ def call_workspace_query(sql):
         return None
     try:
         headers = {"X-API-Key": os.environ.get("WORKSPACE_API_KEY", "").strip()}
-        r = http_requests.get(f"{WORKSPACE_URL}/api/query", params={"sql": sql}, headers=headers, timeout=25)
+        r = http_requests.get(
+            f"{WORKSPACE_URL}/api/query", params={"sql": sql},
+            headers=headers, timeout=25, allow_redirects=False)
         if r.status_code == 200:
             return r.json()
         return {"error": f"workspace returned {r.status_code}", "detail": r.text[:300]}
@@ -2004,7 +2018,8 @@ def call_openai_format(endpoint_config, messages, role, max_tokens=2000):
     for attempt, delay in enumerate(delays + [None]):
         try:
             response = http_requests.post(
-                endpoint_config["url"], headers=headers, json=body, timeout=120
+                endpoint_config["url"], headers=headers, json=body, timeout=120,
+                allow_redirects=False,
             )
             if response.status_code == 429:
                 if delay is None:
@@ -2068,7 +2083,8 @@ def call_anthropic_format(endpoint_config, system_prompt, messages, role, max_to
     }
     try:
         response = http_requests.post(
-            endpoint_config["url"], headers=headers, json=body, timeout=120
+            endpoint_config["url"], headers=headers, json=body, timeout=120,
+            allow_redirects=False,
         )
         response.raise_for_status()
         data = response.json()
@@ -2103,7 +2119,9 @@ def call_gemini_native(endpoint_config, system_prompt, messages, role, max_token
         body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     try:
-        response = http_requests.post(url, headers=headers, json=body, timeout=120)
+        response = http_requests.post(
+            url, headers=headers, json=body, timeout=120,
+            allow_redirects=False)
         response.raise_for_status()
         data = response.json()
         return data["candidates"][0]["content"]["parts"][0]["text"]
@@ -3752,7 +3770,7 @@ import hmac as _hmac
 
 def _mailbox_auth_ok():
     key = os.environ.get("MAILBOX_KEY", "").strip()
-    given = (request.args.get("mailbox_key") or (request.get_json(silent=True) or {}).get("mailbox_key") or "").strip()
+    given = request.headers.get("X-Mailbox-Key", "").strip()
     return bool(key) and _hmac.compare_digest(key, given)
 
 def agent_start_blockers(objective):
@@ -3867,7 +3885,8 @@ def agent_queue_read():
         url = f"https://api.github.com/repos/{repo}/contents/{AGENT_QUEUE_PATH}"
         headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
                    "X-GitHub-Api-Version": "2022-11-28"}
-        r = http_requests.get(url, headers=headers, timeout=30)
+        r = http_requests.get(
+            url, headers=headers, timeout=30, allow_redirects=False)
         if r.status_code == 404:
             return jsonify({"exists": False, "path": AGENT_QUEUE_PATH, "content": ""})
         r.raise_for_status()
@@ -3900,14 +3919,17 @@ def agent_queue_update():
         url = f"https://api.github.com/repos/{repo}/contents/{AGENT_QUEUE_PATH}"
         headers = {"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
                    "X-GitHub-Api-Version": "2022-11-28"}
-        get_r = http_requests.get(url, headers=headers, timeout=30)
+        get_r = http_requests.get(
+            url, headers=headers, timeout=30, allow_redirects=False)
         sha = get_r.json().get("sha", "") if get_r.status_code == 200 else ""
         encoded = base64.b64encode(content.encode("utf-8")).decode("utf-8")
         commit_body = {"message": f"Agent queue: {note} — {timestamp()}",
                        "content": encoded, "branch": GITHUB_BRANCH}
         if sha:
             commit_body["sha"] = sha
-        put_r = http_requests.put(url, headers=headers, json=commit_body, timeout=30)
+        put_r = http_requests.put(
+            url, headers=headers, json=commit_body, timeout=30,
+            allow_redirects=False)
         if put_r.status_code in (200, 201):
             new_sha = put_r.json().get("content", {}).get("sha", "")
             socketio.emit('routing_action', {'type': 'injection',
@@ -3963,7 +3985,7 @@ def agent_handoff():
     diag_key = os.environ.get("DIAG_KEY", "").strip()
     if not diag_key:
         return jsonify({"error": "diag disabled"}), 503
-    if request.headers.get("X-Diag-Key", "") != diag_key and request.args.get("diag_key", "") != diag_key:
+    if request.headers.get("X-Diag-Key", "") != diag_key:
         return jsonify({"error": "unauthorized"}), 401
     from datetime import datetime, timezone
     out = {"ok": True, "generated_at": datetime.now(timezone.utc).isoformat(), "engines": {}}
@@ -3981,7 +4003,10 @@ def agent_handoff():
         peer = os.environ.get("PEER_ENGINE_URL", "").strip()
         if peer:
             try:
-                pr = http_requests.get(f"{peer}/diag/engine?diag_key={diag_key}", timeout=10)
+                pr = http_requests.get(
+                    f"{peer}/diag/engine",
+                    headers={"X-Diag-Key": diag_key}, timeout=10,
+                    allow_redirects=False)
                 out["engines"]["peer"] = pr.json()
             except Exception as e:
                 out["engines"]["peer"] = {"error": str(e)[:120]}
@@ -4008,7 +4033,7 @@ def diag_relay(endpoint):
     diag_key = os.environ.get("DIAG_KEY", "").strip()
     if not diag_key:
         return jsonify({"error": "diag disabled — set DIAG_KEY in Railway variables"}), 503
-    if request.headers.get("X-Diag-Key", "") != diag_key and request.args.get("diag_key", "") != diag_key:
+    if request.headers.get("X-Diag-Key", "") != diag_key:
         return jsonify({"error": "unauthorized"}), 401
     base = endpoint.split("?")[0].strip("/")
     if base not in DIAG_ALLOWED and not base.startswith("history/"):
@@ -4038,7 +4063,7 @@ def diag_relay(endpoint):
                              "User-Agent": "Ontinuity-Engine/1.0"},
                     json={"model": os.environ.get("MODEL_A_MODEL","").strip() or "gpt-oss-120b",
                           "messages": [{"role": "user", "content": "ok"}], "max_tokens": 3},
-                    timeout=20)
+                    timeout=20, allow_redirects=False)
                 out["provider_status"] = pr.status_code
                 out["provider_body"] = pr.text[:300]
                 out["provider_resp_headers"] = {k: v for k, v in pr.headers.items()
@@ -4081,7 +4106,11 @@ def diag_relay(endpoint):
     try:
         params = {k: v for k, v in request.args.items() if k != "diag_key"}
         headers = {"X-API-Key": os.environ.get("WORKSPACE_API_KEY", "").strip()}
-        r = http_requests.get(f"{WORKSPACE_URL}/{base}", params=params, headers=headers, timeout=25)
+        r = http_requests.get(
+            f"{WORKSPACE_URL}/{base}", params=params, headers=headers,
+            timeout=25, allow_redirects=False)
+        if r.is_redirect or r.is_permanent_redirect:
+            return jsonify({"error": "workspace redirect refused"}), 502
         return (r.text, r.status_code, {"Content-Type": r.headers.get("Content-Type", "application/json")})
     except Exception as e:
         return jsonify({"error": f"relay error: {str(e)}"}), 502
@@ -4132,14 +4161,153 @@ def diag_relay(endpoint):
 # remains the authority on args/tier/ledger.
 OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "backup_db"}
 
+# B1 intentionally starts with a narrow model surface. Broader operations remain
+# available to the operator through the server-side root and require a later,
+# separately certified grant policy before models may request them.
+B1_INITIAL_MODEL_OPS = {
+    "__probe__",
+    "bootstrap_gate",
+    "mailbox_ack",
+    "mailbox_fetch",
+    "mailbox_peek",
+    "mailbox_send",
+    "read_repo",
+    "you_there",
+}
+
+_capability_authority = None
+_capability_authority_config = None
+
+def _cap_authority():
+    """B1 admission authority. DIAG_KEY signs capabilities but never leaves MAIN."""
+    global _capability_authority, _capability_authority_config
+    diag_key = os.environ.get("DIAG_KEY", "").strip()
+    if not diag_key:
+        raise CapabilityError("admission disabled — set DIAG_KEY in Railway variables")
+    registry_path = os.environ.get(
+        "ONTINUITY_CAPABILITY_REGISTRY",
+        os.path.join(os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "/tmp"),
+                     "ontinuity_capabilities.json"),
+    )
+    authority_config = (
+        hashlib.sha256(diag_key.encode("utf-8")).digest(), registry_path)
+    if (_capability_authority is None
+            or _capability_authority_config != authority_config):
+        _capability_authority = CapabilityAuthority(
+            secret=diag_key, registry_path=registry_path)
+        _capability_authority_config = authority_config
+    return _capability_authority
+
+def _operator_diag_ok():
+    diag_key = os.environ.get("DIAG_KEY", "").strip()
+    return bool(diag_key) and secrets.compare_digest(
+        request.headers.get("X-Diag-Key", ""), diag_key)
+
+def _admission_json(payload, status=200):
+    """Admission responses, especially one-time grants, must never be cached."""
+    response = jsonify(payload)
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Pragma"] = "no-cache"
+    return response, status
+
+def _bounded_request_json(max_bytes):
+    """Parse one JSON body without trusting Content-Length as the size bound."""
+    if request.content_length is not None and request.content_length > max_bytes:
+        raise CapabilityError("request body is too large")
+    raw = request.stream.read(max_bytes + 1)
+    if len(raw) > max_bytes:
+        raise CapabilityError("request body is too large")
+    if not raw.strip():
+        return {}
+    try:
+        return json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise CapabilityError("request body is not valid JSON") from exc
+
+@app.route('/diag/admission/request', methods=['POST'])
+def capability_request():
+    """Create a pending request. This grants no authority until operator approval."""
+    try:
+        body = _bounded_request_json(16384)
+    except CapabilityError as exc:
+        status = 413 if "too large" in str(exc) else 400
+        return _admission_json({"error": str(exc)}, status)
+    if not isinstance(body, dict):
+        return _admission_json({"error": "request must be a JSON object"}, 400)
+    requested_ops = body.get("operations") or []
+    if (not isinstance(requested_ops, list) or not requested_ops
+            or not all(isinstance(op, str) for op in requested_ops)):
+        return _admission_json(
+            {"error": "operations must be a nonempty string list"}, 400)
+    if any(op not in B1_INITIAL_MODEL_OPS for op in requested_ops):
+        return _admission_json({
+            "error": "request exceeds the B1 initial model capability scope",
+            "allowed": sorted(B1_INITIAL_MODEL_OPS),
+        }, 403)
+    try:
+        row = _cap_authority().request(
+            seat=body.get("seat"), lineage=body.get("lineage"),
+            operations=requested_ops, ttl_seconds=body.get("ttl_seconds", 900))
+        return _admission_json({"ok": True, **row}, 202)
+    except CapabilityError as exc:
+        return _admission_json({"error": str(exc)}, 400)
+
+@app.route('/diag/admission/requests', methods=['GET'])
+def capability_requests():
+    """Operator-only admission queue and issued-grant metadata."""
+    if not _operator_diag_ok():
+        return _admission_json({"error": "unauthorized"}, 401)
+    try:
+        return _admission_json(
+            {"ok": True, "requests": _cap_authority().list_requests()})
+    except CapabilityError as exc:
+        return _admission_json({"error": str(exc)}, 400)
+
+@app.route('/diag/admission/approve', methods=['POST'])
+def capability_approve():
+    """Operator-only approval. Returns bearer material exactly once."""
+    if not _operator_diag_ok():
+        return _admission_json({"error": "unauthorized"}, 401)
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return _admission_json({"error": "request must be a JSON object"}, 400)
+    try:
+        result = _cap_authority().approve(body.get("request_id"))
+        return _admission_json({"ok": True, **result})
+    except CapabilityError as exc:
+        return _admission_json({"error": str(exc)}, 400)
+
+@app.route('/diag/admission/revoke', methods=['POST'])
+def capability_revoke():
+    if not _operator_diag_ok():
+        return _admission_json({"error": "unauthorized"}, 401)
+    body = request.get_json(silent=True) or {}
+    if not isinstance(body, dict):
+        return _admission_json({"error": "request must be a JSON object"}, 400)
+    try:
+        return _admission_json(
+            {"ok": True, **_cap_authority().revoke(body.get("jti"))})
+    except CapabilityError as exc:
+        return _admission_json({"error": str(exc)}, 400)
+
 @app.route('/diag/op/<name>', methods=['POST'])
 def diag_op_courier(name):
-    # 1) Same diag-key gate as diag_relay (constant text-compare on the env key).
+    # 1) B1: accept either the operator's shared root (transition/recovery) or an
+    # operator-approved short-lived capability. Capabilities are operation-bound;
+    # seat and lineage come from the signed grant, never from the request body.
     diag_key = os.environ.get("DIAG_KEY", "").strip()
     if not diag_key:
         return jsonify({"error": "diag disabled — set DIAG_KEY in Railway variables"}), 503
-    if request.headers.get("X-Diag-Key", "") != diag_key and request.args.get("diag_key", "") != diag_key:
-        return jsonify({"error": "unauthorized"}), 401
+    identity = None
+    supplied_diag = request.headers.get("X-Diag-Key", "")
+    operator_call = secrets.compare_digest(supplied_diag, diag_key)
+    if not operator_call:
+        auth = request.headers.get("Authorization", "")
+        token = auth[7:].strip() if auth.startswith("Bearer ") else ""
+        try:
+            identity = _cap_authority().authorize(token, name)
+        except CapabilityError as exc:
+            return jsonify({"error": str(exc)}), 401
 
     # 2) Name-gate: only forward known scoped ops; unknown -> fail fast here.
     if name not in OP_ALLOWED:
@@ -4151,21 +4319,51 @@ def diag_op_courier(name):
 
     # 4) Bounded body: forward only a JSON object (the op's bounded args), or {}.
     #    The box validates the args; the courier just refuses non-object bodies.
-    body = request.get_json(silent=True)
+    if operator_call:
+        body = request.get_json(silent=True)
+    else:
+        try:
+            body = _bounded_request_json(65536)
+        except CapabilityError as exc:
+            status = 413 if "too large" in str(exc) else 400
+            return jsonify({"error": str(exc)}), status
     if body is None:
         body = {}
     if not isinstance(body, dict):
         return jsonify({"error": "op args must be a JSON object"}), 400
 
+    # The bootstrap standard comes from this engine's actual courier surface.
+    # A caller cannot weaken certification by supplying its own count.
+    if name == "bootstrap_gate":
+        body = dict(body)
+        body.pop("canonical_op_count", None)
+
     # 5) Forward to the box's /op/<name> with the box's diag-key gate header,
     #    exactly as _register_egress forwards to /register_egress. Return the
     #    box response verbatim so its status/body are not masked by the courier.
     try:
+        relay_headers = {"X-Diag-Key": diag_key, "Content-Type": "application/json"}
+        if name == "bootstrap_gate":
+            relay_headers["X-Ontinuity-Courier-Count"] = str(len(OP_ALLOWED))
+        if identity:
+            # The box is firewalled behind this shared server-to-server trust hop.
+            # User-supplied identity headers are never forwarded.
+            relay_headers.update({
+                "X-Ontinuity-Seat": identity["seat"],
+                "X-Ontinuity-Lineage": identity["lineage"],
+                "X-Ontinuity-Capability": identity["jti"],
+            })
+        # ``you_there`` is a bounded long poll: the box may wait for as long as
+        # 90 seconds before returning.  Keep the relay alive through that cap
+        # plus a small transport margin so MAIN cannot report a premature 502
+        # while the box later claims a message for an abandoned request.
+        relay_timeout = 100 if name == "you_there" else 25
         r = http_requests.post(
             f"{WORKSPACE_URL}/op/{name}",
-            headers={"X-Diag-Key": diag_key, "Content-Type": "application/json"},
+            headers=relay_headers,
             json=body,
-            timeout=25,
+            timeout=relay_timeout,
+            allow_redirects=False,
         )
         return (r.text, r.status_code, {"Content-Type": r.headers.get("Content-Type", "application/json")})
     except Exception as e:
@@ -4195,7 +4393,7 @@ _GOV_FARM_URL = "https://ontinuity-farm-production.up.railway.app"
 # list hard-hides. Edit these as you scale workers up/down.
 _GOV_ACTIVE_SEATS = ("worker11", "worker22")
 _GOV_RETIRED_SEATS = ("worker2", "worker4", "worker-review", "control-seat",
-                      "kb_ipad", "kb_laptop", "operator")
+                      "operator")
 _GOV_ROSTER_WINDOW_H = 48
 _GOV_POOL_SEATS = ("any_worker",)
 _GOV_CLAIMABLE_KINDS = ("task", "proposal", "review_finding", "signoff")
@@ -4205,8 +4403,7 @@ def _gov_key_ok():
     if not dk:
         return False
     return (request.headers.get("X-API-Key", "") == dk
-            or request.headers.get("X-Diag-Key", "") == dk
-            or request.args.get("diag_key", "") == dk)
+            or request.headers.get("X-Diag-Key", "") == dk)
 
 def _gov_rows(sql):
     r = call_workspace_query(sql)
@@ -4253,7 +4450,10 @@ def governor_data():
         out["main"] = {"error": "unavailable"}
     try:
         dk = os.environ.get("DIAG_KEY", "").strip()
-        pr = http_requests.get(f"{_GOV_FARM_URL}/diag/engine", params={"diag_key": dk}, timeout=6)
+        pr = http_requests.get(
+            f"{_GOV_FARM_URL}/diag/engine",
+            headers={"X-Diag-Key": dk}, timeout=6,
+            allow_redirects=False)
         out["farm"] = pr.json() if pr.status_code == 200 else {"error": f"farm {pr.status_code}"}
     except Exception as e:
         out["farm"] = {"error": str(e)[:80]}
@@ -4317,20 +4517,6 @@ def governor_workers():
     return jsonify({"seats": seats, "pool": {"kinds": pool, "claimable": pool_claimable},
                     "server_now": now.isoformat()})
 
-# -----------------------------------------
-# iPad KEYBOARD (WebRTC) — portable, works from any network.
-# Served from templates/kb.html as raw bytes (no escaping mangling).
-# -----------------------------------------
-@app.route('/kb')
-def kb_page():
-    import os as _os
-    _p = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "templates", "kb.html")
-    with open(_p, "r", encoding="utf-8") as _f:
-        _html = _f.read()
-    return (_html, 200, {"Content-Type": "text/html; charset=utf-8",
-                         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"})
-
-# -----------------------------------------
 # INTAKE PROXY ROUTE
 # -----------------------------------------
 # Lets ontinuity.org/intake.html run a problem-discovery conversation with
@@ -4528,7 +4714,8 @@ def intake_capture():
     }
     try:
         # Get current SHA if the file exists (required to overwrite)
-        get_r = http_requests.get(gh_url, headers=gh_headers, timeout=30)
+        get_r = http_requests.get(
+            gh_url, headers=gh_headers, timeout=30, allow_redirects=False)
         sha = get_r.json().get("sha", "") if get_r.status_code == 200 else ""
         encoded = base64.b64encode(
             _intake_json_dumps(record).encode("utf-8")).decode("utf-8")
@@ -4538,7 +4725,9 @@ def intake_capture():
         }
         if sha:
             body["sha"] = sha
-        put_r = http_requests.put(gh_url, headers=gh_headers, json=body, timeout=30)
+        put_r = http_requests.put(
+            gh_url, headers=gh_headers, json=body, timeout=30,
+            allow_redirects=False)
         if put_r.status_code in (200, 201):
             return (jsonify({"captured": True, "final": is_final}), 200, headers)
         return (jsonify({"error": f"GitHub write failed: {put_r.status_code}"}), 502, headers)
@@ -4581,7 +4770,8 @@ def intake_resume():
         "X-GitHub-Api-Version": "2022-11-28",
     }
     try:
-        list_r = http_requests.get(dir_url, headers=gh_headers, timeout=30)
+        list_r = http_requests.get(
+            dir_url, headers=gh_headers, timeout=30, allow_redirects=False)
         if list_r.status_code != 200:
             return (jsonify({"found": False}), 200, headers)
         entries = list_r.json()
@@ -4602,7 +4792,8 @@ def intake_resume():
         if not best_name:
             return (jsonify({"found": False}), 200, headers)
         file_url = f"{dir_url}/{best_name}"
-        get_r = http_requests.get(file_url, headers=gh_headers, timeout=30)
+        get_r = http_requests.get(
+            file_url, headers=gh_headers, timeout=30, allow_redirects=False)
         if get_r.status_code != 200:
             return (jsonify({"found": False}), 200, headers)
         import json as _j
@@ -4948,7 +5139,8 @@ if __name__ == '__main__':
             return
         try:
             r = http_requests.post(f"{WORKSPACE_URL}/register_egress",
-                                   headers={"X-Diag-Key": dk}, timeout=15)
+                                   headers={"X-Diag-Key": dk}, timeout=15,
+                                   allow_redirects=False)
             print(f"[EGRESS REGISTER] {r.status_code} {r.text[:120]}", flush=True)
         except Exception as e:
             print(f"[EGRESS REGISTER] failed (non-fatal): {str(e)[:120]}", flush=True)

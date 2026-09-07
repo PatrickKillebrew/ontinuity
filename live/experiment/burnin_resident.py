@@ -12,6 +12,14 @@ session-id prefix marking the clean counted set, e.g. '2026-06-08_').
 """
 import json, os, time, urllib.request, random
 
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
+
 FARM = os.environ["FARM_URL"].rstrip("/")
 MAIN = os.environ["MAIN_URL"].rstrip("/")
 DIAG = os.environ["DIAG_KEY"]
@@ -33,10 +41,13 @@ PROBES = [
 PRESESSION = ("1. One DB_QUERY cycle with a single read-only SELECT COUNT(*). "
              "2. One-sentence report citing the executed query. Close after the reviewed report.")
 
-def http(url, body=None, timeout=40):
-    req = urllib.request.Request(url, data=json.dumps(body).encode() if body else None,
-        headers={"Content-Type": "application/json"} if body else {})
-    return json.loads(urllib.request.urlopen(req, timeout=timeout).read().decode())
+def http(url, body=None, timeout=40, headers=None):
+    request_headers = dict(headers or {})
+    if body is not None:
+        request_headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None,
+        headers=request_headers)
+    return json.loads(_NO_REDIRECT_OPENER.open(req, timeout=timeout).read().decode())
 
 def log(rec):
     rec["t"] = time.strftime("%Y-%m-%d %H:%M:%S")
@@ -47,8 +58,8 @@ def log(rec):
 
 def q(sql):
     import urllib.parse
-    url = f"{MAIN}/diag/api/query?diag_key={DIAG}&sql={urllib.parse.quote(sql)}"
-    return http(url, timeout=40)["rows"]
+    url = f"{MAIN}/diag/api/query?sql={urllib.parse.quote(sql)}"
+    return http(url, timeout=40, headers={"X-Diag-Key": DIAG})["rows"]
 
 def randomized_count():
     return q(f"SELECT COUNT(*) FROM behavioral_observations WHERE randomized_flag=1 AND session_id >= '{BOUNDARY}'")[0][0]
@@ -60,12 +71,13 @@ def latest_receipt():
     return q("SELECT MAX(receipt_id) FROM write_receipts")[0][0]
 
 def engine_idle():
-    e = http(f"{FARM}/diag/engine?diag_key={DIAG}")
+    e = http(f"{FARM}/diag/engine", headers={"X-Diag-Key": DIAG})
     return not e.get("running") and not e.get("waiting_for_input") and not e.get("finalizing")
 
 def run_one(objective):
     base = latest_receipt()
-    r = http(f"{FARM}/agent/start", {"mailbox_key": MBKEY, "objective": objective, "start_fresh": True})
+    r = http(f"{FARM}/agent/start", {"objective": objective, "start_fresh": True},
+             headers={"X-Mailbox-Key": MBKEY})
     if not r.get("ok"):
         log({"event": "start_refused", "detail": r}); return "STOP"
     t0 = time.time()
@@ -74,13 +86,14 @@ def run_one(objective):
     while time.time() - t0 < SESSION_BUDGET_S:
         time.sleep(8)
         try:
-            mb = http(f"{FARM}/mailbox/turn?mailbox_key={MBKEY}")
+            mb = http(f"{FARM}/mailbox/turn", headers={"X-Mailbox-Key": MBKEY})
         except Exception:
             continue
         if mb.get("waiting"):
             kind, tid = mb.get("kind"), mb.get("turn_id")
             if kind == "pre_session_questions" and not answered:
-                http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": tid, "response": PRESESSION})
+                http(f"{FARM}/mailbox/respond", {"turn_id": tid, "response": PRESESSION},
+                     headers={"X-Mailbox-Key": MBKEY})
                 answered = True
             elif kind == "human_input_needed":
                 proceeds += 1
@@ -90,26 +103,26 @@ def run_one(objective):
                     # /agent/stop fails with 'no session running' when the turn holds
                     # the session open, leaving an orphaned wait that deadlocks the
                     # next session. Answering clears it; this is the auto-clear fix.
-                    try: http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": tid, "response": "Stop."})
+                    try: http(f"{FARM}/mailbox/respond", {"turn_id": tid, "response": "Stop."}, headers={"X-Mailbox-Key": MBKEY})
                     except Exception: pass
-                    try: http(f"{FARM}/agent/stop", {"mailbox_key": MBKEY})
+                    try: http(f"{FARM}/agent/stop", {}, headers={"X-Mailbox-Key": MBKEY})
                     except Exception: pass
                     # verify the wait actually cleared before moving on
                     for _ in range(6):
                         time.sleep(4)
                         try:
-                            e = http(f"{FARM}/diag/engine?diag_key={DIAG}")
+                            e = http(f"{FARM}/diag/engine", headers={"X-Diag-Key": DIAG})
                             if not e.get("waiting_for_input") and not e.get("running"):
                                 break
                             # still waiting on a (possibly new) turn — answer it too
-                            mb2 = http(f"{FARM}/mailbox/turn?mailbox_key={MBKEY}")
+                            mb2 = http(f"{FARM}/mailbox/turn", headers={"X-Mailbox-Key": MBKEY})
                             if mb2.get("waiting"):
-                                http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": mb2.get("turn_id"), "response": "Stop."})
+                                http(f"{FARM}/mailbox/respond", {"turn_id": mb2.get("turn_id"), "response": "Stop."}, headers={"X-Mailbox-Key": MBKEY})
                         except Exception:
                             pass
                     log({"event": "MODAL_STOP_CLEARED", "detail": "orphaned wait released; ready for next session"})
                     return "MODAL_STOP"
-                http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": tid, "response": "Proceed."})
+                http(f"{FARM}/mailbox/respond", {"turn_id": tid, "response": "Proceed."}, headers={"X-Mailbox-Key": MBKEY})
         try:
             if engine_idle():
                 time.sleep(8)

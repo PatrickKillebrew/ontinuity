@@ -25,17 +25,12 @@ from __future__ import annotations
 import json, os, urllib.request, urllib.parse, urllib.error
 
 # ---- canonical reference values -------------------------------------------
-# CHECK 1: the canonical courier allowlist count. SOURCE OF TRUTH is app.py
-# OP_ALLOWED on the engine. A sandbox seat cannot import app.py, so the count
-# is injected (build/deploy wires the real import when this becomes the courier
-# op in step 2). Default reflects the live allowlist as of BOOTGATE-2 (12):
-#   read_journal, restart_workspace, register_egress, mailbox_send,
-#   mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, write_file,
-#   commit_self, read_file, commit_file.
-# CHECK 1's job is to catch MANUAL drift against this canonical number — and
-# the manual currently still says "10 ops" (OPERATING_MANUAL.md line ~45),
-# which is exactly the drift this check exists to surface.
-CANONICAL_COURIER_OP_COUNT = 12
+# CHECK 1: app.py OP_ALLOWED on the engine is the normal source of truth. MAIN
+# derives its actual length and supplies it over the authenticated server hop.
+# The committed value below is the direct operator/recovery fallback and must
+# move in the same reviewed change as OP_ALLOWED; release tests enforce the
+# current 19-operation value and reject a caller-provided body override.
+CANONICAL_COURIER_OP_COUNT = 19
 
 # CHECK 3: corpus floor — monotonic non-decreasing last-known session count.
 CORPUS_SESSION_FLOOR = 307
@@ -56,8 +51,8 @@ QUEUE_RAW = ("https://raw.githubusercontent.com/PatrickKillebrew/"
 #                        seat's reproduction is matched against, token-wise)
 #   manual_probe       : a distinctive substring that must be PRESENT in the
 #                        manual, so the runnable ratifies the invariant against
-#                        the manual rather than against itself. (a) has no manual
-#                        probe yet — see INVARIANT_A_GAP below.
+#                        the manual rather than against itself. All four probes
+#                        are required by the current candidate manual.
 MECHANICS_INVARIANTS = [
     {
         "key": "no_self_poll",
@@ -65,12 +60,7 @@ MECHANICS_INVARIANTS = [
             "a chat seat does not self-poll the mailbox; it acts only when its "
             "conversation is given a turn, so coordination is mailbox-native but "
             "a worker still needs its conversation nudged"),
-        # INVARIANT_A_GAP (FINDING -> control): the manual does not yet state
-        # this verbatim. The refinement itself notes control drifted on it THIS
-        # session. Until the manual carries it, this probe is None and the check
-        # matches the seat's reproduction against canonical_statement only,
-        # flagging that the manual must add it (manual-currency).
-        "manual_probe": None,
+        "manual_probe": "a chat seat does NOT self-poll the mailbox",
     },
     {
         "key": "courier_only",
@@ -99,18 +89,35 @@ MECHANICS_INVARIANTS = [
 
 
 # ---- tiny http helpers (stdlib only, no deps) -----------------------------
-def _get(url, timeout=30):
-    req = urllib.request.Request(url, method="GET")
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
+
+
+def _get(url, timeout=30, headers=None):
+    req = urllib.request.Request(url, headers=headers or {}, method="GET")
+    with _NO_REDIRECT_OPENER.open(req, timeout=timeout) as r:
         return r.status, r.read().decode("utf-8", "replace")
 
 
-def _post(url, body, timeout=40):
+def _fresh_raw(url):
+    """Force a current public-repository read rather than a hot CDN object."""
+    import time
+    separator = "&" if "?" in url else "?"
+    return f"{url}{separator}cb={int(time.time())}"
+
+
+def _post(url, body, timeout=40, headers=None):
     data = json.dumps(body).encode()
+    request_headers = {"Content-Type": "application/json"}
+    request_headers.update(headers or {})
     req = urllib.request.Request(
-        url, data=data, headers={"Content-Type": "application/json"},
+        url, data=data, headers=request_headers,
         method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as r:
+    with _NO_REDIRECT_OPENER.open(req, timeout=timeout) as r:
         return r.status, r.read().decode("utf-8", "replace")
 
 
@@ -133,12 +140,15 @@ def _norm(s):
 def check_manual():
     name = "MANUAL"
     try:
-        st, body = _get(MANUAL_RAW)
+        st, body = _get(_fresh_raw(MANUAL_RAW))
     except Exception as e:
         return _fail(name, f"manual unreachable: {e}",
                      "NOT ORIENTED [CHECK 1 MANUAL]: could not read "
                      "OPERATING_MANUAL.md — manual unreachable; re-sync before "
                      "acting.")
+    if st != 200:
+        return _fail(name, f"manual returned HTTP {st}",
+                     "NOT ORIENTED [CHECK 1 MANUAL]: manual did not return HTTP 200.")
     # parse the stated courier allowlist count from the "Allowlist (live, N ops)"
     # phrasing in the scoped-op courier line.
     import re
@@ -162,37 +172,61 @@ def check_manual():
 def check_queue():
     name = "QUEUE"
     try:
-        st, body = _get(QUEUE_RAW)
+        st, body = _get(_fresh_raw(QUEUE_RAW))
     except Exception as e:
         return _fail(name, f"queue unreachable: {e}",
                      "NOT ORIENTED [CHECK 2 QUEUE]: agent_queue.md unreachable.")
-    # head = the curated ACTIVE block; next action = first numbered ACTIVE item.
+    if st != 200:
+        return _fail(name, f"queue returned HTTP {st}",
+                     "NOT ORIENTED [CHECK 2 QUEUE]: queue did not return HTTP 200.")
+    # The queue is append-only history. Current truth is exactly one NEXT marker
+    # and one complete bullet in the latest canonical H2 FOLD section.
     import re
     lines = body.splitlines()
-    active_idx = next((i for i, l in enumerate(lines)
-                       if l.strip().upper().startswith("## ACTIVE")), None)
-    next_action = None
-    if active_idx is not None:
-        for l in lines[active_idx + 1:]:
-            if re.match(r"\s*1\.\s+\S", l):
-                next_action = l.strip()
-                break
-    if not next_action:
-        return _fail(name, "no ACTIVE head item parsed",
-                     "NOT ORIENTED [CHECK 2 QUEUE]: agent_queue head empty or "
-                     "unparseable — no current next action to orient onto.")
-    one_line = " ".join(next_action.split())
-    return _ok(name, f"next action: {one_line[:160]}")
+    fold_indexes = [i for i, line in enumerate(lines)
+                    if re.fullmatch(r"## FOLD(?:[ \t]+.*)?", line)]
+    if not fold_indexes:
+        return _fail(name, "no canonical FOLD section",
+                     "NOT ORIENTED [CHECK 2 QUEUE]: no queue-tail FOLD section.")
+    start = fold_indexes[-1] + 1
+    end = next((i for i in range(start, len(lines))
+                if re.match(r"^##(?:[ \t]+|$)", lines[i])), len(lines))
+    latest = lines[start:end]
+    markers = [i for i, line in enumerate(latest) if line.strip() == "**NEXT**"]
+    if len(markers) != 1:
+        return _fail(name, f"latest FOLD has {len(markers)} NEXT markers",
+                     "NOT ORIENTED [CHECK 2 QUEUE]: latest FOLD needs exactly one NEXT.")
+    tail = latest[markers[0] + 1:]
+    while tail and not tail[0].strip():
+        tail.pop(0)
+    while tail and not tail[-1].strip():
+        tail.pop()
+    if not tail:
+        return _fail(name, "latest FOLD NEXT is empty",
+                     "NOT ORIENTED [CHECK 2 QUEUE]: NEXT needs one complete bullet.")
+    first = re.fullmatch(r"[ \t]*[-*][ \t]+(\S.*)", tail[0])
+    if not first:
+        return _fail(name, "latest FOLD NEXT is not a bullet",
+                     "NOT ORIENTED [CHECK 2 QUEUE]: NEXT must begin with one bullet.")
+    action_lines = [first.group(1)]
+    for line in tail[1:]:
+        if (not line.strip() or re.match(r"[ \t]*[-*][ \t]+\S", line)
+                or not re.match(r"^[ \t]+\S", line)):
+            return _fail(name, "latest FOLD NEXT is ambiguous",
+                         "NOT ORIENTED [CHECK 2 QUEUE]: NEXT must be one bounded bullet.")
+        action_lines.append(line.strip())
+    return _ok(name, "next action: " + " ".join(action_lines))
 
 
 def check_corpus(diag_key, engine=ENGINE_MAIN):
     name = "CORPUS"
     sql = "SELECT COUNT(*) FROM sessions"
-    url = (f"{engine}/diag/api/query?diag_key="
-           f"{urllib.parse.quote(diag_key)}&sql={urllib.parse.quote(sql)}")
+    url = f"{engine}/diag/api/query?sql={urllib.parse.quote(sql)}"
     try:
-        st, body = _get(url)
+        st, body = _get(url, headers={"X-Diag-Key": diag_key})
         d = json.loads(body)
+        if st != 200 or not isinstance(d, dict):
+            raise ValueError(f"unexpected HTTP status {st}")
         count = int(d["rows"][0][0])
     except Exception as e:
         return _fail(name, f"corpus query error: {e}",
@@ -207,11 +241,17 @@ def check_corpus(diag_key, engine=ENGINE_MAIN):
     return _ok(name, fact)
 
 
-def check_hands(diag_key, seat, engine=ENGINE_MAIN):
+def check_hands(diag_key, seat, engine=ENGINE_MAIN, relay_identity=None):
     name = "HANDS"
-    url = f"{engine}/diag/op/mailbox_peek?diag_key={urllib.parse.quote(diag_key)}"
+    if relay_identity and relay_identity.get("authenticated"):
+        if relay_identity.get("seat") != seat:
+            return _fail(name, "authenticated relay identity mismatch",
+                         "NOT ORIENTED [CHECK 4 HANDS]: courier identity does not match seat.")
+        return _ok(name, "authenticated capability reached the box through the courier")
+    url = f"{engine}/diag/op/mailbox_peek"
     try:
-        st, body = _post(url, {"seat": seat, "limit": 1})
+        st, body = _post(url, {"seat": seat, "limit": 1},
+                         headers={"X-Diag-Key": diag_key})
         d = json.loads(body)
     except Exception as e:
         return _fail(name, f"courier error: {e}",
@@ -226,18 +266,24 @@ def check_hands(diag_key, seat, engine=ENGINE_MAIN):
     return _ok(name, f"mailbox_peek ok (count={d.get('count')})")
 
 
-def check_engine():
+def check_engine(diag_key=None):
     name = "ENGINE"
+    diag_key = diag_key or os.environ.get("ONTINUITY_DIAG_KEY")
+    if not diag_key:
+        return _fail(name, "no diagnostic root provided",
+                     "NOT ORIENTED [CHECK 5 ENGINE]: no server authority available.")
     facts = []
     for label, base in (("MAIN", ENGINE_MAIN), ("FARM", ENGINE_FARM)):
         # engine state needs the diag key; reachability+parse is the bar, but
         # the /diag/engine route is key-gated, so we use the key passed via env
         # at call time. We read it here from the closure-injected value.
-        url = f"{base}/diag/engine?diag_key={urllib.parse.quote(check_engine.diag_key)}"
+        url = f"{base}/diag/engine"
         try:
-            st, body = _get(url)
+            st, body = _get(url, headers={"X-Diag-Key": diag_key})
             d = json.loads(body)
-            running = d.get("running")
+            if st != 200 or not isinstance(d, dict) or type(d.get("running")) is not bool:
+                raise ValueError(f"expected HTTP 200 JSON with boolean running; status={st}")
+            running = d["running"]
             facts.append(f"{label}: running={running}")
         except Exception as e:
             return _fail(name, f"{label} unreachable: {e}",
@@ -257,11 +303,14 @@ def check_mechanics(seat_invariants, role):
     """
     name = "MECHANICS"
     try:
-        st, manual = _get(MANUAL_RAW)
+        st, manual = _get(_fresh_raw(MANUAL_RAW))
     except Exception as e:
         return _fail(name, f"manual unreachable for ratification: {e}",
                      "NOT ORIENTED [CHECK 6 MECHANICS]: manual unreachable; "
                      "cannot ratify reproduced invariants.")
+    if st != 200:
+        return _fail(name, f"manual returned HTTP {st}",
+                     "NOT ORIENTED [CHECK 6 MECHANICS]: manual did not return HTTP 200.")
     findings = []
     for inv in MECHANICS_INVARIANTS:
         key = inv["key"]
@@ -273,12 +322,15 @@ def check_mechanics(seat_invariants, role):
         coverage = (len(present) / len(ref_tokens)) if ref_tokens else 0.0
         reproduced = coverage >= 0.85
         probe = inv["manual_probe"]
-        if probe is None:
-            manual_ok = None  # gap: not yet in manual (invariant a)
-        else:
-            manual_ok = probe in manual
+        manual_ok = probe in manual
         ok = reproduced and (manual_ok is not False)
-        findings.append((key, reproduced, round(coverage, 2), manual_ok, ok))
+        findings.append({
+            "key": key,
+            "reproduced": reproduced,
+            "coverage": round(coverage, 2),
+            "manual_ratified": manual_ok,
+            "pass": ok,
+        })
         if not ok:
             if not reproduced:
                 msg = (f"NOT ORIENTED [CHECK 6 MECHANICS]: invariant '{key}' "
@@ -288,17 +340,18 @@ def check_mechanics(seat_invariants, role):
                 msg = (f"NOT ORIENTED [CHECK 6 MECHANICS]: invariant '{key}' "
                        f"reproduced but NOT ratified by manual (probe absent) "
                        f"— manual/seat incoherent; re-sync.")
-            return _fail(name,
-                         f"role={role} findings={findings}", msg)
-    # all passed; surface the invariant-a manual gap as a non-failing note
-    gap = any(inv["manual_probe"] is None for inv in MECHANICS_INVARIANTS)
-    note = " (NOTE: invariant 'no_self_poll' not yet in manual — flag to control to add it)" if gap else ""
-    return _ok(name, f"role={role} all {len(MECHANICS_INVARIANTS)} invariants reproduced + ratified{note}")
+            return _fail(name, {"role": role, "findings": findings}, msg)
+    return _ok(name, {
+        "role": role,
+        "summary": (f"all {len(MECHANICS_INVARIANTS)} invariants "
+                    "reproduced + ratified"),
+        "findings": findings,
+    })
 
 
 # ---- the gate --------------------------------------------------------------
 def run_gate(seat, lineage, role="worker", diag_key=None,
-             seat_invariants=None):
+             seat_invariants=None, relay_identity=None):
     """Run the verified bootstrap gate. role in {control, worker}.
     The five STATE checks run for BOTH roles. CHECK 6 MECHANICS runs for
     control always, and for worker too (good practice; refinement). diag_key
@@ -315,8 +368,6 @@ def run_gate(seat, lineage, role="worker", diag_key=None,
                                  "NOT ORIENTED [PRECONDITION]: no diag key in "
                                  "arg or ONTINUITY_DIAG_KEY env — cannot run "
                                  "corpus/hands/engine checks.")]}
-    check_engine.diag_key = diag_key  # inject for the engine check
-
     result = {"oriented": False, "seat": seat, "role": role,
               "lineage": lineage, "checks": []}
 
@@ -325,8 +376,8 @@ def run_gate(seat, lineage, role="worker", diag_key=None,
         lambda: check_manual(),
         lambda: check_queue(),
         lambda: check_corpus(diag_key),
-        lambda: check_hands(diag_key, seat),
-        lambda: check_engine(),
+        lambda: check_hands(diag_key, seat, relay_identity=relay_identity),
+        lambda: check_engine(diag_key),
         lambda: check_mechanics(seat_invariants or {}, role),
     ]
     for step in steps:

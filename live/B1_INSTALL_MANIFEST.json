@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "candidate_base_commit": "3476ed8d373807dcefc6ea85e7c88d778efa4bda",
+  "state": "local_candidate_uncommitted_rejected_three_times_corrected_awaiting_fourth_review_not_live",
+  "generated_utc": "2026-09-07",
+  "engine_deploy": {
+    "targets": [
+      "MAIN",
+      "FARM"
+    ],
+    "required": [
+      {
+        "path": "app.py",
+        "sha256": "126431d1a70ddd390fa09ed5305564536b9616ac2fc5a196eafabcdf5d31ac8e"
+      },
+      {
+        "path": "capability_auth.py",
+        "sha256": "346be5ca540610ba97d6e11cf1687adf8dc8518da1baa6fe4da95b750de0e49d"
+      },
+      {
+        "path": "templates/index.html",
+        "sha256": "46f2dbf7f3cfcd38dd73084de2e6f7df9e5cad27ea28ac43fae4e5e9d46f4222"
+      }
+    ]
+  },
+  "box_install": {
+    "restart_required_after_exact_install": true,
+    "required": [
+      {
+        "path": "live/box/file_server.py",
+        "sha256": "936c3c8503490a92a399375516e0331ef6779ddba1c23f48a4e21b48811c2f6c",
+        "target": "box_project/file_server.py"
+      },
+      {
+        "path": "live/box/box_ops.py",
+        "sha256": "3f685b1d047486d8f410bd0635831b3d9678ce84366352949aa945db1ab02a28",
+        "target": "box_project/box_ops.py"
+      },
+      {
+        "path": "live/box/seat_mailbox.py",
+        "sha256": "a175e47ae729326342d2e5ec85d8d1487208f4f6207be83b81267fb9951538a4",
+        "target": "box_project/seat_mailbox.py"
+      },
+      {
+        "path": "live/bootstrap/gate.py",
+        "sha256": "fb4fd8c39990aa5a3271b82e0d51828128d1e10f422ba95c10b03eeb0d79ab87",
+        "target": "box_project/live/bootstrap/gate.py"
+      },
+      {
+        "path": "live/shepherd_alert.py",
+        "sha256": "93fd4888fad6cfdc97b91766089d02cadadaf42396d2cdc35843a8002fea82c2",
+        "target": "box_project/shepherd_alert.py"
+      }
+    ]
+  },
+  "active_service_sources": {
+    "reinstall_and_restart_only_during_authorized_cutover": true,
+    "required": [
+      {
+        "path": "live/experiment/burnin_resident.py",
+        "sha256": "2890eb13c7b4097bec155ffe00972e392af55b365237964bb9d61608df53cf02",
+        "target": "/opt/ontinuity/burnin_resident.py",
+        "service": "ontinuity-burnin"
+      }
+    ]
+  },
+  "repository_contract": {
+    "required": [
+      {
+        "path": "model_client.py",
+        "sha256": "2ca6525db6d834d1f2841e41e1ff3af0d64b517054cac01d707fd16cf5c60e6c"
+      },
+      {
+        "path": "live/ONTINUITY_1_0_BOARD.md",
+        "sha256": "85f1be2d0d36a61218d00832632d38dcf1772b19729c392d365e507dfad4152c"
+      },
+      {
+        "path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md",
+        "sha256": "611a480740924a8b2a0c73695c1b2d1a2cb1ba3bb45be515ace24d8c39aa615d"
+      },
+      {
+        "path": "live/box/laptop_seat.py",
+        "sha256": "3e91d1c95bcd1b6d770c2433e0f8e9dfcdbb6dfc5f2fe41cc383663da50d2626"
+      },
+      {
+        "path": "live/shepherd.py",
+        "sha256": "f84fe9de8846c5c710999fd03bd83f70cfc19294c4e5905ec35b07d0dab67f10"
+      },
+      {
+        "path": "live/control_loop.py",
+        "sha256": "e6549dcbbe8b4411bb0ba75235b59ce457957ade0d4e79d9bbfdb9074a0aa7cd"
+      },
+      {
+        "path": "live/governor/governor_relay.py",
+        "sha256": "1a0f317d45be86aad9edf5c9f4c8f8d89aaeff36d8be4c229a054ef05872ebed"
+      },
+      {
+        "path": "live/governor/governor_routes.py",
+        "sha256": "4a7bfe0226a1e1b2f5d4ef7928ad7d07812cfa7759ddfa36e4b83a5edefdc9f3"
+      },
+      {
+        "path": "live/misc/push_to_github.py",
+        "sha256": "94d50a9619d26721567ffe3b6bde4d01bd86648f1286f8e6e8bb7b67d38780d9"
+      },
+      {
+        "path": "live/CONTROL_QUICKBOOT.md",
+        "sha256": "d69c05e0362dba779527d63ed4fc1e3265a0f579ab8e35b7f6ee43a396b2e72c"
+      },
+      {
+        "path": "live/CONTROL_QUICKBOOT_SNIPPET.md",
+        "sha256": "dbd7e53d76661b381bf92beac23450fbbebae159d554a698bcd39581e0076d06"
+      },
+      {
+        "path": "live/WORKER_QUICKBOOT.md",
+        "sha256": "06e7cc9ce5e535b842057e4ee0fd38b988b0e78a50fbe532884e688e21d24195"
+      },
+      {
+        "path": "live/WORKER_BOOT_PACKET.md",
+        "sha256": "b4a37369927b2249f104c1a2fdaa4b7623b41d11d81f6cc8f85b32ddc947a3df"
+      },
+      {
+        "path": "live/WORKER_MANUAL.md",
+        "sha256": "ce01e34358e400aeb4ab0bb91aa7be40ea26f3014c0bc4869fb859d4fd452194"
+      },
+      {
+        "path": "live/OPERATING_MANUAL.md",
+        "sha256": "724601aef2dd247f0eaa7b97079b8e8e9cd364cc96c57323f87bf5adc791c43d"
+      },
+      {
+        "path": "live/OPERATING_RUBRIC.md",
+        "sha256": "b60d12b193195d9bdabe0052e28ca7b245544863290a59134e12a847d8a355d9"
+      },
+      {
+        "path": "live/THE_PARADIGM.md",
+        "sha256": "207263947191625d3251fc0d841453f7c58979ac28d128bd5d7d689e2194bd6d"
+      },
+      {
+        "path": "live/CONTROL_HANDOFF.md",
+        "sha256": "6404d6a01c4492a6fbd26f1d072d6117489687838ef5d35095d8207c535a6472"
+      },
+      {
+        "path": "live/PUNCH_LIST.md",
+        "sha256": "3d147d46592b344ce6ff5668fee28883b6dcf159ed24b1551d0130b58b543dba"
+      },
+      {
+        "path": "live/agent_queue.md",
+        "sha256": "d39ca53dcdac79ceeff17522cd4717dfb1c77f861c2e63282a4e98e25fdd9a94"
+      },
+      {
+        "path": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md",
+        "sha256": "90d7e2345352838235be1ee3718fbe525497c610b09c8053910808bef1ddb76a"
+      },
+      {
+        "path": "live/specs/verified_bootstrap_gate.md",
+        "sha256": "56c8261e071673367682caee2fdfb633a5fd59eed744e3e33bfdb5fada547526"
+      }
+    ]
+  },
+  "verification_sources": {
+    "required": [
+      {
+        "path": "tests/test_b1_bootstrap_gate.py",
+        "sha256": "4abed54196de873e3845fa045d0905e3704ec85b85dacd75641895b46a3a91e0"
+      },
+      {
+        "path": "tests/test_b1_release_boundaries.py",
+        "sha256": "2783f9186f1cd0e8ac7a18d2ac669862d399438843463ceb25e8933b1c760553"
+      },
+      {
+        "path": "tests/test_capability_admission.py",
+        "sha256": "af6f7b5132b9e83927ef058841f24e43629faec2688b11caa7c20543750b4cff"
+      },
+      {
+        "path": "tests/test_capability_admission_surface.py",
+        "sha256": "dccb443f721b32a82043ead4d8be5bcff280b54a82cdf17a8788bbe7b70d1c5d"
+      },
+      {
+        "path": "tests/test_capability_box_identity.py",
+        "sha256": "d1591ec63183cd183093be1ab1139210682f64fb50bde6f05eb8686f6f14bf7a"
+      },
+      {
+        "path": "tests/test_capability_courier.py",
+        "sha256": "c19b1db5d513f9f250b09c326e2f65d68f8f5442e3c7867cb3e3931b164e2c6b"
+      }
+    ]
+  },
+  "configuration_requirements": [
+    "MAIN and FARM keep DIAG_KEY server-side; no model boot packet receives it",
+    "ONTINUITY_CAPABILITY_REGISTRY points to a private persistent writable path, or RAILWAY_VOLUME_MOUNT_PATH supplies its parent",
+    "WORKSPACE_URL identifies the box hop and the box diagnostic root matches the engine root during the authorized transition",
+    "SHEPHERD_ALERT_TO_SEAT defaults to control; any different target is an explicit operator choice"
+  ],
+  "cutover_order": [
+    {
+      "order": 1,
+      "action": "preflight",
+      "instruction": "confirm the reviewed commit, idle MAIN and FARM, preserved rollback bytes, persistent registry configuration, and matching server-side box/engine diagnostic root",
+      "proof": "reviewed commit and rollback identifiers recorded; both engines idle; required configuration present without displaying values"
+    },
+    {
+      "order": 2,
+      "action": "install_box",
+      "instruction": "install the exact backward-compatible five-file box unit, then restart the workspace once",
+      "proof": "all box_install targets report the manifest hashes after restart"
+    },
+    {
+      "order": 3,
+      "action": "verify_box",
+      "instruction": "verify box health, header-only operator recovery, query-root denial, and compatibility with the still-rollback engines",
+      "proof": "health and authenticated read-only probes pass before either engine deploys"
+    },
+    {
+      "order": 4,
+      "action": "install_active_services",
+      "instruction": "install the exact persistent burn-in source, verify its hash, and restart only its named service",
+      "proof": "active service bytes match the manifest and the service resumes without query credentials"
+    },
+    {
+      "order": 5,
+      "action": "deploy_main",
+      "instruction": "deploy MAIN at the reviewed commit while FARM remains the rollback peer",
+      "proof": "MAIN source identity, health, header-only recovery, admission UI, and public removals match the reviewed commit"
+    },
+    {
+      "order": 6,
+      "action": "deploy_farm",
+      "instruction": "deploy FARM at the same reviewed commit",
+      "proof": "FARM source identity and health match MAIN and the reviewed commit"
+    },
+    {
+      "order": 7,
+      "action": "prove_capabilities",
+      "instruction": "complete distinct Control and Worker capability boots, then prove excluded-operation denial, revocation, and expiry",
+      "proof": "both gates orient through capabilities and denied/revoked/expired calls fail"
+    },
+    {
+      "order": 8,
+      "action": "retire_laptop",
+      "instruction": "install the manifest tombstone at the laptop target and stop its resident loop",
+      "proof": "installed tombstone hash matches and no laptop_seat resident process remains"
+    }
+  ],
+  "retire_during_authorized_cutover": [
+    {
+      "path": "live/box/laptop_seat.py",
+      "sha256": "3e91d1c95bcd1b6d770c2433e0f8e9dfcdbb6dfc5f2fe41cc383663da50d2626",
+      "target": "C:\\donkeycar\\laptop_seat.py",
+      "action": "install_tombstone_and_stop",
+      "proof": "installed tombstone hash matches and no laptop_seat resident process remains"
+    }
+  ],
+  "public_removals": [
+    {
+      "path": "templates/kb.html",
+      "base_sha256": "b016ed9105fc26c687c9ac38d95ae207e1032301dc88f3f389dac80aa517789e",
+      "receipt": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md"
+    },
+    {
+      "path": "live/tools/ipad_keyboard.py",
+      "base_sha256": "225122da64d8926a83e8f0b2589e6dcfeb7e676a21699863d85c58b4bd82dfe8",
+      "receipt": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md"
+    },
+    {
+      "path": "live/tools/ipad_keyboard_CONTRACT.md",
+      "base_sha256": "806c8058e4bf668939705bad8796e133cf08e665a7cd8b96ac0df0faa29db5c7",
+      "receipt": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md"
+    },
+    {
+      "path": "live/tools/ipad_keyboard_CORPUS.md",
+      "base_sha256": "caf9729ab0f151bd61bb1c130ede920f7db9eb46e45a4f569aa7b804bd64c556",
+      "receipt": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md"
+    }
+  ],
+  "cutover_proof_required": [
+    "reviewed commit hash equals deployed MAIN and FARM source",
+    "installed box bytes equal manifest hashes",
+    "active service bytes equal manifest hashes before restart",
+    "query-string roots are rejected and header-only operator recovery remains available",
+    "Control boot passes with a short-lived capability",
+    "Worker boot passes with a distinct short-lived capability",
+    "expiry and revocation deny subsequent courier calls"
+  ]
+}

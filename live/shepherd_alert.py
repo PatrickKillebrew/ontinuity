@@ -45,10 +45,20 @@ DIAG = (open("/home/claude/diagkey.txt").read().strip()
         if os.path.exists("/home/claude/diagkey.txt")
         else os.environ.get("DIAG_KEY", ""))
 
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
+
 POLL_S = 60                       # check cadence
 IDLE_THRESHOLD_S = 300            # no activity for >5min + queued work = idle-with-work
 WORKER_ROLES = ("any_worker",)    # broadcast targets whose queue depth matters
 KNOWN_SEATS = ("worker1", "worker2", "control")  # seats to watch; extend as nodes register
+ALERT_TO_SEAT = (os.environ.get("SHEPHERD_ALERT_TO_SEAT", "control").strip()
+                 or "control")  # preserves the observed installed behavior
 ALERTS_FILE = "/home/claude/shepherd_alerts.jsonl"
 STATE_FILE = "/home/claude/shepherd_alert_state.json"
 
@@ -58,17 +68,20 @@ def _now():
 
 
 def _q(sql):
-    url = f"{ENGINE}/diag/api/query?diag_key={DIAG}&sql=" + urllib.parse.quote(sql)
-    with urllib.request.urlopen(url, timeout=30) as r:
+    url = f"{ENGINE}/diag/api/query?sql=" + urllib.parse.quote(sql)
+    req = urllib.request.Request(url, headers={"X-Diag-Key": DIAG})
+    with _NO_REDIRECT_OPENER.open(req, timeout=30) as r:
         return json.loads(r.read().decode())
 
 
 def _op(name, body):
-    url = f"{ENGINE}/diag/op/{name}?diag_key={DIAG}"
+    url = f"{ENGINE}/diag/op/{name}"
     data = json.dumps(body).encode()
-    req = urllib.request.Request(url, data=data,
-                                 headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=30) as r:
+    req = urllib.request.Request(
+        url, data=data,
+        headers={"Content-Type": "application/json", "X-Diag-Key": DIAG},
+        method="POST")
+    with _NO_REDIRECT_OPENER.open(req, timeout=30) as r:
         return json.loads(r.read().decode())
 
 
@@ -127,11 +140,11 @@ def emit_alert(seat, depth, age_s):
     with open(ALERTS_FILE, "a") as f:
         f.write(json.dumps({"t": _now(), "seat": seat, "queue_depth": depth,
                             "idle_s": int(age_s), "kind": "idle_with_work"}) + "\n")
-    # 2) a mailbox note to the operator (single line; note kind so a draining node
+    # 2) a mailbox note to the configured alert seat (single line; note kind so a draining node
     #    never claims it as work — the work-vs-chatter filter excludes 'note')
     try:
         _op("mailbox_send", {"from_seat": "shepherd", "from_lineage": "vps:shepherd_alert",
-                             "to_seat": "operator", "kind": "note", "body": line})
+                             "to_seat": ALERT_TO_SEAT, "kind": "note", "body": line})
     except Exception:
         pass
     print(line, flush=True)

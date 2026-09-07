@@ -5,20 +5,33 @@ verify receipt -> pace -> next. Stops the batch on any modal (operator
 constitutional point), repeated provider failure, or missing receipt.
 Run: python3 shepherd.py <start_index> <count>
 """
-import json, sys, time, urllib.request
+import json, os, sys, time, urllib.request
+
+
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
 
 FARM = "https://ontinuity-farm-production.up.railway.app"
 MAIN = "https://web-production-7eaf8.up.railway.app"
-DIAG = open("/home/claude/diagkey.txt").read().strip() if __import__("os").path.exists("/home/claude/diagkey.txt") else "Gj7NvkTfuV5SMzJR9I6ZoWHiPLQC0rx8dDFB3Awn"
+DIAG = (open("/home/claude/diagkey.txt").read().strip()
+        if os.path.exists("/home/claude/diagkey.txt")
+        else os.environ.get("DIAG_KEY", ""))
 MBKEY = open("/home/claude/farm_mbkey.txt").read().strip()
 PACE_S = 25          # gap between sessions (rate weather)
 SESSION_BUDGET_S = 420   # max wall-clock per session before flagging
 LOG = "/home/claude/shepherd_log.jsonl"
 
-def http(url, body=None):
-    req = urllib.request.Request(url, data=json.dumps(body).encode() if body else None,
-        headers={"Content-Type": "application/json"} if body else {})
-    return json.loads(urllib.request.urlopen(req, timeout=40).read().decode())
+def http(url, body=None, headers=None):
+    request_headers = dict(headers or {})
+    if body is not None:
+        request_headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None,
+        headers=request_headers)
+    return json.loads(_NO_REDIRECT_OPENER.open(req, timeout=40).read().decode())
 
 def log(rec):
     rec["t"] = time.strftime("%H:%M:%S")
@@ -27,27 +40,30 @@ def log(rec):
     print(rec)
 
 def engine():
-    return http(f"{FARM}/diag/engine?diag_key={DIAG}")
+    return http(f"{FARM}/diag/engine", headers={"X-Diag-Key": DIAG})
 
 def mailbox():
-    return http(f"{FARM}/mailbox/turn?mailbox_key={MBKEY}")
+    return http(f"{FARM}/mailbox/turn", headers={"X-Mailbox-Key": MBKEY})
 
 def respond(turn_id, text):
-    return http(f"{FARM}/mailbox/respond", {"mailbox_key": MBKEY, "turn_id": turn_id, "response": text})
+    return http(f"{FARM}/mailbox/respond", {"turn_id": turn_id, "response": text},
+                headers={"X-Mailbox-Key": MBKEY})
 
 def latest_receipt():
-    d = http(f"{MAIN}/diag/api/query?diag_key={DIAG}&sql=SELECT%20receipt_id%2C%20session_id%2C%20outcome%20FROM%20write_receipts%20ORDER%20BY%20receipt_id%20DESC%20LIMIT%201")
+    d = http(f"{MAIN}/diag/api/query?sql=SELECT%20receipt_id%2C%20session_id%2C%20outcome%20FROM%20write_receipts%20ORDER%20BY%20receipt_id%20DESC%20LIMIT%201",
+             headers={"X-Diag-Key": DIAG})
     return d["rows"][0]
 
 def consecutive_provider_failures():
-    d = http(f"{FARM}/diag/console?diag_key={DIAG}")
+    d = http(f"{FARM}/diag/console", headers={"X-Diag-Key": DIAG})
     ev = d if isinstance(d, list) else []
     tail = [str(e) for e in ev[-10:]]
     return sum(1 for s in tail if "403" in s or "401" in s)
 
 def run_one(obj):
     base_receipt = latest_receipt()[0]
-    r = http(f"{FARM}/agent/start", {"mailbox_key": MBKEY, "objective": obj["objective"], "start_fresh": True})
+    r = http(f"{FARM}/agent/start", {"objective": obj["objective"], "start_fresh": True},
+             headers={"X-Mailbox-Key": MBKEY})
     if not r.get("ok"):
         log({"id": obj["id"], "event": "start_refused", "detail": r}); return "STOP"
     log({"id": obj["id"], "event": "started"})
