@@ -1,7 +1,9 @@
 # CONTROL HANDOFF — current state + the single next action
 # Updated 2026-09-08 — the accepted transport-lock and fixed burn-in restart are
-# committed at `6f52063`; exact deploy-object binding and curl-default hardening
-# are refrozen locally, uncommitted, awaiting a new clean review, and not live.
+# committed at `6f52063`; the later implementation reached public main as
+# `b596d3c` during review but was not accepted. Its local metadata correction is
+# manifest-frozen under the review/exact-HEAD authorization gate. Public or local
+# commit state is not deployment authority, and live deployment is unverified.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
 ## STATE AT FOLD
@@ -14,6 +16,10 @@
   exact six-file unit by adding `trusted_deploy.py` beside `box_ops.py`; it is not
   installed. Do not restart until all six candidate disk hashes pass during an
   authorized cutover.
+- **PUBLIC REPOSITORY OBSERVATION:** local remote-tracking reflog records a push
+  of `b596d3c` to `origin/main` during the review interval. The review rejected
+  that commit's stale operational state text. Do not infer acceptance, operator
+  authorization, installation, or live deployment from its public presence.
 - **TRANSPORT LOCK ACCEPTED:** commit `6f52063` preserves the successful top-level
   `curl --disable --config -` engine path, exact request envelope, interprocess replay lock,
   bounded response intake, fixed ledgered `restart_burnin`, and the reviewed
@@ -24,8 +30,10 @@
   credentials, records a pre-mutation state, captures the exact provider deployment
   identifier, and verifies that stored identifier's service and commit. A caller
   cannot select transport details or satisfy status with a stale success.
-- **SINGLE NEXT ACTION:** independently review the exact refrozen object-bound
-  deploy and transport-hardening candidate. An author does not deploy these bytes.
+- **SINGLE NEXT ACTION:** apply the review/authorization gate to the exact
+  manifest-frozen object-bound deploy and transport-hardening candidate: require
+  an independent ACCEPT, then resolve the exact candidate HEAD and obtain
+  Patrick's authorization for that hash. An author does not deploy these bytes.
 - B0 is complete at commit `7abadca`; its authenticated read-only report
   honestly returned `DRIFT`. The original observation remains the baseline even
   where later work repaired part of the observed box divergence.

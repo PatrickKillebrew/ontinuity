@@ -52,7 +52,7 @@ Create a machine-readable and human-readable manifest of:
 ### B1 — Operator-approved capability admission
 
 **Serves:** RC-2; prerequisite to authenticated RC-3 and RC-5  
-**State:** MAIN LIVE AT `693435a`, FARM AT ROLLBACK `3476ed8`; LOCAL CANDIDATE BASE `6f52063` AWAITING A NEW CLEAN REVIEW
+**State:** PUBLIC MAIN OBSERVED AT `b596d3c` WITHOUT ACCEPTANCE; LIVE MAIN LAST VERIFIED AT `693435a`, FARM AT ROLLBACK `3476ed8`; LOCAL METADATA CORRECTION UNDER THE REVIEW/EXACT-HEAD AUTHORIZATION GATE
 
 Supersedes and consolidates:
 
@@ -91,10 +91,14 @@ verifier preflights its selected project runtime before starting tests. Successi
 clean reviews forced correction of process-local replay locking, unbounded relay-
 response intake, contradictory handoff state, deploy authority not bound to the
 exact block/commit/target object, loose persisted-schema typing, and curl's implicit
-user default configuration. The current overlay is based on accepted local transport
-commit `6f52063`, passes the complete current author-side verifier, remains uncommitted, and is not live.
-The B1 transition does not resume until these exact refrozen bytes receive a new
-clean independent review and Patrick authorizes the resulting exact commit.
+user default configuration. The implementation was committed and pushed as
+`b596d3c` during the clean-review interval, but that review rejected its stale
+commit-state instructions; public presence is not acceptance or evidence of live
+deployment. A local manifest-frozen metadata correction derived from accepted
+transport base `6f52063` passes the complete current author-side verifier.
+Local commit state is not authority. The B1 transition resumes only when these
+exact manifest-frozen bytes have a clean independent ACCEPT, the candidate HEAD
+has then been resolved mechanically, and Patrick has authorized that exact hash.
 The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
 ### B2 — Bind occupant and action provenance
@@ -334,10 +338,11 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Obtain a new independent review of the exact refrozen `codex/b1-transport-lock`
-overlay based on accepted local transport commit `6f52063`. If accepted, commit
-those unchanged bytes locally and request Patrick's authorization for that exact
-commit before any push, install, restart, or deployment. Then resume the fail-
+Apply the review/authorization gate to the exact manifest-frozen
+`codex/b1-transport-lock` candidate derived from accepted local transport commit
+`6f52063`: require an independent ACCEPT, then resolve the exact candidate HEAD
+and request Patrick's authorization for that hash before any push, install,
+restart, or deployment. Only then resume the fail-
 stopped B1 cutover at the remaining pre-restart box readback. B3 remains the next
 dependency lane after B1; do not mix it into this bounded correction.
 

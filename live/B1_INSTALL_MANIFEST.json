@@ -77,11 +77,11 @@
       },
       {
         "path": "live/ONTINUITY_1_0_BOARD.md",
-        "sha256": "2b504d105f6c58675e525c601a417b8aae1adddfa54b76e66077e7bc8a813481"
+        "sha256": "9e7ff56856d1bcf0f3e75e2e5e2735c63675130297697e9f29bf21492f6e82be"
       },
       {
         "path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md",
-        "sha256": "e713b0c224907263a3281d697efdecbb8a2b65b565134b04ccc7ef336a27b779"
+        "sha256": "db5b2b4b6f21381814a097390609deec578647522a7f8dcf11c836233f50b2af"
       },
       {
         "path": "live/ONTINUITY_1_0_BASELINE.md",
@@ -161,15 +161,15 @@
       },
       {
         "path": "live/CONTROL_HANDOFF.md",
-        "sha256": "52da8f6d245c4f9cc823d5c24efdef74b6b60934786a7ac9694920a6a2d9aa11"
+        "sha256": "76ed12280466e5ccacfde41eb122016b013da2742685566caa86b06943adb958"
       },
       {
         "path": "live/PUNCH_LIST.md",
-        "sha256": "c40995cbddca1743a23856c10ad17a7e4f0ec2b8299967a319e071627ab955e1"
+        "sha256": "3365f231b3f186470588e6b5197512c800033169897b3aecedd0629661729e5e"
       },
       {
         "path": "live/agent_queue.md",
-        "sha256": "07277e4e81842266b3cc194992bd510dc8e899ef76136844a99c4a2cac370ae9"
+        "sha256": "55a118b013ab15b5334dd7d5fc3f074e6031070cbcaa7829c7aedcf922bec3bc"
       },
       {
         "path": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md",
@@ -197,7 +197,7 @@
       },
       {
         "path": "tests/test_b1_release_boundaries.py",
-        "sha256": "4d7de208633d168ca0a9476d06bea457646c5119f2a37f627d5a182a816fc692"
+        "sha256": "2d4cefe5371540a915f45c34190a3991b71c9a108bc2c8112523cf70d326abd2"
       },
       {
         "path": "tests/test_capability_admission.py",

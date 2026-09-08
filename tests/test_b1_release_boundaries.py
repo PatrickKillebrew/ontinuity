@@ -222,22 +222,25 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         current_punch = punch.split("## IN-PROGRESS", 1)[1]
         current_punch = current_punch.split("## DONE", 1)[0]
 
-        self.assertIn("exact-object and transport hardening refrozen", latest_fold)
+        self.assertIn("concurrent public push recorded without authority", latest_fold)
         self.assertIn("curl --disable --config - < REQUEST.curl", latest_fold)
         self.assertIn("accepted local transport base `6f52063`", latest_fold)
-        self.assertIn("new clean independent review", latest_fold)
+        self.assertIn("`b596d3c`", latest_fold)
+        self.assertIn("independent ACCEPT", latest_fold)
+        self.assertIn("resolve the exact candidate HEAD", latest_fold)
         self.assertIn("Patrick's authorization", latest_fold)
         self.assertNotIn("obtain a second clean independent review", latest_fold.lower())
 
         roadmap = next(
             line for line in punch.splitlines()
             if "ONTINUITY 1.0 COMPLETION PLAN — controlling roadmap" in line)
-        self.assertIn("new independent exact-byte review", roadmap)
+        self.assertIn("review/authorization gate", roadmap)
         self.assertIn("`6f52063`", roadmap)
         self.assertIn("Patrick's authorization", roadmap)
         self.assertNotIn("second independent exact-byte review", roadmap.lower())
 
-        self.assertIn("new independent review", current_board)
+        self.assertIn("review/authorization gate", current_board)
+        self.assertIn("resolve the exact candidate HEAD", current_board)
         self.assertIn("`6f52063`", current_board)
         self.assertIn("Patrick's authorization", current_board)
         self.assertNotIn("second independent review", current_board.lower())

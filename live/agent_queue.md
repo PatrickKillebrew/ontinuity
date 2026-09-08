@@ -1441,3 +1441,72 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
   and request Patrick's authorization for that exact commit before any remote or
   live action. Then resume the existing B1 fail-stop order; B3 remains next after
   B1 and is not part of this correction.
+
+## FOLD — review gate made lifecycle-neutral — 2026-09-08
+
+**CORRECTION TO THE PRECEDING OPERATIONAL NEXT**
+- The preceding fold is immutable history. Its assumption that the candidate
+  would still be uncommitted after review is not an authorization condition.
+- During the clean-review interval, local branch HEAD became `b596d3c`; no
+  repository remote or live system changed. Local commit existence does not
+  authorize publication, installation, restart, or deployment.
+
+**CURRENT GATE**
+- Apply one lifecycle-neutral rule to the exact manifest-frozen candidate,
+  derived from accepted local transport base `6f52063`:
+  require an independent ACCEPT, then resolve the exact candidate HEAD
+  mechanically and obtain Patrick's authorization for that exact hash before
+  any remote or live action.
+- This rule remains valid across local commits and review-metadata corrections.
+  Do not infer review acceptance or operator authorization from branch state,
+  commit prose, prior authorization for another hash, or conversation memory.
+- The sole model-seat network transition remains exactly
+  `curl --disable --config - < REQUEST.curl`. The inherited host proxy, DNS, and
+  TLS environment remains the admitted sandbox platform boundary. No general
+  model tool is disabled.
+
+**STATE LEFT**
+- The complete current author-side verifier passes; that evidence does not
+  substitute for independent ACCEPT or exact-HEAD operator authorization.
+- MAIN remains live at `693435a`; FARM remains rollback `3476ed8`; the live B1
+  transition remains fail-stopped. This fold records no push, install, restart,
+  deployment, live request, credential access, or credential change.
+- B3 remains next after B1 and is outside this bounded correction.
+
+**NEXT**
+- Require an independent ACCEPT of the exact manifest-frozen candidate, then
+  resolve the exact candidate HEAD mechanically and obtain Patrick's
+  authorization for that exact hash before any remote or live action.
+
+## FOLD — concurrent public push recorded without authority — 2026-09-08
+
+**NEW OBSERVATION**
+- After the preceding fold, the local remote-tracking reflog recorded a push of
+  `b596d3c` to `origin/main` at 2026-09-08 19:02:15 -0400. That commit contains
+  the implementation candidate reviewed in the preceding interval.
+- The clean review rejected `b596d3c` because its current operational surfaces
+  incorrectly assumed the candidate was uncommitted. Public presence is not
+  independent ACCEPT, operator authorization, installation, or live-deployment
+  evidence. No rollback or further remote mutation was attempted.
+
+**LOCAL CORRECTION**
+- Board, handoff, completion plan, punch list, manifest state, and their
+  regression now use a lifecycle-neutral gate. They record public main honestly
+  while keeping the last verified live state distinct.
+- The complete current author-side verifier passes. The implementation boundary,
+  canonical `curl --disable --config - < REQUEST.curl` model-seat transition,
+  exact deploy-object binding, and provider-neutral caller contract are unchanged.
+- The candidate is derived from accepted local transport base `6f52063`. Its
+  current manifest-frozen HEAD must be resolved only after independent ACCEPT.
+
+**STATE LEFT**
+- Public main is observed at `b596d3c`. Live MAIN was last verified at `693435a`;
+  FARM was last verified at rollback `3476ed8`. Current live provider state has
+  not been queried in this correction and is not inferred from the public branch.
+- No install, restart, deployment, live request, credential access, credential
+  change, rollback, or additional remote mutation was performed.
+
+**NEXT**
+- Require an independent ACCEPT of the exact manifest-frozen local correction,
+  then resolve the exact candidate HEAD mechanically and obtain Patrick's authorization
+  for that exact hash before any further remote or live action.

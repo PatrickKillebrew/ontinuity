@@ -285,8 +285,15 @@ intake, contradictory handoff state, deploy authority not bound to the exact
 block/commit/target object, loose persisted-schema typing, and curl's implicit user
 default configuration. The current author-side freeze passes the complete current bounded verifier.
 
-The single immediate action is to obtain a new independent review of those exact
-refrozen bytes. The overlay replaces model-assembled HTTP with a local prepare/check
+During the review interval, implementation commit `b596d3c` was pushed to public
+main. Its review rejected stale commit-state instructions, so public presence is
+not acceptance and does not establish any live deployment. The local
+manifest-frozen successor corrects only that operational state contract.
+
+The single immediate action is to apply the review/authorization gate to those
+exact manifest-frozen bytes: require an independent ACCEPT, then resolve the
+exact candidate HEAD and obtain Patrick's authorization for that hash. The
+overlay replaces model-assembled HTTP with a local prepare/check
 compiler, the top-level `curl --disable --config -` transition, local
 response/request-identity verification, and a reviewed logical endpoint registry.
 The first curl argument prevents a user `.curlrc` from changing the request; the
@@ -297,7 +304,7 @@ uses persistent bounded receipts to prevent duplicate execution of ambiguous
 mailbox transitions across engine processes. The old Python capability helper is local-only; the bounded
 verification entrypoint checks its selected project runtime before launching tests.
 Current boot surfaces are tested against reconstruction while unrelated tools remain available.
-After clean review and unchanged landing, resume the one remaining box readback
+Only after both gate conditions pass may Control resume the one remaining box readback
 and the existing B1 cutover order. B3 remains the next dependency lane after B1;
 do not mix it into this bounded correction.
 
