@@ -1,34 +1,31 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-08 by successor Control (`chatgpt-work:gpt-5.6-sol`) — the first clean transport-lock review rejected three release blockers; all three are corrected locally and the exact refreeze awaits a second clean review. The live B1 cutover remains fail-stopped before box restart.
+# Updated 2026-09-08 — the accepted transport-lock and fixed burn-in restart are
+# committed at `6f52063`; exact deploy-object binding and curl-default hardening
+# are refrozen locally, uncommitted, awaiting a new clean review, and not live.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
 ## STATE AT FOLD
 - **CURRENT OVERRIDE:** MAIN runs reviewed B1 commit `693435a` with its persistent
   capability-registry volume attached. FARM remains on rollback `3476ed8`. The
-  reviewed five-file box unit has been written to disk; pre-restart readback passed
+  five files from the earlier B1 box unit have been written to disk; pre-restart readback passed
   for `file_server.py`, `box_ops.py`, `seat_mailbox.py`, and `gate.py`;
   `shepherd_alert.py` still requires readback. The workspace has not restarted, so
-  the old process remains in memory. Do not restart until all five disk hashes pass.
-- **TRANSPORT DEFECT REOPENED:** the 2026-09-04 correction preserved the correct
-  `WORK_EGRESS_DENIED` classification but not the exact known-good operator request
-  as an executable artifact. Control reconstructed and client-shopped the path
-  again during cutover. Local overlay branch `codex/b1-transport-lock` preserves
-  the successful top-level `curl --config -` form through a local
-  prepare/check/curl/verify state machine and a reviewed logical endpoint registry.
-  Candidate MAIN now requires the exact v2 envelope for admission and capability
-  traffic, echoes the request identity, and persists bounded replay state for the
-  four mailbox operations that can mutate or claim work. Missing/mismatched
-  envelopes fail before relay; ambiguous duplicates are not executed again. The
-  old capability-bearing Python control helper is now a local-only response
-  transformer. The bounded B1 verifier preflights its selected Python runtime.
-  The first clean review reproduced the exact freeze and all 142 tests but rejected
-  process-local replay locking, unbounded relay-response intake, and contradictory
-  handoff state. The correction uses an interprocess transaction lock, bounded
-  streamed response reads, and one authoritative current action. It remains local,
-  uncommitted, and not live.
-- **SINGLE NEXT ACTION:** independently review the exact corrected and refrozen
-  transport-lock overlay. Only after clean acceptance may the fail-stopped B1 transition resume
-  with the one remaining pre-restart read.
+  the old process remains in memory. The corrected candidate expands this to the
+  exact six-file unit by adding `trusted_deploy.py` beside `box_ops.py`; it is not
+  installed. Do not restart until all six candidate disk hashes pass during an
+  authorized cutover.
+- **TRANSPORT LOCK ACCEPTED:** commit `6f52063` preserves the successful top-level
+  `curl --disable --config -` engine path, exact request envelope, interprocess replay lock,
+  bounded response intake, fixed ledgered `restart_burnin`, and the reviewed
+  logical endpoint registry. It does not govern hosting-provider administration.
+- **TRUSTED DEPLOY GAP CORRECTED LOCALLY:** the existing box-side `/op/deploy`
+  accepts only a two-phase provider-neutral tuple: action, logical target,
+  signoff block, and exact commit. The box alone holds provider configuration and
+  credentials, records a pre-mutation state, captures the exact provider deployment
+  identifier, and verifies that stored identifier's service and commit. A caller
+  cannot select transport details or satisfy status with a stale success.
+- **SINGLE NEXT ACTION:** independently review the exact refrozen object-bound
+  deploy and transport-hardening candidate. An author does not deploy these bytes.
 - B0 is complete at commit `7abadca`; its authenticated read-only report
   honestly returned `DRIFT`. The original observation remains the baseline even
   where later work repaired part of the observed box divergence.
@@ -152,8 +149,12 @@ There are TWO surfaces and they update DIFFERENTLY:
 
 ## TWO-PARTY DEPLOY GATE — RAN IT THIS SHIFT, IT WORKS
 The gate (signoff_deploychain.md) needs a 'proposal' row (author) + a 'signoff' row from a DISTINCT
-seat, same block_id. /op/deploy: target main|farm|box, requires block_id + signoff_block_id.
-dry_run:true runs the full gate with ZERO Railway side-effect — use it first. We ran MAILBOXFIX-1
+seat, same block_id, carrying the identical canonical ref
+`deploy:v1:<main|farm|both>:<40-hex-commit>`. The deploy-only capability must bind
+that same block, commit, and target scope. The corrected `/op/deploy` accepts exactly four required
+strings: `action` (`start|status`), `target` (`main|farm`), `signoff_block_id`,
+and an exact lowercase 40-hex `commit_sha`. It has no box target and no dry-run
+field. Historical dry-run evidence below describes the superseded live contract. We ran MAILBOXFIX-1
 (author=control, signer=operator): dry-run authorized:true, real deploy authorized but stopped at
 "railway env not configured" on the ENGINE (engine lacks RAILWAY_TOKEN/service IDs — known FARM
 seam). The actual deploy was done control-side via Railway GraphQL (serviceInstanceDeploy) for the

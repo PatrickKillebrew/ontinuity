@@ -11,7 +11,7 @@ remembered copy.
 
 The packet requires reviewed `live/tools/ontinuity_https.sh` and
 `live/ONTINUITY_ENDPOINTS.conf` from the same verified repository revision. They
-compile the request before the exact top-level `curl --config - < REQUEST.curl`.
+compile the request before the exact top-level `curl --disable --config - < REQUEST.curl`.
 If either is unavailable, stop; do not reconstruct HTTP with another client.
 MAIN requires that compiled v2 envelope and echoes its request ID; an improvised
 admission, capability, or probe call fails before relay. Ambiguous mailbox-request

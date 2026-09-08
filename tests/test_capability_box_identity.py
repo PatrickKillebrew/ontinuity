@@ -25,12 +25,15 @@ class CapabilityBoxIdentityTests(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("b1_seat_mailbox", path)
         cls.mailbox = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.mailbox)
+        sys.modules["seat_mailbox"] = cls.mailbox
         box_ops_path = os.path.join(
             os.path.dirname(__file__), "..", "live", "box", "box_ops.py")
         box_ops_spec = importlib.util.spec_from_file_location(
             "b1_box_ops", box_ops_path)
         cls.box_ops = importlib.util.module_from_spec(box_ops_spec)
         box_ops_spec.loader.exec_module(cls.box_ops)
+        cls.box_ops._PROVENANCE_LEDGER = os.path.join(
+            cls.tmp.name, "provenance_ledger.jsonl")
         app = Flask(__name__)
         app.register_blueprint(cls.mailbox.seat_mailbox_bp)
         app.register_blueprint(cls.box_ops.box_ops_bp)
@@ -52,6 +55,181 @@ class CapabilityBoxIdentityTests(unittest.TestCase):
         conn.execute("DELETE FROM seat_mailbox")
         conn.commit()
         conn.close()
+
+    def create_deploy_chain(self, block_id="block-1", *, proposal_ref=None,
+                            signoff_ref=None):
+        expected_ref = "deploy:v1:both:" + "a" * 40
+        proposal_ref = expected_ref if proposal_ref is None else proposal_ref
+        signoff_ref = expected_ref if signoff_ref is None else signoff_ref
+        proposal = self.send(kind="proposal", block_id=block_id,
+                             body="exact commit proposal", ref=proposal_ref)
+        self.assertEqual(proposal.status_code, 200)
+        reviewer = {
+            "X-Diag-Key": "box-master",
+            "X-Ontinuity-Seat": "worker2",
+            "X-Ontinuity-Lineage": "openai:test",
+            "X-Ontinuity-Capability": "deploy-grant",
+        }
+        signoff = self.client.post("/op/mailbox_send", headers=reviewer, json={
+            "from_seat": "worker2", "to_seat": "control", "kind": "signoff",
+            "body": "verified", "block_id": block_id, "ref": signoff_ref,
+        })
+        self.assertEqual(signoff.status_code, 200)
+        return reviewer
+
+    @staticmethod
+    def deploy_body(action="start"):
+        return {"action": action, "target": "main",
+                "signoff_block_id": "block-1", "commit_sha": "a" * 40}
+
+    def test_deploy_requires_authenticated_caller_to_be_signer(self):
+        self.create_deploy_chain()
+        with mock.patch.object(self.box_ops.trusted_deploy, "start") as start:
+            response = self.client.post(
+                "/op/deploy", headers=self.headers, json=self.deploy_body())
+        self.assertEqual(response.status_code, 403)
+        start.assert_not_called()
+
+    def test_deploy_dispatches_only_validated_provider_neutral_tuple(self):
+        reviewer = self.create_deploy_chain()
+        result = {"ok": True, "tracking_id": "c" * 64,
+                  "action_state": "accepted", "target": "main",
+                  "commit_sha": "a" * 40, "terminal": False}
+        with mock.patch.object(
+                self.box_ops.trusted_deploy, "start",
+                return_value=(result, True)) as start:
+            response = self.client.post(
+                "/op/deploy", headers=reviewer, json=self.deploy_body())
+        self.assertEqual(response.status_code, 200)
+        start.assert_called_once_with("block-1", "main", "a" * 40)
+
+    def test_deploy_ref_binds_proposal_and_signoff_to_target_and_commit(self):
+        cases = (
+            ("deploy:v1:both:" + "a" * 40,
+             "deploy:v1:both:" + "b" * 40),
+            ("deploy:v1:farm:" + "a" * 40,
+             "deploy:v1:farm:" + "a" * 40),
+            ("deploy:v1:both:" + "b" * 40,
+             "deploy:v1:both:" + "b" * 40),
+            ("", ""),
+        )
+        for proposal_ref, signoff_ref in cases:
+            self.setUp()
+            reviewer = self.create_deploy_chain(
+                proposal_ref=proposal_ref, signoff_ref=signoff_ref)
+            with self.subTest(
+                    proposal_ref=proposal_ref, signoff_ref=signoff_ref), \
+                    mock.patch.object(
+                        self.box_ops.trusted_deploy, "start") as start:
+                response = self.client.post(
+                    "/op/deploy", headers=reviewer, json=self.deploy_body())
+            self.assertEqual(response.status_code, 403)
+            start.assert_not_called()
+
+    def test_target_specific_ref_authorizes_only_that_target(self):
+        reviewer = self.create_deploy_chain(
+            proposal_ref="deploy:v1:main:" + "a" * 40,
+            signoff_ref="deploy:v1:main:" + "a" * 40)
+        result = {"ok": True, "tracking_id": "c" * 64,
+                  "action_state": "accepted", "target": "main",
+                  "commit_sha": "a" * 40, "terminal": False}
+        with mock.patch.object(
+                self.box_ops.trusted_deploy, "start",
+                return_value=(result, True)) as start:
+            response = self.client.post(
+                "/op/deploy", headers=reviewer, json=self.deploy_body())
+        self.assertEqual(response.status_code, 200)
+        start.assert_called_once()
+
+    def test_box_deploy_route_rejects_every_noncanonical_http_shape(self):
+        valid = (b'{"action":"start","target":"main",'
+                 b'"signoff_block_id":"block-1","commit_sha":"'
+                 + b"a" * 40 + b'"}')
+        cases = (
+            ("query", "/op/deploy?provider=other", valid, "application/json"),
+            ("content-type", "/op/deploy", valid, "text/plain"),
+            ("invalid-utf8", "/op/deploy", b"{\xff}", "application/json"),
+            ("duplicate-top", "/op/deploy",
+             valid[:-1] + b',"target":"farm"}', "application/json"),
+            ("duplicate-nested", "/op/deploy",
+             valid[:-1] + b',"extra":{"x":1,"x":2}}',
+             "application/json"),
+            ("nonobject", "/op/deploy", b"[]", "application/json"),
+            ("missing", "/op/deploy", b'{"action":"start"}',
+             "application/json"),
+            ("extra", "/op/deploy", valid[:-1] + b',"extra":"x"}',
+             "application/json"),
+            ("nonstrings", "/op/deploy",
+             valid.replace(b'"target":"main"', b'"target":1'),
+             "application/json"),
+            ("oversize", "/op/deploy", b" " * 5000, "application/json"),
+        )
+        for label, path, body, content_type in cases:
+            with self.subTest(case=label), mock.patch.object(
+                    self.box_ops.trusted_deploy, "start") as start:
+                response = self.client.post(
+                    path, headers=self.headers, data=body,
+                    content_type=content_type)
+            self.assertIn(response.status_code, {400, 413})
+            start.assert_not_called()
+
+    def test_deploy_ledger_start_failure_prevents_provider_dispatch(self):
+        reviewer = self.create_deploy_chain()
+        file_server = sys.modules["file_server"]
+        with mock.patch.object(file_server, "_ops_begin", return_value=None), \
+                mock.patch.object(self.box_ops.trusted_deploy, "start") as start:
+            response = self.client.post(
+                "/op/deploy", headers=reviewer, json=self.deploy_body())
+        self.assertEqual(response.status_code, 503)
+        start.assert_not_called()
+
+    def test_deploy_attempts_ledger_finish_after_adapter_failure(self):
+        reviewer = self.create_deploy_chain()
+        file_server = sys.modules["file_server"]
+        with mock.patch.object(file_server, "_ops_finish") as finish, \
+                mock.patch.object(
+                    self.box_ops.trusted_deploy, "start",
+                    side_effect=self.box_ops.trusted_deploy.DeployError(
+                        "safe refusal", status=502)):
+            response = self.client.post(
+                "/op/deploy", headers=reviewer, json=self.deploy_body())
+        self.assertEqual(response.status_code, 502)
+        finish.assert_called_once()
+        self.assertEqual(finish.call_args.args[1], "fail")
+
+    def test_terminal_deploy_failure_finishes_operations_ledger_as_failure(self):
+        reviewer = self.create_deploy_chain()
+        file_server = sys.modules["file_server"]
+        result = {"ok": False, "tracking_id": "c" * 64,
+                  "action_state": "failure", "target": "main",
+                  "commit_sha": "a" * 40, "terminal": True,
+                  "build_logs": {"available": 1}}
+        with mock.patch.object(file_server, "_ops_finish") as finish, \
+                mock.patch.object(
+                    self.box_ops.trusted_deploy, "status",
+                    return_value=(result, True)):
+            response = self.client.post(
+                "/op/deploy", headers=reviewer,
+                json=self.deploy_body(action="status"))
+        self.assertEqual(response.status_code, 502)
+        finish.assert_called_once()
+        self.assertEqual(finish.call_args.args[1], "fail")
+
+    def test_start_replay_of_terminal_failure_is_http_502_and_ledger_failure(self):
+        reviewer = self.create_deploy_chain()
+        file_server = sys.modules["file_server"]
+        result = {"ok": False, "tracking_id": "c" * 64,
+                  "action_state": "failure", "target": "main",
+                  "commit_sha": "a" * 40, "terminal": True,
+                  "build_logs": {"available": False}}
+        with mock.patch.object(file_server, "_ops_finish") as finish, \
+                mock.patch.object(self.box_ops.trusted_deploy, "start",
+                                  return_value=(result, False)):
+            response = self.client.post(
+                "/op/deploy", headers=reviewer, json=self.deploy_body())
+        self.assertEqual(response.status_code, 502)
+        self.assertFalse(response.get_json()["ok"])
+        self.assertEqual(finish.call_args.args[1], "fail")
 
     def send(self, **changes):
         body = {"from_seat": "worker1", "to_seat": "control", "kind": "note",

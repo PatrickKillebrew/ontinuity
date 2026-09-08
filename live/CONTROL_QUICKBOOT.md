@@ -11,7 +11,7 @@ All Ontinuity HTTP in this packet begins with reviewed local compiler
 `live/tools/ontinuity_https.sh`. Its `prepare` step freezes a named action into a
 private curl-config receipt and body snapshot; `check` proves neither changed. The
 only network transition is the literal top-level command printed by the compiler:
-`curl --config - < REQUEST.curl`. Do not assemble flags, use Python HTTP,
+`curl --disable --config - < REQUEST.curl`. Do not assemble flags, use Python HTTP,
 substitute a connector/browser, or recreate the request from prose. The compiler
 fixes the logical engine, POST method, header-only credential placement, redirect
 denial, timeouts, response files, and a fresh body/credential-bound request
@@ -21,10 +21,15 @@ Local `verify` also requires MAIN to echo the exact prepared request ID. The rev
 `live/ONTINUITY_ENDPOINTS.conf` maps `main|farm` to their current hosting URLs, so
 moving providers changes the registry rather than boot logic.
 
+`--disable` must remain curl's first argument; it prevents user-level curl defaults
+from modifying the frozen request. Do not prepend environment assignments. Curl
+inherits the platform's admitted proxy, DNS, and TLS trust environment because
+those are the sandbox's network substrate, not caller-selected routing choices.
+
 A host platform can deny that curl command before curl starts. That is
 `WORK_EGRESS_DENIED`, not an Ontinuity response. The receipt survives; after host
 admission is actually available, retry the identical
-`curl --config - < REQUEST.curl` in one tool call. If curl did start but no HTTP status was captured,
+`curl --disable --config - < REQUEST.curl` in one tool call. If curl did start but no HTTP status was captured,
 the outcome is UNKNOWN and must fail-stop because retry might duplicate a request.
 Do not client-shop. Other GPT tools remain available for their proper purposes;
 they are not alternate states for this prepared Ontinuity action.
@@ -34,6 +39,24 @@ the request ID before relay. An identical completed replay returns the saved bou
 response without executing twice; an in-progress, conflicting, or unknown replay
 returns HTTP 409 and stops. An intentional later operation requires a new prepare.
 The exact wire contract is `live/specs/ontinuity_https_protocol.md`.
+
+Deployment is a separate elevated capability, never part of the initial Control
+grant. First, the proposal author and distinct-seat signer must use the same
+canonical mailbox ref `deploy:v1:<main|farm|both>:<40-hex-commit>`. When Patrick
+authorizes that reviewed object, request only `deploy` for at most 300 seconds and
+include exactly this additional scope in the admission body:
+
+```json
+"deploy_scope":{"signoff_block_id":"<BLOCK>","commit_sha":"<40-HEX-COMMIT>","target_scope":"<main|farm|both>"}
+```
+
+The operator panel displays and confirms that exact scope. Send the provider-
+neutral body with exactly `action`, `target`, `signoff_block_id`, and `commit_sha`
+through `ontinuity_https.sh`. MAIN refuses any mismatch with the capability before
+relay; the box independently requires the proposal and signoff refs to match the
+same target and commit before provider action. Use `start` once, then separate
+`status` calls with the same tuple. The trusted box selects the provider and keeps
+every hosting credential and protocol detail server-side.
 
 ## 0. Request bounded hands
 
@@ -51,7 +74,7 @@ Prepare and check locally, then run only the exact top-level curl transition:
 ```sh
 live/tools/ontinuity_https.sh prepare admission main admission_request REQUEST_BODY.json - ADMISSION.curl
 live/tools/ontinuity_https.sh check ADMISSION.curl
-curl --config - < ADMISSION.curl
+curl --disable --config - < ADMISSION.curl
 live/tools/ontinuity_https.sh verify ADMISSION.curl
 ```
 
@@ -72,7 +95,7 @@ then run the exact curl transition and verify locally:
 ```sh
 live/tools/ontinuity_https.sh prepare capability main __probe__ EMPTY_BODY.json "$ONTINUITY_CAPABILITY_FILE" PROBE.curl
 live/tools/ontinuity_https.sh check PROBE.curl
-curl --config - < PROBE.curl
+curl --disable --config - < PROBE.curl
 live/tools/ontinuity_https.sh verify PROBE.curl
 ```
 
@@ -84,7 +107,7 @@ Railway or credential failure; report the layer that denied the request.
 
 Read each file in full by creating the body
 `{"path":"live/<file>","ref":"main"}`, preparing and checking a unique
-capability receipt, invoking `curl --config - < RECEIPT.curl`, then running
+capability receipt, invoking `curl --disable --config - < RECEIPT.curl`, then running
 `live/tools/ontinuity_https.sh verify RECEIPT.curl`. Do not
 substitute a platform connector, raw HTTP, or memory. Report one real current line
 from every group:

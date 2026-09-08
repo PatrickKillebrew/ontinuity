@@ -279,16 +279,19 @@ The corrected B1 freeze passed its fourth clean review and landed as commit
 recurring Control transport-path defect is corrected.
 The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
-The first clean review of local overlay `codex/b1-transport-lock` reproduced its
-exact freeze and all 142 tests but rejected process-local replay locking, unbounded
-relay-response intake, and contradictory handoff state. The defects are corrected
-locally with an interprocess SQLite transaction lock around the existing registry,
-bounded streamed response reads, and one authoritative current action.
+Clean reviews of local overlay `codex/b1-transport-lock` have successively exposed
+and forced correction of process-local replay locking, unbounded relay-response
+intake, contradictory handoff state, deploy authority not bound to the exact
+block/commit/target object, loose persisted-schema typing, and curl's implicit user
+default configuration. The current author-side freeze passes the complete current bounded verifier.
 
-The single immediate action is to refreeze and obtain a second independent review
-of that exact corrected overlay. It replaces model-assembled HTTP with a local
-prepare/check compiler, the proven top-level `curl --config -` transition, local
+The single immediate action is to obtain a new independent review of those exact
+refrozen bytes. The overlay replaces model-assembled HTTP with a local prepare/check
+compiler, the top-level `curl --disable --config -` transition, local
 response/request-identity verification, and a reviewed logical endpoint registry.
+The first curl argument prevents a user `.curlrc` from changing the request; the
+inherited host proxy, DNS, and TLS environment is explicitly the platform boundary
+that supplies admitted sandbox networking.
 Candidate MAIN requires the exact v2 envelope before admission/capability relay and
 uses persistent bounded receipts to prevent duplicate execution of ambiguous
 mailbox transitions across engine processes. The old Python capability helper is local-only; the bounded

@@ -5,9 +5,10 @@ set -eu
 #
 # PREPARE is local. It freezes the complete request into a private curl-config
 # receipt and companion bundle. CHECK is local. The only network transition is
-# deliberately the already-proved, top-level host-visible command:
+# deliberately the top-level host-visible command. --disable must be first so a
+# user-level curl configuration cannot modify the frozen request:
 #
-#     curl --config - < REQUEST.curl
+#     curl --disable --config - < REQUEST.curl
 #
 # VERIFY is local and interprets the captured response. A host denial explicitly
 # reported before curl starts permits the identical command to be retried. Once
@@ -33,7 +34,7 @@ usage:
   ontinuity_https.sh verify REQUEST.curl
 
 After CHECK, send with this exact top-level command:
-  curl --config - < REQUEST.curl
+  curl --disable --config - < REQUEST.curl
 
 ENGINE is exactly main or farm. Admission is MAIN-only. REQUEST.curl and its
 companion bundle must not already exist. Credential files must have mode 600.
@@ -237,7 +238,7 @@ prepare() {
 
     printf 'ONTINUITY_REQUEST_READY=%s\n' "$request_file"
     printf 'ONTINUITY_REQUEST_ID=%s\n' "$request_id"
-    printf 'ONTINUITY_SEND_EXACT=curl --config - < %s\n' "$request_file"
+    printf 'ONTINUITY_SEND_EXACT=curl --disable --config - < %s\n' "$request_file"
 }
 
 check_request() {
@@ -259,7 +260,7 @@ check_request() {
     [ "$(file_hash "$bundle/body.json")" = "$expected_body" ] || \
         die "request body bytes changed after prepare"
     printf 'ONTINUITY_REQUEST_CHECK=PASS\n'
-    printf 'ONTINUITY_SEND_EXACT=curl --config - < %s\n' "$request_file"
+    printf 'ONTINUITY_SEND_EXACT=curl --disable --config - < %s\n' "$request_file"
 }
 
 verify() {

@@ -6,7 +6,7 @@ Transforms response files already captured by the canonical Ontinuity HTTPS
 receipt flow. It performs no network access and holds no capability material.
 The model-facing transition remains visibly and exclusively:
 
-    curl --config - < REQUEST.curl
+    curl --disable --config - < REQUEST.curl
 
 WHAT IT AUTOMATES (the routing): within one turn, the control seat gives this the
 two verified response files. It filters pending worker acks, preserves their refs,
@@ -144,7 +144,7 @@ if __name__ == "__main__":
     if not args.peek_response or not args.review_response:
         print(json.dumps({
             "error": "compiled mailbox_peek and you_there response files are required",
-            "transport": "curl --config - < REQUEST.curl",
+            "transport": "curl --disable --config - < REQUEST.curl",
         }))
     else:
         print(json.dumps(triage(

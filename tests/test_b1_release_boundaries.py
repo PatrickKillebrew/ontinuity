@@ -206,6 +206,51 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         self.assertNotIn("private secret equality scan", checks)
         self.assertIn("high-confidence repository secret-pattern scan", checks)
 
+    def test_current_action_surfaces_bind_the_same_transport_and_review_state(self):
+        queue = (ROOT / "live" / "agent_queue.md").read_text(encoding="utf-8")
+        latest_fold = queue.rsplit("\n## FOLD — ", 1)[-1]
+        punch = (ROOT / "live" / "PUNCH_LIST.md").read_text(encoding="utf-8")
+        board = (ROOT / "live" / "ONTINUITY_1_0_BOARD.md").read_text(
+            encoding="utf-8")
+        plan = (ROOT / "live" / "ONTINUITY_1_0_COMPLETION_PLAN.md").read_text(
+            encoding="utf-8")
+        board_b1 = board.split("### B1 —", 1)[1].split("### B2 —", 1)[0]
+        current_board = board.split("## 4. CURRENT SINGLE NEXT ACTION", 1)[1]
+        current_board = current_board.split("\n---", 1)[0]
+        current_plan = plan.split("## 8. IMMEDIATE NEXT ACTION", 1)[1]
+        current_plan = current_plan.split("\n---", 1)[0]
+        current_punch = punch.split("## IN-PROGRESS", 1)[1]
+        current_punch = current_punch.split("## DONE", 1)[0]
+
+        self.assertIn("exact-object and transport hardening refrozen", latest_fold)
+        self.assertIn("curl --disable --config - < REQUEST.curl", latest_fold)
+        self.assertIn("accepted local transport base `6f52063`", latest_fold)
+        self.assertIn("new clean independent review", latest_fold)
+        self.assertIn("Patrick's authorization", latest_fold)
+        self.assertNotIn("obtain a second clean independent review", latest_fold.lower())
+
+        roadmap = next(
+            line for line in punch.splitlines()
+            if "ONTINUITY 1.0 COMPLETION PLAN — controlling roadmap" in line)
+        self.assertIn("new independent exact-byte review", roadmap)
+        self.assertIn("`6f52063`", roadmap)
+        self.assertIn("Patrick's authorization", roadmap)
+        self.assertNotIn("second independent exact-byte review", roadmap.lower())
+
+        self.assertIn("new independent review", current_board)
+        self.assertIn("`6f52063`", current_board)
+        self.assertIn("Patrick's authorization", current_board)
+        self.assertNotIn("second independent review", current_board.lower())
+
+        for name, current_surface in (
+                ("latest queue fold", latest_fold),
+                ("board B1", board_b1),
+                ("completion-plan action", current_plan),
+                ("punch-list in-progress", current_punch)):
+            self.assertIn("complete current", current_surface.lower(), name)
+            self.assertNotRegex(
+                current_surface.lower(), r"\b\d+[ -]tests?\b", name)
+
     def test_resident_mailbox_callers_use_headers_not_urls_or_bodies(self):
         for relative in ("live/shepherd.py", "live/experiment/burnin_resident.py"):
             source = (ROOT / relative).read_text(encoding="utf-8")
@@ -266,6 +311,15 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
             "mailbox_purge", "read_file", "register_egress",
             "restart_burnin", "restart_workspace", "seed_tenant", "write_file",
         }))
+        elevated = None
+        for node in module.body:
+            if (isinstance(node, ast.Assign)
+                    and any(isinstance(target, ast.Name)
+                            and target.id == "B1_ELEVATED_MODEL_OPS"
+                            for target in node.targets)):
+                elevated = set(ast.literal_eval(node.value))
+                break
+        self.assertEqual(elevated, {"deploy"})
 
     def test_operator_can_inspect_approve_and_revoke_from_main(self):
         app_text = (ROOT / "app.py").read_text(encoding="utf-8")
@@ -285,6 +339,24 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         self.assertIn("document.getElementById('admission-operator-key').value = '';",
                       page)
         self.assertIn("redirect: 'error'", page)
+        self.assertIn("ELEVATED / HIGH-IMPACT", page)
+        self.assertIn("elevated_confirmed", page)
+        self.assertIn("window.confirm", page)
+        for field in ("signoff_block_id", "target_scope", "commit_sha"):
+            self.assertIn(field, page)
+
+    def test_deploy_authority_is_bound_to_one_reviewed_object(self):
+        authority = (ROOT / "capability_auth.py").read_text(encoding="utf-8")
+        courier = (ROOT / "app.py").read_text(encoding="utf-8")
+        box = (ROOT / "live" / "box" / "box_ops.py").read_text(
+            encoding="utf-8")
+        self.assertIn("_clean_deploy_scope", authority)
+        self.assertIn('payload["deploy_scope"]', authority)
+        self.assertIn('issued.get("deploy_scope") != clean_scope', authority)
+        self.assertIn("_validate_deploy_capability_scope(identity, body)", courier)
+        self.assertIn("deploy:v1:{target}:{commit_sha}", box)
+        self.assertIn("deploy:v1:both:{commit_sha}", box)
+        self.assertIn('author["ref"] != signer["ref"]', box)
 
     def test_pending_admission_registry_is_bounded_and_pruned(self):
         path = ROOT / "capability_auth.py"
@@ -316,11 +388,12 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
                 "app.py", "capability_auth.py", "live/bootstrap/gate.py",
                 "model_client.py",
                 "live/box/file_server.py", "live/box/box_ops.py",
-                "live/box/seat_mailbox.py",
+                "live/box/seat_mailbox.py", "live/box/trusted_deploy.py",
                 "live/shepherd.py", "live/shepherd_alert.py",
                 "live/experiment/burnin_resident.py",
                 "live/ONTINUITY_1_0_BOARD.md",
                 "live/ONTINUITY_1_0_COMPLETION_PLAN.md",
+                "live/specs/trusted_deploy_protocol.md",
                 "live/specs/verified_bootstrap_gate.md"):
             self.assertIn(relative, text)
 
@@ -338,6 +411,7 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         rows.extend(data["verification_sources"]["required"])
         rows.extend(data["retire_during_authorized_cutover"])
         for row in rows:
+            self.assertRegex(row["sha256"], r"\A[0-9a-f]{64}\Z", row["path"])
             digest = hashlib.sha256((ROOT / row["path"]).read_bytes()).hexdigest()
             self.assertEqual(digest, row["sha256"], row["path"])
             self.assertNotEqual(row["sha256"], "REFRESH", row["path"])
@@ -377,6 +451,70 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         self.assertTrue(any(row.get("path") == "live/box/laptop_seat.py"
                             and row.get("action") == "install_tombstone_and_stop"
                             for row in retirement))
+
+    def test_install_manifest_directly_covers_cumulative_base_diff(self):
+        data = json.loads((ROOT / "live" / "B1_INSTALL_MANIFEST.json").read_text(
+            encoding="utf-8"))
+        rows = []
+        for section in ("engine_deploy", "box_install", "active_service_sources",
+                        "repository_contract", "verification_sources"):
+            rows.extend(data[section]["required"])
+        rows.extend(data["retire_during_authorized_cutover"])
+        covered = {row["path"] for row in rows}
+        covered.update(row["path"] for row in data["public_removals"])
+        covered.update(row["receipt"] for row in data["public_removals"])
+        changed = set(subprocess.check_output(
+            ["git", "diff", "--name-only", data["candidate_base_commit"], "--"],
+            cwd=ROOT, text=True).splitlines())
+        changed.update(subprocess.check_output(
+            ["git", "ls-files", "--others", "--exclude-standard"],
+            cwd=ROOT, text=True).splitlines())
+        relevant = {path for path in changed
+                    if "__pycache__" not in Path(path).parts
+                    and not path.endswith(".pyc")
+                    and path not in {"live/B1_INSTALL_MANIFEST.json",
+                                     "live/B1_TRANSPORT_LOCK_MANIFEST.json"}}
+        self.assertEqual(relevant - covered, set())
+
+    def test_trusted_deploy_transport_and_public_protocol_boundary(self):
+        adapter = (ROOT / "live" / "box" / "trusted_deploy.py").read_text(
+            encoding="utf-8")
+        self.assertIn('["curl", "--config", "-"]', adapter)
+        self.assertIn("shell=False", adapter)
+        self.assertIn('"proto = \\"=https\\""', adapter)
+        for forbidden in ("urllib", "requests", "httpx"):
+            self.assertNotIn(forbidden, adapter)
+        protocol = (ROOT / "live" / "specs" /
+                    "trusted_deploy_protocol.md").read_text(encoding="utf-8")
+        for provider_literal in ("backboard", "Project-Access-Token",
+                                 "serviceInstanceDeployV2", "buildLogs("):
+            self.assertNotIn(provider_literal, protocol)
+
+    def test_current_docs_name_the_exact_six_file_box_unit(self):
+        for relative in ("live/OPERATING_MANUAL.md", "live/CONTROL_HANDOFF.md"):
+            source = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("six-file", source, relative)
+            self.assertIn("trusted_deploy.py", source, relative)
+            self.assertNotIn("main|farm|box", source, relative)
+            self.assertNotIn("commit_sha?", source, relative)
+            self.assertNotIn("dry_run", source, relative)
+
+    def test_rejected_hosting_admin_compiler_has_no_forward_reference(self):
+        forward_paths = (
+            ROOT / "live" / "B1_INSTALL_MANIFEST.json",
+            ROOT / "live" / "B1_TRANSPORT_LOCK_MANIFEST.json",
+            ROOT / "live" / "CONTROL_HANDOFF.md",
+            ROOT / "live" / "CONTROL_QUICKBOOT.md",
+            ROOT / "live" / "CONTROL_QUICKBOOT_SNIPPET.md",
+            ROOT / "live" / "OPERATING_MANUAL.md",
+            ROOT / "live" / "PUNCH_LIST.md",
+            ROOT / "live" / "WORKER_BOOT_PACKET.md",
+            ROOT / "live" / "WORKER_MANUAL.md",
+        )
+        findings = [str(path.relative_to(ROOT)) for path in forward_paths
+                    if re.search(r"hosting_admin|HOSTING_ADMIN", path.read_text(
+                        encoding="utf-8"))]
+        self.assertEqual(findings, [])
 
     def test_current_roadmap_identity_ceiling_and_cutover_order_are_coherent(self):
         for relative in (
@@ -459,7 +597,7 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
             json.loads(completed.stdout),
             {
                 "error": "compiled mailbox_peek and you_there response files are required",
-                "transport": "curl --config - < REQUEST.curl",
+                "transport": "curl --disable --config - < REQUEST.curl",
             },
         )
         source = script.read_text(encoding="utf-8")

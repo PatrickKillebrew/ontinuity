@@ -65,7 +65,7 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         env["FAKE_CURL_EXIT"] = curl_exit
         with receipt.open("r", encoding="utf-8") as config_input:
             completed = subprocess.run(
-                ["curl", "--config", "-"],
+                ["curl", "--disable", "--config", "-"],
                 cwd=ROOT,
                 env=env,
                 stdin=config_input,
@@ -117,7 +117,7 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         )
         self.assertNotIn("private-capability", meta)
         self.assertIn(
-            f"ONTINUITY_SEND_EXACT=curl --config - < {receipt}",
+            f"ONTINUITY_SEND_EXACT=curl --disable --config - < {receipt}",
             result.stdout,
         )
         config = receipt.read_text(encoding="utf-8")
@@ -177,7 +177,7 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         self.assertIn('request = "POST"', config)
         self.assertIn('max-redirs = 0', config)
         self.assertIn('proto = "=https"', config)
-        self.assertEqual(args.splitlines(), ["--config", "-"])
+        self.assertEqual(args.splitlines(), ["--disable", "--config", "-"])
         self.assertNotIn("private-capability", args)
         verified = self.run_client("verify", receipt)
         self.assertEqual(verified.returncode, 0, verified.stderr)
@@ -280,7 +280,7 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         self.assertEqual(retried.returncode, 0, retried.stderr)
         self.assertEqual(receipt.read_bytes(), before)
         self.assertEqual(self.args.read_text(encoding="utf-8").splitlines(),
-                         ["--config", "-"])
+                         ["--disable", "--config", "-"])
 
     def test_probe_treats_designed_403_as_success_but_other_403_as_failure(self):
         probe_receipt, prepared = self.prepare(
@@ -326,7 +326,7 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         self.assertNotIn("command -v curl", source)
         self.assertNotIn("| curl", source)
         self.assertNotIn("$curl", source)
-        self.assertIn("curl --config - < request.curl", source)
+        self.assertIn("curl --disable --config - < request.curl", source)
 
     def test_logical_endpoint_registry_decouples_compiler_from_host_provider(self):
         source = CLIENT.read_text(encoding="utf-8").lower()
@@ -346,7 +346,7 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         headers = Path(f"{receipt}.d") / "response.headers"
         with receipt.open("r", encoding="utf-8") as config_input:
             parsed = subprocess.run(
-                [curl, "--config", "-", "--version"],
+                [curl, "--disable", "--config", "-", "--version"],
                 stdin=config_input,
                 text=True,
                 capture_output=True,
@@ -356,6 +356,31 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         self.assertIn("curl ", parsed.stdout)
         self.assertEqual(headers.read_bytes(), b"", "parser check made a request")
 
+    def test_disable_is_first_and_blocks_user_curlrc_without_network(self):
+        curl = shutil.which("curl")
+        if curl is None:
+            self.skipTest("curl is not installed")
+        home = self.root / "curl-home"
+        home.mkdir()
+        marker = self.root / "default-config-output"
+        source = self.root / "local-source"
+        source.write_text("local-only", encoding="utf-8")
+        (home / ".curlrc").write_text(
+            f'output = "{marker}"\n', encoding="utf-8")
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+        parsed = subprocess.run(
+            [curl, "--disable", "--config", "-"],
+            input=f'url = "{source.as_uri()}"\nproto = "=file"\n',
+            env=env,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(parsed.returncode, 0, parsed.stderr)
+        self.assertEqual(parsed.stdout, "local-only")
+        self.assertFalse(marker.exists(), ".curlrc influenced the request")
+
     def test_current_boot_packets_preserve_exact_direct_curl_transition(self):
         for relative in (
             "live/CONTROL_QUICKBOOT.md",
@@ -363,7 +388,7 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         ):
             source = (ROOT / relative).read_text(encoding="utf-8")
             self.assertIn("live/tools/ontinuity_https.sh", source, relative)
-            self.assertIn("curl --config - <", source, relative)
+            self.assertIn("curl --disable --config - <", source, relative)
             self.assertNotRegex(source, re.compile(r"\bcurl\s+-X"), relative)
             self.assertNotRegex(
                 source,

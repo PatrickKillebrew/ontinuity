@@ -4167,6 +4167,8 @@ B1_INITIAL_MODEL_OPS = {
     "read_repo",
     "you_there",
 }
+B1_ELEVATED_MODEL_OPS = {"deploy"}
+B1_ELEVATED_MAX_TTL_SECONDS = 300
 
 _capability_authority = None
 _capability_authority_config = None
@@ -4222,9 +4224,51 @@ def _bounded_request_payload(max_bytes):
     if not raw.strip():
         return raw, {}
     try:
-        return raw, json.loads(raw)
-    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        def reject_duplicates(pairs):
+            parsed = {}
+            for key, value in pairs:
+                if key in parsed:
+                    raise ValueError("duplicate JSON key")
+                parsed[key] = value
+            return parsed
+        return raw, json.loads(
+            raw.decode("utf-8", "strict"),
+            object_pairs_hook=reject_duplicates,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
         raise CapabilityError("request body is not valid JSON") from exc
+
+def _validate_deploy_courier_body(body):
+    """Validate the provider-neutral deploy tuple before any box relay."""
+    expected = {"action", "target", "signoff_block_id", "commit_sha"}
+    if not isinstance(body, dict) or set(body) != expected:
+        raise CapabilityError(
+            "deploy request keys must be exactly action, target, "
+            "signoff_block_id, commit_sha")
+    if not all(isinstance(body[key], str) for key in expected):
+        raise CapabilityError("all deploy request fields must be strings")
+    if body["action"] not in {"start", "status"}:
+        raise CapabilityError("deploy action must be start or status")
+    if body["target"] not in {"main", "farm"}:
+        raise CapabilityError("deploy target must be main or farm")
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}",
+                        body["signoff_block_id"]):
+        raise CapabilityError("deploy signoff_block_id is invalid")
+    if not re.fullmatch(r"[0-9a-f]{40}", body["commit_sha"]):
+        raise CapabilityError("deploy commit_sha is invalid")
+
+def _validate_deploy_capability_scope(identity, body):
+    """Require the elevated grant to name this exact reviewed deploy object."""
+    scope = identity.get("deploy_scope") if isinstance(identity, dict) else None
+    try:
+        scope = CapabilityAuthority._clean_deploy_scope(scope)
+    except CapabilityError as exc:
+        raise CapabilityError("deploy capability has no valid object scope") from exc
+    if (scope["signoff_block_id"] != body["signoff_block_id"]
+            or scope["commit_sha"] != body["commit_sha"]
+            or scope["target_scope"] not in {body["target"], "both"}):
+        raise CapabilityError(
+            "deploy request does not match the approved capability scope")
 
 MAX_COURIER_READ_RESPONSE_BYTES = 16 * 1024 * 1024
 
@@ -4294,15 +4338,34 @@ def capability_request():
             or not all(isinstance(op, str) for op in requested_ops)):
         return _admission_json(
             {"error": "operations must be a nonempty string list"}, 400)
-    if any(op not in B1_INITIAL_MODEL_OPS for op in requested_ops):
+    requested_set = set(requested_ops)
+    deploy_only = requested_ops == ["deploy"]
+    if (not requested_set.issubset(B1_INITIAL_MODEL_OPS) and not deploy_only):
         return _admission_json({
-            "error": "request exceeds the B1 initial model capability scope",
+            "error": "request exceeds the certified B1 capability scope",
             "allowed": sorted(B1_INITIAL_MODEL_OPS),
+            "elevated_allowed": sorted(B1_ELEVATED_MODEL_OPS),
         }, 403)
+    ttl_seconds = body.get("ttl_seconds", 900)
+    if deploy_only:
+        expected = {"seat", "lineage", "operations", "ttl_seconds",
+                    "deploy_scope"}
+        if set(body) != expected:
+            return _admission_json({
+                "error": "deploy admission keys must be exactly seat, lineage, "
+                         "operations, ttl_seconds, deploy_scope",
+            }, 400)
+        if type(ttl_seconds) is not int:
+            return _admission_json({"error": "ttl_seconds must be an integer"}, 400)
+        if ttl_seconds < 1 or ttl_seconds > B1_ELEVATED_MAX_TTL_SECONDS:
+            return _admission_json({
+                "error": "elevated deploy capability ttl must be 1..300 seconds",
+            }, 400)
     try:
         row = _cap_authority().request(
             seat=body.get("seat"), lineage=body.get("lineage"),
-            operations=requested_ops, ttl_seconds=body.get("ttl_seconds", 900))
+            operations=requested_ops, ttl_seconds=ttl_seconds,
+            deploy_scope=body.get("deploy_scope"))
         return _admission_json({"ok": True, **row}, 202)
     except CapabilityError as exc:
         return _admission_json({"error": str(exc)}, 400)
@@ -4327,7 +4390,10 @@ def capability_approve():
     if not isinstance(body, dict):
         return _admission_json({"error": "request must be a JSON object"}, 400)
     try:
-        result = _cap_authority().approve(body.get("request_id"))
+        result = _cap_authority().approve(
+            body.get("request_id"),
+            elevated_confirmed=body.get("elevated_confirmed") is True,
+        )
         return _admission_json({"ok": True, **result})
     except CapabilityError as exc:
         return _admission_json({"error": str(exc)}, 400)
@@ -4370,7 +4436,28 @@ def diag_op_courier(name):
     #    designed name-gate response such as __probe__ is returned.
     request_id = None
     request_fingerprint = None
-    if operator_call:
+    if name == "deploy":
+        if request.args or request.mimetype != "application/json":
+            return jsonify({
+                "error": "deploy requires application/json without query parameters",
+            }), 400
+        try:
+            raw_body, body = _bounded_request_payload(4096)
+            _validate_deploy_courier_body(body)
+        except CapabilityError as exc:
+            status = 413 if "too large" in str(exc) else 400
+            return jsonify({"error": str(exc)}), status
+        if not operator_call:
+            try:
+                request_id, request_fingerprint = _compiled_request_identity(
+                    "capability", name, raw_body, token)
+            except CapabilityError as exc:
+                return jsonify({"error": str(exc)}), 428
+            try:
+                _validate_deploy_capability_scope(identity, body)
+            except CapabilityError as exc:
+                return _compiled_json({"error": str(exc)}, 403, request_id)
+    elif operator_call:
         raw_body = request.get_data(cache=True)
         body = request.get_json(silent=True)
     else:
@@ -4421,7 +4508,7 @@ def diag_op_courier(name):
     #    exactly as _register_egress forwards to /register_egress. Return the
     #    box response verbatim so its status/body are not masked by the courier.
     side_effecting = identity and name in {
-        "mailbox_ack", "mailbox_fetch", "mailbox_send", "you_there"}
+        "deploy", "mailbox_ack", "mailbox_fetch", "mailbox_send", "you_there"}
     if side_effecting:
         try:
             transition = _cap_authority().begin_transition(

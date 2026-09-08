@@ -14,8 +14,15 @@ curl-config receipt and frozen companion files. `check` verifies their hashes.
 The only model-seat network transition is visibly:
 
 ```sh
-curl --config - < REQUEST.curl
+curl --disable --config - < REQUEST.curl
 ```
+
+`--disable` is deliberately the first curl argument, so curl cannot load a
+user-level default configuration before the frozen standard-input config. No
+caller may prepend environment assignments or add flags. The process still
+inherits the host platform's admitted network environment, including its proxy,
+DNS, and TLS trust configuration. That environment is the runtime trust boundary
+which makes sandbox egress possible; it is not caller-selected protocol state.
 
 `verify` reads the captured headers and body. It requires the returned request ID
 to equal the prepared ID for admission and capability modes. Operator-root mode is
@@ -80,3 +87,9 @@ The protocol uses ordinary HTTPS, JSON, headers, SHA-256, and a curl config read
 from standard input. Model lineage and hosting provider are not protocol fields.
 `live/ONTINUITY_ENDPOINTS.conf` maps logical engines to current HTTPS endpoints;
 changing hosting changes that reviewed registry, not the boot state machine.
+
+This boundary enforces the request and authorization protocol, not executable
+attestation. A platform that must make every alternate HTTP executable powerless
+must keep the bearer outside the model and expose this same intent contract through
+a trusted transport executor. That is an authority-placement layer, not a reason
+to add another client path to this protocol.

@@ -43,6 +43,7 @@ def _b64decode(value: str) -> bytes:
 
 class CapabilityAuthority:
     MAX_TTL_SECONDS = 3600
+    ELEVATED_MAX_TTL_SECONDS = 300
 
     def __init__(self, *, secret, registry_path, now=None):
         if not secret:
@@ -125,6 +126,13 @@ class CapabilityAuthority:
                 pass
             raise
 
+    @staticmethod
+    def _registry_integer(row, field):
+        if (not isinstance(row, dict) or type(row.get(field)) is not int
+                or row[field] < 0):
+            raise CapabilityError("capability registry has an invalid shape")
+        return row[field]
+
     def _prune(self, data, now=None):
         """Bound registry growth and expire requests that were never approved."""
         current = int(self._now() if now is None else now)
@@ -134,7 +142,7 @@ class CapabilityAuthority:
         transitions = data.setdefault("transitions", {})
 
         for request_id, row in list(requests.items()):
-            created_at = int(row.get("created_at", 0) or 0)
+            created_at = self._registry_integer(row, "created_at")
             if (row.get("status") == "pending"
                     and current - created_at >= PENDING_REQUEST_TTL_SECONDS):
                 row["status"] = "expired"
@@ -143,16 +151,20 @@ class CapabilityAuthority:
         # Once an issued grant is expired, its registry entry and any matching
         # revocation marker no longer serve an authorization purpose.
         for jti, row in list(issued.items()):
-            if current >= int(row.get("exp", 0) or 0):
+            if current >= self._registry_integer(row, "exp"):
                 issued.pop(jti, None)
                 revoked.pop(jti, None)
+
+        if any(type(revoked_at) is not int or revoked_at < 0
+               for revoked_at in revoked.values()):
+            raise CapabilityError("capability registry has an invalid shape")
 
         # Keep only the newest completed request records. Pending requests are
         # separately bounded at admission time and are never discarded here.
         completed = sorted(
             ((request_id, row) for request_id, row in requests.items()
              if row.get("status") != "pending"),
-            key=lambda item: int(item[1].get("created_at", 0) or 0),
+            key=lambda item: self._registry_integer(item[1], "created_at"),
             reverse=True,
         )
         for request_id, _row in completed[MAX_PENDING_REQUESTS:]:
@@ -162,7 +174,7 @@ class CapabilityAuthority:
         # operations whose effects must not be repeated after an ambiguous
         # client-side transport result. They expire independently of grants.
         for transition_id, row in list(transitions.items()):
-            created_at = int(row.get("created_at", 0) or 0)
+            created_at = self._registry_integer(row, "created_at")
             if current - created_at >= TRANSITION_TTL_SECONDS:
                 transitions.pop(transition_id, None)
         protected_count = sum(
@@ -171,7 +183,7 @@ class CapabilityAuthority:
         completed_transitions = sorted(
             ((transition_id, row) for transition_id, row in transitions.items()
              if row.get("state") == "completed"),
-            key=lambda item: int(item[1].get("created_at", 0) or 0),
+            key=lambda item: self._registry_integer(item[1], "created_at"),
             reverse=True,
         )
         completed_limit = max(0, MAX_TRANSITION_RECORDS - protected_count)
@@ -290,20 +302,66 @@ class CapabilityAuthority:
             raise CapabilityError("operations must be an explicit nonempty allowlist")
         return clean
 
-    def request(self, *, seat, lineage, operations, ttl_seconds=900):
+    @staticmethod
+    def _clean_deploy_scope(scope):
+        """Return the one immutable object an elevated deploy grant may name."""
+        expected = {"signoff_block_id", "commit_sha", "target_scope"}
+        if not isinstance(scope, dict) or set(scope) != expected:
+            raise CapabilityError(
+                "deploy_scope keys must be exactly signoff_block_id, "
+                "commit_sha, target_scope")
+        if not all(isinstance(scope[key], str) for key in expected):
+            raise CapabilityError("deploy_scope fields must be strings")
+        block_id = scope["signoff_block_id"]
+        commit_sha = scope["commit_sha"]
+        target_scope = scope["target_scope"]
+        if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,127}", block_id):
+            raise CapabilityError("deploy_scope signoff_block_id is invalid")
+        if not re.fullmatch(r"[0-9a-f]{40}", commit_sha):
+            raise CapabilityError("deploy_scope commit_sha is invalid")
+        if target_scope not in {"main", "farm", "both"}:
+            raise CapabilityError("deploy_scope target_scope must be main, farm, or both")
+        return {
+            "signoff_block_id": block_id,
+            "commit_sha": commit_sha,
+            "target_scope": target_scope,
+        }
+
+    def request(self, *, seat, lineage, operations, ttl_seconds=900,
+                deploy_scope=None):
         seat = self._clean_identity(seat, "seat")
         lineage = self._clean_identity(lineage, "lineage")
         operations = self._clean_operations(operations)
-        try:
-            ttl_seconds = int(ttl_seconds)
-        except (TypeError, ValueError):
-            raise CapabilityError("ttl_seconds must be an integer")
-        if ttl_seconds < 1 or ttl_seconds > self.MAX_TTL_SECONDS:
+        elevated = operations == ["deploy"]
+        if "deploy" in operations and not elevated:
+            raise CapabilityError("elevated admission is deploy-only")
+        if elevated:
+            if type(ttl_seconds) is not int:
+                raise CapabilityError("ttl_seconds must be an integer")
+        else:
+            try:
+                ttl_seconds = int(ttl_seconds)
+            except (TypeError, ValueError):
+                raise CapabilityError("ttl_seconds must be an integer")
+        if elevated:
+            deploy_scope = self._clean_deploy_scope(deploy_scope)
+        elif deploy_scope is not None:
+            raise CapabilityError("deploy_scope is valid only for deploy admission")
+        maximum_ttl = (self.ELEVATED_MAX_TTL_SECONDS if elevated
+                       else self.MAX_TTL_SECONDS)
+        if ttl_seconds < 1 or ttl_seconds > maximum_ttl:
+            if elevated:
+                raise CapabilityError(
+                    "elevated admission is deploy-only with ttl_seconds 1..300")
             raise CapabilityError(f"ttl_seconds must be 1..{self.MAX_TTL_SECONDS}")
         request_id = uuid.uuid4().hex
         created_at = int(self._now())
         row = {"seat": seat, "lineage": lineage, "ops": operations,
-               "ttl": ttl_seconds, "status": "pending", "created_at": created_at}
+               "ttl": ttl_seconds, "status": "pending", "created_at": created_at,
+               "elevated": elevated,
+               "risk_tier": "high-impact" if elevated else "initial"}
+        if elevated:
+            row["deploy_scope"] = deploy_scope
         with self._registry_transaction():
             data = self._prune(self._load(), created_at)
             pending_count = sum(
@@ -328,29 +386,68 @@ class CapabilityAuthority:
                 item["status"] = "revoked"
                 item["revoked_at"] = data["revoked"][item["jti"]]
             rows.append(item)
-        rows.sort(key=lambda row: int(row.get("created_at", 0)), reverse=True)
+        rows.sort(
+            key=lambda row: self._registry_integer(row, "created_at"),
+            reverse=True,
+        )
         return rows
 
-    def approve(self, request_id):
+    def approve(self, request_id, *, elevated_confirmed=False):
         request_id = str(request_id or "").strip()
         with self._registry_transaction():
             data = self._prune(self._load())
             row = data.setdefault("requests", {}).get(request_id)
             if not row or row.get("status") != "pending":
                 raise CapabilityError("pending admission request not found")
+            try:
+                operations = self._clean_operations(row.get("ops"))
+                seat = self._clean_identity(row.get("seat"), "seat")
+                lineage = self._clean_identity(row.get("lineage"), "lineage")
+                ttl = row.get("ttl")
+                if (not isinstance(ttl, int) or isinstance(ttl, bool)
+                        or ttl < 1 or ttl > self.MAX_TTL_SECONDS):
+                    raise CapabilityError("pending admission metadata is inconsistent")
+            except CapabilityError as exc:
+                raise CapabilityError(
+                    "pending admission metadata is inconsistent") from exc
+            elevated = operations == ["deploy"]
+            if "deploy" in operations and not elevated:
+                raise CapabilityError("pending admission metadata is inconsistent")
+            if elevated:
+                if (ttl > self.ELEVATED_MAX_TTL_SECONDS
+                        or row.get("elevated") is not True
+                        or row.get("risk_tier") != "high-impact"):
+                    raise CapabilityError(
+                        "pending deploy elevation metadata is inconsistent")
+                try:
+                    deploy_scope = self._clean_deploy_scope(
+                        row.get("deploy_scope"))
+                except CapabilityError as exc:
+                    raise CapabilityError(
+                        "pending deploy elevation metadata is inconsistent") from exc
+            elif (("elevated" in row and row.get("elevated") is not False)
+                  or ("risk_tier" in row and row.get("risk_tier") != "initial")):
+                raise CapabilityError("pending admission metadata is inconsistent")
+            if elevated and elevated_confirmed is not True:
+                raise CapabilityError(
+                    "explicit elevated-operation confirmation is required")
             issued_at = int(self._now())
             jti = uuid.uuid4().hex
-            payload = {"seat": row["seat"], "lineage": row["lineage"],
-                       "ops": row["ops"], "iat": issued_at,
-                       "exp": issued_at + int(row["ttl"]), "jti": jti}
+            payload = {"seat": seat, "lineage": lineage,
+                       "ops": operations, "iat": issued_at,
+                       "exp": issued_at + ttl, "jti": jti}
+            if elevated:
+                payload["deploy_scope"] = deploy_scope
             token = self._encode(payload)
             row["status"] = "approved"
             row["approved_at"] = issued_at
             row["jti"] = jti
             data.setdefault("issued", {})[jti] = {
-                "request_id": request_id, "seat": row["seat"],
-                "lineage": row["lineage"], "ops": list(row["ops"]),
+                "request_id": request_id, "seat": seat,
+                "lineage": lineage, "ops": list(operations),
                 "exp": payload["exp"]}
+            if elevated:
+                data["issued"][jti]["deploy_scope"] = deploy_scope
             self._save(data)
         return {"capability": token, "identity": payload}
 
@@ -416,6 +513,16 @@ class CapabilityAuthority:
         if clean_ops != payload["ops"] or not re.fullmatch(
                 r"[0-9a-f]{32}", payload["jti"]):
             raise CapabilityError("invalid capability claims")
+        if clean_ops == ["deploy"]:
+            try:
+                clean_scope = self._clean_deploy_scope(
+                    payload.get("deploy_scope"))
+            except CapabilityError as exc:
+                raise CapabilityError("invalid capability claims") from exc
+            if clean_scope != payload.get("deploy_scope"):
+                raise CapabilityError("invalid capability claims")
+        elif "deploy_scope" in payload:
+            raise CapabilityError("invalid capability claims")
         current = int(self._now() if now is None else now)
         if payload["exp"] <= payload["iat"] or current >= payload["exp"]:
             raise CapabilityError("capability expired")
@@ -434,6 +541,8 @@ class CapabilityAuthority:
         if (issued.get("seat") != payload["seat"] or
                 issued.get("lineage") != payload["lineage"] or
                 issued.get("ops") != payload["ops"] or
-                int(issued.get("exp", -1)) != payload["exp"]):
+                self._registry_integer(issued, "exp") != payload["exp"]):
             raise CapabilityError("capability identity mismatch")
+        if clean_ops == ["deploy"] and issued.get("deploy_scope") != clean_scope:
+            raise CapabilityError("capability deploy scope mismatch")
         return payload

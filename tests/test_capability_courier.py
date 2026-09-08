@@ -7,6 +7,13 @@ import uuid
 from unittest import mock
 
 
+DEPLOY_SCOPE = {
+    "signoff_block_id": "block-1",
+    "commit_sha": "a" * 40,
+    "target_scope": "both",
+}
+
+
 class _Response:
     def __init__(self, body=b'{"ok":true}', *, status_code=200,
                  content_type="application/json"):
@@ -76,16 +83,21 @@ class CapabilityCourierTests(unittest.TestCase):
         headers["Content-Type"] = "application/json"
         return self.client.post(path, headers=headers, data=raw_body)
 
-    def issue(self, operations):
+    def issue(self, operations, deploy_scope=None):
+        body = {
+            "seat": "worker1", "lineage": "openai:test",
+            "operations": operations, "ttl_seconds": 300,
+        }
+        if operations == ["deploy"]:
+            body["deploy_scope"] = deploy_scope or DEPLOY_SCOPE
         requested = self.compiled_post(
             "/diag/admission/request", mode="admission",
-            operation="admission_request", body={
-            "seat": "worker1", "lineage": "openai:test",
-            "operations": operations, "ttl_seconds": 300})
+            operation="admission_request", body=body)
         self.assertEqual(requested.status_code, 202)
         approved = self.client.post("/diag/admission/approve",
             headers={"X-Diag-Key": os.environ["DIAG_KEY"]},
-            json={"request_id": requested.get_json()["request_id"]})
+            json={"request_id": requested.get_json()["request_id"],
+                  "elevated_confirmed": operations == ["deploy"]})
         self.assertEqual(approved.status_code, 200)
         return approved.get_json()
 
@@ -115,6 +127,84 @@ class CapabilityCourierTests(unittest.TestCase):
                 credential=token, body={})
         self.assertEqual(response.status_code, 401)
         post.assert_not_called()
+
+    def test_deploy_only_elevated_capability_uses_existing_short_relay(self):
+        token = self.issue(["deploy"])["capability"]
+        body = {"action": "status", "target": "farm",
+                "signoff_block_id": "block-1", "commit_sha": "a" * 40}
+        with mock.patch.object(
+                self.module.http_requests, "post",
+                return_value=_Response()) as post:
+            response = self.compiled_post(
+                "/diag/op/deploy", mode="capability", operation="deploy",
+                credential=token, body=body)
+        self.assertEqual(response.status_code, 200)
+        forwarded = post.call_args.kwargs
+        self.assertEqual(forwarded["json"], body)
+        self.assertEqual(forwarded["timeout"], 25)
+        self.assertFalse(forwarded["allow_redirects"])
+        self.assertEqual(forwarded["headers"]["X-Ontinuity-Seat"], "worker1")
+
+    def test_deploy_capability_refuses_any_different_object_before_relay(self):
+        token = self.issue(["deploy"])["capability"]
+        valid = {"action": "start", "target": "main",
+                 "signoff_block_id": "block-1", "commit_sha": "a" * 40}
+        cases = (
+            {**valid, "signoff_block_id": "block-2"},
+            {**valid, "commit_sha": "b" * 40},
+        )
+        for body in cases:
+            with self.subTest(body=body), mock.patch.object(
+                    self.module.http_requests, "post") as post:
+                response = self.compiled_post(
+                    "/diag/op/deploy", mode="capability",
+                    operation="deploy", credential=token, body=body)
+            self.assertEqual(response.status_code, 403)
+            post.assert_not_called()
+
+        farm_only = self.issue(
+            ["deploy"], {**DEPLOY_SCOPE, "target_scope": "farm"})["capability"]
+        with mock.patch.object(self.module.http_requests, "post") as post:
+            response = self.compiled_post(
+                "/diag/op/deploy", mode="capability", operation="deploy",
+                credential=farm_only, body=valid)
+        self.assertEqual(response.status_code, 403)
+        post.assert_not_called()
+
+    def test_main_deploy_route_rejects_every_noncanonical_http_shape(self):
+        headers = {"X-Diag-Key": os.environ["DIAG_KEY"]}
+        valid = (b'{"action":"start","target":"main",'
+                 b'"signoff_block_id":"block-1","commit_sha":"'
+                 + b"a" * 40 + b'"}')
+        cases = (
+            ("query", "/diag/op/deploy?provider=other", valid,
+             "application/json"),
+            ("content-type", "/diag/op/deploy", valid, "text/plain"),
+            ("invalid-utf8", "/diag/op/deploy", b"{\xff}",
+             "application/json"),
+            ("duplicate-top", "/diag/op/deploy",
+             valid[:-1] + b',"target":"farm"}', "application/json"),
+            ("duplicate-nested", "/diag/op/deploy",
+             valid[:-1] + b',"extra":{"x":1,"x":2}}',
+             "application/json"),
+            ("nonobject", "/diag/op/deploy", b"[]", "application/json"),
+            ("missing", "/diag/op/deploy", b'{"action":"start"}',
+             "application/json"),
+            ("extra", "/diag/op/deploy", valid[:-1] + b',"extra":"x"}',
+             "application/json"),
+            ("nonstrings", "/diag/op/deploy",
+             valid.replace(b'"target":"main"', b'"target":1'),
+             "application/json"),
+            ("oversize", "/diag/op/deploy", b" " * 5000,
+             "application/json"),
+        )
+        for label, path, body, content_type in cases:
+            with self.subTest(case=label), mock.patch.object(
+                    self.module.http_requests, "post") as post:
+                response = self.client.post(
+                    path, headers=headers, data=body, content_type=content_type)
+            self.assertIn(response.status_code, {400, 413})
+            post.assert_not_called()
 
     def test_master_key_in_url_is_not_an_operator_auth_path(self):
         with mock.patch.object(self.module.http_requests, "post") as post:

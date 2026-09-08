@@ -52,7 +52,7 @@ Create a machine-readable and human-readable manifest of:
 ### B1 — Operator-approved capability admission
 
 **Serves:** RC-2; prerequisite to authenticated RC-3 and RC-5  
-**State:** REVIEWED BASE COMMIT `693435a`; LIVE TRANSITION PAUSED BEFORE BOX RESTART FOR TRANSPORT-LOCK REVIEW
+**State:** MAIN LIVE AT `693435a`, FARM AT ROLLBACK `3476ed8`; LOCAL CANDIDATE BASE `6f52063` AWAITING A NEW CLEAN REVIEW
 
 Supersedes and consolidates:
 
@@ -81,19 +81,20 @@ The transition exposed a separate recurring reliability defect: prior corpus tex
 named a "known-good curl" but did not preserve the exact operator request as an
 executable artifact. Local overlay `codex/b1-transport-lock` supplies that client
 and rewires current boot packets to it. The compiler preserves the proven
-host-visible top-level `curl --config -` transition and reads current URLs from a
+host-visible top-level `curl --disable --config -` transition and reads current URLs from a
 reviewed logical endpoint registry, keeping the mechanism model/provider/host
 neutral. Candidate MAIN rejects admission/capability calls without the exact v2
 body-and-credential-bound envelope before relay, echoes the prepared request ID,
 and keeps bounded persistent replay state for mailbox operations that can claim or
 mutate work. The former Python capability helper is local-only, and the full B1
-verifier preflights its selected project runtime before starting tests. The first
-clean transport-lock review reproduced the freeze and all 142 tests but rejected
-process-local replay locking, unbounded relay-response intake, and contradictory
-handoff state. Those defects are corrected locally with an interprocess transaction
-lock, bounded streamed response reads, and one authoritative current action. The
-overlay remains uncommitted and not live; the B1 transition does not resume until
-the exact corrected manifest receives a second clean review.
+verifier preflights its selected project runtime before starting tests. Successive
+clean reviews forced correction of process-local replay locking, unbounded relay-
+response intake, contradictory handoff state, deploy authority not bound to the
+exact block/commit/target object, loose persisted-schema typing, and curl's implicit
+user default configuration. The current overlay is based on accepted local transport
+commit `6f52063`, passes the complete current author-side verifier, remains uncommitted, and is not live.
+The B1 transition does not resume until these exact refrozen bytes receive a new
+clean independent review and Patrick authorizes the resulting exact commit.
 The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
 ### B2 — Bind occupant and action provenance
@@ -333,11 +334,12 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Refreeze and obtain a second independent review of the exact corrected
-`codex/b1-transport-lock` overlay on reviewed B1 commit `693435a`. If accepted,
-land the unchanged overlay, then resume
-the fail-stopped B1 cutover at the one remaining pre-restart box readback. B3
-remains next in dependency order after B1 closes; do not mix it into this repair.
+Obtain a new independent review of the exact refrozen `codex/b1-transport-lock`
+overlay based on accepted local transport commit `6f52063`. If accepted, commit
+those unchanged bytes locally and request Patrick's authorization for that exact
+commit before any push, install, restart, or deployment. Then resume the fail-
+stopped B1 cutover at the remaining pre-restart box readback. B3 remains the next
+dependency lane after B1; do not mix it into this bounded correction.
 
 B0 detected FARM and box drift. Preserve that observation; reconcile it under
 B6 rather than silently mixing correction into the baseline.

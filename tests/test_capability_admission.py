@@ -10,6 +10,13 @@ import capability_auth
 from capability_auth import CapabilityAuthority, CapabilityError
 
 
+DEPLOY_SCOPE = {
+    "signoff_block_id": "block-1",
+    "commit_sha": "a" * 40,
+    "target_scope": "both",
+}
+
+
 class _CoordinatedLoadAuthority(CapabilityAuthority):
     """Widen the old load/save race without entering the transaction lock."""
 
@@ -97,6 +104,251 @@ class CapabilityAdmissionTests(unittest.TestCase):
     def test_request_requires_explicit_nonempty_allowlist(self):
         with self.assertRaisesRegex(CapabilityError, "operations"):
             self.approve(operations=[])
+
+    def test_elevated_request_is_deploy_only_and_maximum_300_seconds(self):
+        row = self.authority.request(
+            seat="worker1", lineage="openai:test", operations=["deploy"],
+            ttl_seconds=300, deploy_scope=DEPLOY_SCOPE)
+        self.assertTrue(row["elevated"])
+        self.assertEqual(row["risk_tier"], "high-impact")
+        self.assertEqual(row["deploy_scope"], DEPLOY_SCOPE)
+        for operations, ttl in ((["deploy"], 301), (["deploy"], 3600),
+                                (["deploy", "read_repo"], 300)):
+            with self.subTest(operations=operations, ttl=ttl), \
+                    self.assertRaisesRegex(CapabilityError, "deploy-only"):
+                self.authority.request(
+                    seat="worker1", lineage="openai:test",
+                    operations=operations, ttl_seconds=ttl,
+                    deploy_scope=DEPLOY_SCOPE)
+        for ttl in (True, 300.9, "300"):
+            with self.subTest(ttl=ttl), self.assertRaisesRegex(
+                    CapabilityError, "integer"):
+                self.authority.request(
+                    seat="worker1", lineage="openai:test",
+                    operations=["deploy"], ttl_seconds=ttl,
+                    deploy_scope=DEPLOY_SCOPE)
+
+        ordinary = self.authority.request(
+            seat="worker1", lineage="openai:test", operations=["read_repo"],
+            ttl_seconds=300)
+        self.assertFalse(ordinary["elevated"])
+        self.assertEqual(ordinary["risk_tier"], "initial")
+
+        with self.assertRaises(TypeError):
+            self.authority.request(
+                seat="worker1", lineage="openai:test", operations=["deploy"],
+                ttl_seconds=300, elevated=False)
+
+    def test_elevated_approval_requires_explicit_confirmation(self):
+        row = self.authority.request(
+            seat="worker1", lineage="openai:test", operations=["deploy"],
+            ttl_seconds=300, deploy_scope=DEPLOY_SCOPE)
+        with self.assertRaisesRegex(CapabilityError, "confirmation"):
+            self.authority.approve(row["request_id"])
+        grant = self.authority.approve(
+            row["request_id"], elevated_confirmed=True)
+        self.assertEqual(grant["identity"]["ops"], ["deploy"])
+        self.assertEqual(grant["identity"]["deploy_scope"], DEPLOY_SCOPE)
+
+    def test_deploy_scope_is_required_exact_and_deploy_only(self):
+        invalid = (
+            None,
+            {},
+            {**DEPLOY_SCOPE, "extra": "x"},
+            {**DEPLOY_SCOPE, "target_scope": "other"},
+            {**DEPLOY_SCOPE, "commit_sha": "A" * 40},
+            {**DEPLOY_SCOPE, "signoff_block_id": "bad block"},
+        )
+        for scope in invalid:
+            with self.subTest(scope=scope), self.assertRaisesRegex(
+                    CapabilityError, "deploy_scope"):
+                self.authority.request(
+                    seat="worker1", lineage="openai:test",
+                    operations=["deploy"], ttl_seconds=300,
+                    deploy_scope=scope)
+        with self.assertRaisesRegex(CapabilityError, "deploy_scope"):
+            self.authority.request(
+                seat="worker1", lineage="openai:test",
+                operations=["read_repo"], ttl_seconds=300,
+                deploy_scope=DEPLOY_SCOPE)
+
+    def test_authorization_binds_signed_and_registered_deploy_scope(self):
+        row = self.authority.request(
+            seat="worker1", lineage="openai:test", operations=["deploy"],
+            ttl_seconds=300, deploy_scope=DEPLOY_SCOPE)
+        token = self.authority.approve(
+            row["request_id"], elevated_confirmed=True)["capability"]
+        identity = self.authority.authorize(token, "deploy", now=1_001)
+        self.assertEqual(identity["deploy_scope"], DEPLOY_SCOPE)
+        with open(self.authority.registry_path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["issued"][identity["jti"]]["deploy_scope"]["target_scope"] = "farm"
+        with open(self.authority.registry_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        with self.assertRaisesRegex(CapabilityError, "deploy scope mismatch"):
+            self.authority.authorize(token, "deploy", now=1_001)
+
+    def test_persisted_registry_timestamps_require_exact_json_integers(self):
+        for index, malformed in enumerate(("1300", 1300.0, True, -1)):
+            with self.subTest(field="issued.exp", malformed=malformed):
+                authority = CapabilityAuthority(
+                    secret="test-master-secret",
+                    registry_path=os.path.join(
+                        self.tmp.name, f"issued-{index}.json"),
+                    now=lambda: 1_000,
+                )
+                request = authority.request(
+                    seat="worker1", lineage="openai:test", operations=["deploy"],
+                    ttl_seconds=300, deploy_scope=DEPLOY_SCOPE)
+                approved = authority.approve(
+                    request["request_id"], elevated_confirmed=True)
+                identity = approved["identity"]
+                with open(authority.registry_path, encoding="utf-8") as handle:
+                    data = json.load(handle)
+                data["issued"][identity["jti"]]["exp"] = malformed
+                with open(authority.registry_path, "w", encoding="utf-8") as handle:
+                    json.dump(data, handle)
+                with self.assertRaisesRegex(CapabilityError, "invalid shape"):
+                    authority.authorize(
+                        approved["capability"], "deploy", now=1_001)
+
+        authority = CapabilityAuthority(
+            secret="test-master-secret",
+            registry_path=os.path.join(self.tmp.name, "sibling-times.json"),
+            now=lambda: 1_000,
+        )
+        request = authority.request(
+            seat="worker1", lineage="openai:test",
+            operations=["read_repo"], ttl_seconds=300)
+        with open(authority.registry_path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["requests"][request["request_id"]]["created_at"] = "1000"
+        with open(authority.registry_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        with self.assertRaisesRegex(CapabilityError, "invalid shape"):
+            authority.list_requests()
+
+        negative_request_authority = CapabilityAuthority(
+            secret="test-master-secret",
+            registry_path=os.path.join(self.tmp.name, "negative-request-time.json"),
+            now=lambda: 1_000,
+        )
+        request = negative_request_authority.request(
+            seat="worker1", lineage="openai:test",
+            operations=["read_repo"], ttl_seconds=300)
+        with open(negative_request_authority.registry_path,
+                  encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["requests"][request["request_id"]]["created_at"] = -1
+        with open(negative_request_authority.registry_path, "w",
+                  encoding="utf-8") as handle:
+            json.dump(data, handle)
+        with self.assertRaisesRegex(CapabilityError, "invalid shape"):
+            negative_request_authority.list_requests()
+
+        transition_authority = CapabilityAuthority(
+            secret="test-master-secret",
+            registry_path=os.path.join(self.tmp.name, "transition-time.json"),
+            now=lambda: 1_000,
+        )
+        transition_authority.begin_transition("f" * 32, "e" * 64)
+        with open(transition_authority.registry_path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["transitions"]["f" * 32]["created_at"] = 1000.0
+        with open(transition_authority.registry_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        with self.assertRaisesRegex(CapabilityError, "invalid shape"):
+            transition_authority.begin_transition("f" * 32, "e" * 64)
+
+        negative_transition_authority = CapabilityAuthority(
+            secret="test-master-secret",
+            registry_path=os.path.join(self.tmp.name,
+                                       "negative-transition-time.json"),
+            now=lambda: 1_000,
+        )
+        negative_transition_authority.begin_transition("d" * 32, "c" * 64)
+        with open(negative_transition_authority.registry_path,
+                  encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["transitions"]["d" * 32]["created_at"] = -1
+        with open(negative_transition_authority.registry_path, "w",
+                  encoding="utf-8") as handle:
+            json.dump(data, handle)
+        with self.assertRaisesRegex(CapabilityError, "invalid shape"):
+            negative_transition_authority.begin_transition("d" * 32,
+                                                           "c" * 64)
+
+        revoked_authority = CapabilityAuthority(
+            secret="test-master-secret",
+            registry_path=os.path.join(self.tmp.name, "revoked-time.json"),
+            now=lambda: 1_000,
+        )
+        request = revoked_authority.request(
+            seat="worker1", lineage="openai:test",
+            operations=["read_repo"], ttl_seconds=300)
+        approved = revoked_authority.approve(request["request_id"])
+        jti = approved["identity"]["jti"]
+        revoked_authority.revoke(jti)
+        with open(revoked_authority.registry_path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["revoked"][jti] = "1000"
+        with open(revoked_authority.registry_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        with self.assertRaisesRegex(CapabilityError, "invalid shape"):
+            revoked_authority.list_requests()
+
+        negative_revoked_authority = CapabilityAuthority(
+            secret="test-master-secret",
+            registry_path=os.path.join(self.tmp.name, "negative-revoked-time.json"),
+            now=lambda: 1_000,
+        )
+        request = negative_revoked_authority.request(
+            seat="worker1", lineage="openai:test",
+            operations=["read_repo"], ttl_seconds=300)
+        approved = negative_revoked_authority.approve(request["request_id"])
+        jti = approved["identity"]["jti"]
+        negative_revoked_authority.revoke(jti)
+        with open(negative_revoked_authority.registry_path,
+                  encoding="utf-8") as handle:
+            data = json.load(handle)
+        data["revoked"][jti] = -1
+        with open(negative_revoked_authority.registry_path, "w",
+                  encoding="utf-8") as handle:
+            json.dump(data, handle)
+        with self.assertRaisesRegex(CapabilityError, "invalid shape"):
+            negative_revoked_authority.list_requests()
+
+    def test_deploy_request_cannot_be_mislabeled_initial_or_stale(self):
+        for changes in ({"elevated": False, "risk_tier": "initial"},
+                        {"elevated": True, "risk_tier": "initial"},
+                        {"elevated": False, "risk_tier": "high-impact"},
+                        {"elevated": None, "risk_tier": None}):
+            row = self.authority.request(
+                seat="worker1", lineage="openai:test", operations=["deploy"],
+                ttl_seconds=300, deploy_scope=DEPLOY_SCOPE)
+            with open(self.authority.registry_path, encoding="utf-8") as handle:
+                data = json.load(handle)
+            data["requests"][row["request_id"]].update(changes)
+            with open(self.authority.registry_path, "w", encoding="utf-8") as handle:
+                json.dump(data, handle)
+            with self.subTest(changes=changes), self.assertRaisesRegex(
+                    CapabilityError, "metadata"):
+                self.authority.approve(
+                    row["request_id"], elevated_confirmed=True)
+
+    def test_ordinary_legacy_pending_row_without_elevation_fields_is_approved(self):
+        row = self.authority.request(
+            seat="worker1", lineage="openai:test", operations=["read_repo"],
+            ttl_seconds=300)
+        with open(self.authority.registry_path, encoding="utf-8") as handle:
+            data = json.load(handle)
+        legacy = data["requests"][row["request_id"]]
+        legacy.pop("elevated")
+        legacy.pop("risk_tier")
+        with open(self.authority.registry_path, "w", encoding="utf-8") as handle:
+            json.dump(data, handle)
+        grant = self.authority.approve(row["request_id"])
+        self.assertEqual(grant["identity"]["ops"], ["read_repo"])
 
     def test_seat_identity_rejects_control_characters_and_markup(self):
         for seat in ("worker\n2", "<worker2>"):

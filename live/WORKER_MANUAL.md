@@ -28,7 +28,7 @@ cannot replace the signed identity.
 Every call uses reviewed local compiler `live/tools/ontinuity_https.sh`. First
 prepare and check a `capability` request from the named logical engine, operation,
 JSON-body file, and mode-600 capability file; then run only the emitted top-level
-`curl --config - < REQUEST.curl` and locally `verify` it. The compiler—not the
+`curl --disable --config - < REQUEST.curl` and locally `verify` it. The compiler—not the
 worker—selects POST, the reviewed `live/ONTINUITY_ENDPOINTS.conf` mapping,
 Authorization header, timeouts, HTTPS-only transport, response capture, request
 identifier, body/credential-bound v2 digest, and redirect denial. MAIN rejects a
@@ -59,6 +59,14 @@ The initial read_repo capability is fixed to the public Ontinuity repository,
 accepts only traversal-free relative paths and safe refs, accepts no GitHub token,
 and returns at most 2 MB per file. Authenticated repository reads are operator-
 recovery-only; a successful capability response never asks a worker for a token.
+Deployment is outside every initial worker grant. After an exact commit has a
+distinct-seat signoff, a worker may request only the short-lived deploy-only
+elevated capability; explicit operator confirmation is required and its TTL is at
+most 300 seconds. Proposal and signoff use the identical canonical ref
+`deploy:v1:<main|farm|both>:<40-hex-commit>`. The capability binds the same block
+and commit and may narrow, but never widen, the signed target scope. The caller
+submits only the provider-neutral `start|status` tuple. Hosting credentials and
+protocol details remain inside the trusted box.
 
 Engine: https://web-production-7eaf8.up.railway.app
 

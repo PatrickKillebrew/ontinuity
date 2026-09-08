@@ -23,6 +23,11 @@ WHY:
 import os, json, base64, subprocess, secrets, re, urllib.parse, urllib.request, urllib.error
 from flask import Blueprint, request, jsonify
 
+try:
+    from live.box import trusted_deploy
+except ImportError:  # installed box layout keeps the modules side by side
+    import trusted_deploy
+
 box_ops_bp = Blueprint("box_ops", __name__)
 
 
@@ -652,11 +657,39 @@ def op_bootstrap_gate():
 # direct legacy/operator recovery calls retain the honest-name assumption. Every
 # call is logged.
 #
-# TOKEN: RAILWAY_TOKEN is read from the box ENV (os.environ) — operator sets it as
-# a systemd env var. NEVER hardcoded, never written to a file, never echoed.
-
-_RAILWAY_GQL = "https://backboard.railway.com/graphql/v2"
+# Hosting credentials and provider protocol remain inside trusted_deploy. The
+# caller-facing operation is provider-neutral and accepts only action, target,
+# signoff_block_id, and commit_sha.
 _PROVENANCE_LEDGER = os.path.join(_BASE_DIR, "live", "provenance_ledger.jsonl")
+_DEPLOY_REQUEST_MAX_BYTES = 4096
+
+
+def _strict_deploy_body():
+    """Read the deploy tuple under the exact raw HTTP contract."""
+    if request.args or request.mimetype != "application/json":
+        raise trusted_deploy.DeployError(
+            "deploy requires application/json without query parameters")
+    if (request.content_length is not None
+            and request.content_length > _DEPLOY_REQUEST_MAX_BYTES):
+        raise trusted_deploy.DeployError("deploy request body is too large", 413)
+    raw = request.stream.read(_DEPLOY_REQUEST_MAX_BYTES + 1)
+    if len(raw) > _DEPLOY_REQUEST_MAX_BYTES:
+        raise trusted_deploy.DeployError("deploy request body is too large", 413)
+    try:
+        def reject_duplicates(pairs):
+            value = {}
+            for key, item in pairs:
+                if key in value:
+                    raise ValueError("duplicate JSON key")
+                value[key] = item
+            return value
+        return json.loads(
+            raw.decode("utf-8", "strict"),
+            object_pairs_hook=reject_duplicates,
+        )
+    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+        raise trusted_deploy.DeployError(
+            "deploy request body is not valid JSON") from exc
 
 
 def _prov_append(record):
@@ -677,10 +710,19 @@ def _now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
-def _twoparty_check(block_id):
+def _deploy_authorization_refs(target, commit_sha):
+    """Canonical mailbox refs that authorize this logical target and commit."""
+    return {
+        f"deploy:v1:{target}:{commit_sha}",
+        f"deploy:v1:both:{commit_sha}",
+    }
+
+
+def _twoparty_check(block_id, target, commit_sha):
     """Inspect the mailbox for block_id. Returns (ok, detail, author, signer).
-    ok=True iff a 'proposal' exists AND a 'signoff' exists whose sender differs
-    from the proposal's author (NOSELF-1 author fields). Uses seat_mailbox._mb_conn."""
+    ok=True iff proposal and signoff carry the same canonical deploy ref for the
+    requested target+commit and the signer differs from the proposal author.
+    Uses seat_mailbox._mb_conn."""
     try:
         import seat_mailbox
         c = seat_mailbox._mb_conn()
@@ -690,12 +732,14 @@ def _twoparty_check(block_id):
         # the authored work: prefer the proposal row's author_seat (NOSELF-1),
         # falling back to its from_seat.
         prop = c.execute(
-            "SELECT COALESCE(author_seat, from_seat), COALESCE(author_lineage, from_lineage) "
+            "SELECT COALESCE(author_seat, from_seat), "
+            "COALESCE(author_lineage, from_lineage), ref "
             "FROM seat_mailbox WHERE block_id=? AND kind='proposal' "
             "ORDER BY created_at ASC LIMIT 1", (block_id,)).fetchone()
         # the sign-off: a 'signoff' kind row for this block.
         sign = c.execute(
-            "SELECT from_seat, from_lineage FROM seat_mailbox WHERE block_id=? AND kind='signoff' "
+            "SELECT from_seat, from_lineage, ref FROM seat_mailbox "
+            "WHERE block_id=? AND kind='signoff' "
             "ORDER BY created_at DESC LIMIT 1", (block_id,)).fetchone()
         c.close()
     except Exception as e:
@@ -706,9 +750,18 @@ def _twoparty_check(block_id):
         return False, f"no proposal found for block {block_id}", None, None
     if not sign:
         return False, f"no signoff found for block {block_id} (unsigned deploy refused)", \
-               {"seat": prop[0], "lineage": prop[1]}, None
-    author = {"seat": prop[0], "lineage": prop[1]}
-    signer = {"seat": sign[0], "lineage": sign[1]}
+               {"seat": prop[0], "lineage": prop[1], "ref": prop[2]}, None
+    author = {"seat": prop[0], "lineage": prop[1], "ref": prop[2]}
+    signer = {"seat": sign[0], "lineage": sign[1], "ref": sign[2]}
+    allowed_refs = _deploy_authorization_refs(target, commit_sha)
+    if not author["ref"] or author["ref"] != signer["ref"]:
+        return False, (
+            "proposal and signoff do not carry the same deploy authorization ref"
+        ), author, signer
+    if author["ref"] not in allowed_refs:
+        return False, (
+            "signed deploy authorization ref does not match requested target and commit"
+        ), author, signer
     # TWO-PARTY: the signer must be a DIFFERENT SEAT than the author. Two distinct
     # seats are two parties even when they share a model lineage (worker1 and worker2
     # are both claude:opus-4.8 — that is the normal two-worker case and MUST be
@@ -720,109 +773,105 @@ def _twoparty_check(block_id):
     if (author["seat"] or "") == (signer["seat"] or "") and author["seat"]:
         return False, (f"self-sign-off: author seat={author['seat']} == signer seat "
                        f"{signer['seat']} — two-party rule violated"), author, signer
-    return True, "two-party satisfied (distinct seats)", author, signer
-
-
-def _railway_deploy(service_id, environment_id, token):
-    """Trigger serviceInstanceDeployV2 via the Railway GraphQL API. Token from env."""
-    query = ("mutation($s:String!,$e:String!){serviceInstanceDeployV2(serviceId:$s,environmentId:$e)}")
-    body = json.dumps({"query": query, "variables": {"s": service_id, "e": environment_id}}).encode()
-    req = urllib.request.Request(_RAILWAY_GQL, data=body,
-                                 headers={"Content-Type": "application/json",
-                                          "Authorization": f"Bearer {token}"}, method="POST")
-    with _NO_REDIRECT_OPENER.open(req, timeout=40) as r:
-        return json.loads(r.read().decode())
+    return True, (
+        "two-party satisfied for exact signed target and commit"
+    ), author, signer
 
 
 @box_ops_bp.route("/op/deploy", methods=["POST"])
 def op_deploy():
-    """Authorize + trigger a deploy, gated by the two-party rule. Body:
-      {target: 'main'|'farm'|'box', signoff_block_id (req), commit_sha?, dry_run?}.
-    Two-party: the block must have a proposal (author) AND a signoff by a DIFFERENT
-    seat, else REFUSE + gate_violation record. ENGINE deploy reads RAILWAY_TOKEN +
-    the target's RAILWAY_SERVICE_ID_<TARGET> / RAILWAY_ENVIRONMENT_ID from env. BOX
-    target = restart (no Railway call). dry_run=true runs every check + logs but
-    makes NO Railway call (for tests). See the shared-key caveat in the module note."""
+    """Two-phase exact-commit deploy through the trusted box-side adapter.
+
+    ``start`` performs at most one provider mutation for the deterministic
+    block+target+commit tuple. ``status`` recovers that tuple without accepting a
+    caller-supplied provider deployment identifier. Both phases retain the
+    existing two-party signer gate.
+    """
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    b = request.get_json(silent=True) or {}
-    target = (b.get("target") or "").strip().lower()
-    block_id = (b.get("signoff_block_id") or "").strip()
-    commit_sha = (b.get("commit_sha") or "").strip()
-    dry_run = bool(b.get("dry_run"))
-    if target not in ("main", "farm", "box"):
-        return jsonify({"error": "target must be main|farm|box"}), 400
-    if not block_id:
-        return jsonify({"error": "signoff_block_id required"}), 400
-    caller = _caller_seat()
-    op_id = _ledger_begin("deploy", {"target": target, "block": block_id, "dry_run": dry_run})
-
-    # 1) TWO-PARTY GATE (structural)
-    ok, detail, author, signer = _twoparty_check(block_id)
-    if not ok:
-        _prov_append({"kind": "gate_violation", "block_id": block_id, "target": target,
-                      "caller": caller, "reason": detail, "author": author, "signer": signer,
-                      "commit_sha": commit_sha or None})
-        _ledger_finish(op_id, "fail", f"two-party refused: {detail[:140]}")
-        return jsonify({"error": "deploy refused — two-party rule", "detail": detail,
-                        "author": author, "signer": signer}), 403
-
-    # 1b) Bind an authenticated caller (including a scoped capability relay) to
-    # the SIGNER, so a third party cannot trigger a deploy citing someone else's
-    # signoff. Direct legacy/operator shared-root recovery remains unattributed;
-    # there the structural two-party check above is the available guard.
-    _ident = _authed_identity()
-    if _ident and _ident.get("authenticated"):
-        if signer and (_ident.get("seat") or "") != (signer.get("seat") or ""):
-            _prov_append({"kind": "gate_violation", "block_id": block_id, "target": target,
-                          "caller": "auth:" + str(_ident.get("seat")), "reason":
-                          f"deploy caller {_ident.get('seat')} != signer {signer.get('seat')}",
-                          "author": author, "signer": signer})
-            _ledger_finish(op_id, "fail", "caller != signer")
-            return jsonify({"error": "deploy refused — caller is not the signer",
-                            "caller": _ident.get("seat"), "signer": signer}), 403
-
-    # 2) lifecycle record: authorized (captures the chain so findings don't evaporate)
-    _prov_append({"kind": "deploy_authorized", "block_id": block_id, "target": target,
-                  "caller": caller, "author": author, "signer": signer,
-                  "commit_sha": commit_sha or None, "dry_run": dry_run})
-
-    # 3) DRY RUN: every check passed; make no real call (test path)
-    if dry_run:
-        _ledger_finish(op_id, "ok", f"dry_run authorized target={target} block={block_id}")
-        return jsonify({"ok": True, "dry_run": True, "authorized": True,
-                        "two_party": {"author": author, "signer": signer},
-                        "would_deploy": target})
-
-    # 4) EXECUTE
     try:
-        if target == "box":
-            # box redeploy = restart the workspace (the existing hands-free path)
-            result = {"box": "restart requested"}
-            try:
-                import file_server
-                if hasattr(file_server, "restart_workspace"):
-                    file_server.restart_workspace()
-            except Exception as e:
-                result["restart_note"] = str(e)[:120]
-        else:
-            token = os.environ.get("RAILWAY_TOKEN", "").strip()
-            svc = os.environ.get(f"RAILWAY_SERVICE_ID_{target.upper()}", "").strip()
-            env = os.environ.get("RAILWAY_ENVIRONMENT_ID", "").strip()
-            if not (token and svc and env):
-                _ledger_finish(op_id, "fail", "railway env not configured")
-                _prov_append({"kind": "deploy_result", "block_id": block_id, "target": target,
-                              "outcome": "fail", "reason": "RAILWAY_TOKEN/SERVICE_ID/ENVIRONMENT_ID env missing"})
-                return jsonify({"error": "railway env not configured (RAILWAY_TOKEN / "
-                                "RAILWAY_SERVICE_ID_%s / RAILWAY_ENVIRONMENT_ID)" % target.upper()}), 503
-            result = _railway_deploy(svc, env, token)
-        _prov_append({"kind": "deploy_result", "block_id": block_id, "target": target,
-                      "outcome": "ok", "commit_sha": commit_sha or None})
-        _ledger_finish(op_id, "ok", f"deployed target={target} block={block_id}")
-        return jsonify({"ok": True, "deployed": target, "block_id": block_id,
-                        "two_party": {"author": author, "signer": signer}, "result": result})
-    except Exception as e:
-        _prov_append({"kind": "deploy_result", "block_id": block_id, "target": target,
-                      "outcome": "fail", "reason": str(e)[:140]})
-        _ledger_finish(op_id, "fail", f"deploy error: {str(e)[:140]}")
-        return jsonify({"error": f"deploy error: {str(e)[:200]}"}), 500
+        body = _strict_deploy_body()
+        action, target, block_id, commit_sha = trusted_deploy.validate_request(body)
+    except trusted_deploy.DeployError as exc:
+        return jsonify({"error": str(exc)}), exc.status
+
+    caller = _caller_seat()
+    op_id = _ledger_begin("deploy", {
+        "action": action, "target": target, "block": block_id,
+        "commit_sha": commit_sha,
+    })
+    if op_id is None:
+        return jsonify({"error": "deploy ledger is unavailable"}), 503
+
+    ledger_status = "fail"
+    ledger_result = "deploy failed"
+    try:
+        ok, detail, author, signer = _twoparty_check(
+            block_id, target, commit_sha)
+        if not ok:
+            _prov_append({
+                "kind": "gate_violation", "block_id": block_id,
+                "target": target, "caller": caller, "reason": detail,
+                "author": author, "signer": signer, "commit_sha": commit_sha,
+            })
+            ledger_result = "two-party refused"
+            return jsonify({
+                "error": "deploy refused — two-party rule", "detail": detail,
+                "author": author, "signer": signer,
+            }), 403
+
+        identity = _authed_identity()
+        if (identity and identity.get("authenticated") and signer
+                and (identity.get("seat") or "") != (signer.get("seat") or "")):
+            _prov_append({
+                "kind": "gate_violation", "block_id": block_id,
+                "target": target, "caller": "auth:" + str(identity.get("seat")),
+                "reason": "authenticated deploy caller differs from signer",
+                "author": author, "signer": signer, "commit_sha": commit_sha,
+            })
+            ledger_result = "caller differs from signer"
+            return jsonify({
+                "error": "deploy refused — caller is not the signer",
+                "caller": identity.get("seat"), "signer": signer,
+            }), 403
+
+        if action == "start":
+            result, provider_mutated = trusted_deploy.start(
+                block_id, target, commit_sha
+            )
+            _prov_append({
+                "kind": "deploy_accepted" if provider_mutated else "deploy_replayed",
+                "block_id": block_id, "target": target, "caller": caller,
+                "author": author, "signer": signer, "commit_sha": commit_sha,
+                "tracking_id": result["tracking_id"],
+            })
+            ledger_status = "ok" if result["ok"] else "fail"
+            ledger_result = ("deploy accepted" if provider_mutated else
+                             "deploy replayed " + result["action_state"])
+            status_code = 200 if result["ok"] else 502
+            return jsonify({**result, "two_party": {
+                "author": author, "signer": signer}}), status_code
+
+        result, newly_terminal = trusted_deploy.status(
+            block_id, target, commit_sha
+        )
+        if newly_terminal:
+            _prov_append({
+                "kind": "deploy_result", "block_id": block_id,
+                "target": target, "caller": caller, "author": author,
+                "signer": signer, "commit_sha": commit_sha,
+                "tracking_id": result["tracking_id"],
+                "outcome": result["action_state"],
+            })
+        ledger_status = "ok" if result["ok"] else "fail"
+        ledger_result = "deploy status " + result["action_state"]
+        status_code = 200 if result["ok"] else 502
+        return jsonify({**result, "two_party": {"author": author, "signer": signer}}), status_code
+    except trusted_deploy.DeployError as exc:
+        ledger_result = "deploy adapter refused request"
+        return jsonify({"error": str(exc)}), exc.status
+    except Exception:
+        ledger_result = "deploy internal failure"
+        return jsonify({"error": "deploy internal failure"}), 500
+    finally:
+        _ledger_finish(op_id, ledger_status, ledger_result)

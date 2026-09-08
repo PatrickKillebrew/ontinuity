@@ -1,75 +1,170 @@
 {
-  "schema_version": 2,
-  "base_commit": "693435a8236caeb60f3c429d4728a7390f080dc1",
+  "schema_version": 4,
+  "base_commit": "6f52063ac2f2fe28180c16eaff295b2563dba721",
   "branch": "codex/b1-transport-lock",
-  "state": "local_uncommitted_transport_lock_plus_restart_burnin_correction_awaiting_clean_review_not_live",
-  "purpose": "Preserve the accepted transport lock and add the fixed, ledgered restart_burnin mechanism required to resume the halted B1 cutover without widening initial model grants.",
+  "state": "local_uncommitted_exact_object_and_transport_hardening_candidate_awaiting_clean_review_not_live",
+  "purpose": "Bind trusted deployment to one exact reviewed object, prevent user curl defaults from altering the compiled model-seat transition, and preserve unchanged initial model grants.",
   "required": [
-    {"path": "app.py", "sha256": "6abe4ff5627fc67d01c27d203c6bf6a063fb4e8c8c5f6d677cbd9074143b2f65"},
-    {"path": "capability_auth.py", "sha256": "75b92a2e5ca7bb43a67ebbdb1a15c1fa44d8fcf58092870ad3d5c0f0761be51b"},
-    {"path": "live/B1_INSTALL_MANIFEST.json", "sha256": "b58a471b13abc3e293d01e5c44cda6ea06dc057cc54cf4583c943f4a316f8f48"},
-    {"path": "live/CONTROL_HANDOFF.md", "sha256": "2eeff10774ed3cd87032939851931f819002267ad066bb23019d854d8764c245"},
-    {"path": "live/CONTROL_QUICKBOOT.md", "sha256": "a422812b3ab97211e98c4cd9e838e8ac753035b148b3ab6077601a50b4fe77db"},
-    {"path": "live/CONTROL_QUICKBOOT_SNIPPET.md", "sha256": "d018454f1bc3afda2557c2aadfe001e19a6ef0d28960af44d2fc6dd1a76e6770"},
-    {"path": "live/ONTINUITY_1_0_BOARD.md", "sha256": "f5f70e3f2fd60e2f913c3315921be9fff5f8e1ebe47efa77873f900e65ec725a"},
-    {"path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md", "sha256": "b6cf573172d163de9c4f28c34dfe072feecf9ac514f5e7bee5465a67e4343fe9"},
-    {"path": "live/ONTINUITY_ENDPOINTS.conf", "sha256": "7863863916f3e64778a2d26a52975bc31311c3f421e18a828a4f4f3ff2317236"},
-    {"path": "live/ONTINUITY_1_0_BASELINE.md", "sha256": "429f8fdc94df92714ec74df718430032a1ca9dedd90d15dd572a2e0156481b1b"},
-    {"path": "live/OPERATING_MANUAL.md", "sha256": "fdbb7d8f3517d5dd3accadaedfd6fc51b41cad3f96cb1dd36b0d164017a58c20"},
-    {"path": "live/PUNCH_LIST.md", "sha256": "63feda6a9de4f5fd0c9a982f4d7f6b218e5404ba61134e9db3e41e3a547eb549"},
-    {"path": "live/WORKER_BOOT_PACKET.md", "sha256": "80639a77643d070c31bf1ccb09302b35f4679051b16eb04bf496ccaa00a1cc36"},
-    {"path": "live/WORKER_MANUAL.md", "sha256": "6f8dad850495208ce8bbd92d12144e41e8ce82fd2af4ef17ab9266bc3e4a9e71"},
-    {"path": "live/WORKER_QUICKBOOT.md", "sha256": "4eac90377438f7ecc81285098c734b3a80b3ac7489db6b66caae35b4fd480cc3"},
-    {"path": "live/agent_queue.md", "sha256": "92a33d5355be6784d36453783a5a830cf2b38a0ab1d5315a7c556b6a6ed648fb"},
-    {"path": "live/bootstrap/gate.py", "sha256": "cb9fe34dddc44c6b6b3100a4d5bf80ab19f8f72736fa1911afc68a2a35b18e5f"},
-    {"path": "live/box/file_server.py", "sha256": "d78bc29f19c5cc1741573834ff8dff2ba9655fcd1b9e480d561bc13895a471d0"},
-    {"path": "live/control_loop.py", "sha256": "b4a9401c8b03b7b24c00c3f40271ef7219e645bb48931ea5251994df8d504e66"},
-    {"path": "live/specs/ontinuity_https_protocol.md", "sha256": "ee4376a5ad1b73a55ab62921646c301946e5884e277859697e07cfda9eee772a"},
-    {"path": "live/specs/verified_bootstrap_gate.md", "sha256": "063420d0a7544371086486b5480647667c97105f820fda86c0de4f133a9dcd47"},
-    {"path": "live/tools/b1_verify.sh", "sha256": "1324a2988306c78c381248f56a71f4102f132ede8b3245c0437a60a4864c1ddb"},
-    {"path": "live/tools/ontinuity_https.sh", "sha256": "5f1e441b74a5b61bd342ad902049a9b20a300fdfd41dbac7f77ff3bec3f1df10"},
-    {"path": "tests/test_b1_bootstrap_gate.py", "sha256": "b7be58858316fa5e2416fe73d28be052666e21cd476af36b424ecd5316945731"},
-    {"path": "tests/test_b1_burnin_restart.py", "sha256": "eb68b2ca6b820892cfd95a58d522eae69b55bb9fd2c8215bc9aa8461177ce987"},
-    {"path": "tests/test_b1_release_boundaries.py", "sha256": "64e425e5b8c0cbe61e065227bdeedc3b1bba99a2e51e270a8c21751ecf1d6370"},
-    {"path": "tests/test_capability_admission.py", "sha256": "78684855f1bd587c860dc92d57b5605bca45e6ff0a9ec4791e7388fb6e67bf98"},
-    {"path": "tests/test_capability_admission_surface.py", "sha256": "398723e5efc2419240d61698f7fb267935e34a33e58f6fd1e65dad12a235bc95"},
-    {"path": "tests/test_capability_box_identity.py", "sha256": "5034bbe67a40f75ed469aa73e1817ef267830432b0c3e683d381d6924d955118"},
-    {"path": "tests/test_capability_courier.py", "sha256": "f43d8fc2755e3b6aa90ae992d6732d2698a3e98bb3a863a0d2e3237d2841f5d9"},
-    {"path": "tests/test_ontinuity_https_client.py", "sha256": "d048c07bb95d801953e06cac9c9fc86d05cb73caa146b1186c49c4fb0738c641"}
+    {
+      "path": "app.py",
+      "sha256": "48f38e403094ac00f5fad7742d5f1e50f66b5a7c64490131ce3cee543ced21a8"
+    },
+    {
+      "path": "capability_auth.py",
+      "sha256": "5f98079aee532e0dab92a3f81f71e050e10c6ac9fbb10a308aa329b02efd4e4e"
+    },
+    {
+      "path": "live/B1_INSTALL_MANIFEST.json",
+      "sha256": "1f6eb201fb077979892f009086e0eadc398a3ed322b7d1ad074a38ab78f0e06a"
+    },
+    {
+      "path": "live/CONTROL_HANDOFF.md",
+      "sha256": "52da8f6d245c4f9cc823d5c24efdef74b6b60934786a7ac9694920a6a2d9aa11"
+    },
+    {
+      "path": "live/CONTROL_QUICKBOOT.md",
+      "sha256": "91c66eff69567ac820ceb582c8b828e57c53a3dd0f3b33b020e66cad1dbbf603"
+    },
+    {
+      "path": "live/CONTROL_QUICKBOOT_SNIPPET.md",
+      "sha256": "3784c23dc9bacfe1f089afc4bb8542420208b378be06e93b9ea465f2954810d6"
+    },
+    {
+      "path": "live/ONTINUITY_1_0_BOARD.md",
+      "sha256": "2b504d105f6c58675e525c601a417b8aae1adddfa54b76e66077e7bc8a813481"
+    },
+    {
+      "path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md",
+      "sha256": "e713b0c224907263a3281d697efdecbb8a2b65b565134b04ccc7ef336a27b779"
+    },
+    {
+      "path": "live/OPERATING_MANUAL.md",
+      "sha256": "2eb13c39de40414539321396630b7ad32932c0e0a8fcdb405a697b267db30a98"
+    },
+    {
+      "path": "live/PUNCH_LIST.md",
+      "sha256": "c40995cbddca1743a23856c10ad17a7e4f0ec2b8299967a319e071627ab955e1"
+    },
+    {
+      "path": "live/WORKER_BOOT_PACKET.md",
+      "sha256": "e53b403a40cead488fb4b31e1b6add237813f687cddf79f6e1c661d47bee0012"
+    },
+    {
+      "path": "live/WORKER_MANUAL.md",
+      "sha256": "c27efa7fc7de99b6440d6b8991483a3dd0e787302595c23ee520710423d75cc0"
+    },
+    {
+      "path": "live/WORKER_QUICKBOOT.md",
+      "sha256": "88af1f06d799f14ecb364f899068baaa792ae139c6f80a8efce08215b09b95a5"
+    },
+    {
+      "path": "live/agent_queue.md",
+      "sha256": "07277e4e81842266b3cc194992bd510dc8e899ef76136844a99c4a2cac370ae9"
+    },
+    {
+      "path": "live/box/box_ops.py",
+      "sha256": "b22b4f7aad00699239a3a54549f1741e9640366b809865b90e2d5fb0c6356c2c"
+    },
+    {
+      "path": "live/box/trusted_deploy.py",
+      "sha256": "e9bc7064c2723f4b2e515d9fffacdfc69071c3b30b182f3fa322fe5580cfdf31"
+    },
+    {
+      "path": "live/control_loop.py",
+      "sha256": "5f6251cc2819b3a994ba0ebf9cb2a41c91b2e2f5b2af32347d1d8f87d7ecd01e"
+    },
+    {
+      "path": "live/specs/ontinuity_https_protocol.md",
+      "sha256": "11d313662b75828d23de191062e56e5b2d7a103315f86a31d47460c89036663c"
+    },
+    {
+      "path": "live/specs/trusted_deploy_protocol.md",
+      "sha256": "09cbb008b2188b9e65cce023aeb81477eb51cfc3827574fc135f56eb8a8dcf75"
+    },
+    {
+      "path": "live/tools/b1_verify.sh",
+      "sha256": "b07613286ac792e2aa137c1b581e9693114cb08431d585f6d1d3acb90a4e7eff"
+    },
+    {
+      "path": "live/tools/ontinuity_https.sh",
+      "sha256": "0d1943e556db8ee0bc0122438b215d67b9e9edc1ca980a343b72ed32ed215e1e"
+    },
+    {
+      "path": "templates/index.html",
+      "sha256": "7d58940ab6766d9d689ce60b46ca06ebde2461107b88c152eb951a3dfc0b31c3"
+    },
+    {
+      "path": "tests/test_b1_release_boundaries.py",
+      "sha256": "4d7de208633d168ca0a9476d06bea457646c5119f2a37f627d5a182a816fc692"
+    },
+    {
+      "path": "tests/test_capability_admission.py",
+      "sha256": "cbb1b9cb16612209982f7e08feacca9bbed2c7fd5b3e825bf98d3e093f120e32"
+    },
+    {
+      "path": "tests/test_capability_admission_surface.py",
+      "sha256": "a4e050cd36287df8159874ef2bad7cde94b365292cbae3eebcf02398e4474781"
+    },
+    {
+      "path": "tests/test_capability_box_identity.py",
+      "sha256": "5f6a4b3556efad52816f3a0fc957e364c03f6d5ff7a1c2025dd449c297916f24"
+    },
+    {
+      "path": "tests/test_capability_courier.py",
+      "sha256": "1c790b73c9d4d64844e99f804cf28c53146915cf4838208bf924978d707b44c0"
+    },
+    {
+      "path": "tests/test_ontinuity_https_client.py",
+      "sha256": "f942d38a8c6274825cdbcd8233fb3d049913aa3a28c3deeea935de6d7cc61180"
+    },
+    {
+      "path": "tests/test_trusted_deploy.py",
+      "sha256": "f7bf0d200ec92d111a3f795fdf98a630c7ce0f9ac66cd0f327ff6d0fb2741822"
+    }
   ],
   "required_checks": [
     "B1_TEST_PYTHON=<existing-project-python> live/tools/b1_verify.sh",
     "selected Python imports flask, flask_socketio, and requests before any suite starts",
-    "all 156 tests pass in ten bounded module invocations",
-    "real curl parses a prepared stdin receipt under --version without opening a network connection",
-    "missing or mismatched compiled admission, capability, and __probe__ envelopes fail before relay",
-    "a two-process claim permits exactly one new relay; completed duplicates replay once; conflict, in-progress, and unknown states do not relay again",
-    "chunked box responses are streamed and bounded before decoding; oversized mutable responses become unknown and cannot relay again",
-    "sh -n passes for both shell entrypoints",
-    "Python compilation, both JSON manifests, git diff --check, exact changed-file coverage, and high-confidence repository secret-pattern scan pass"
+    "all bounded tests pass with every provider transition mocked",
+    "model-seat transport is the exact top-level curl --disable --config - command, --disable is first, a hostile user curl default is ignored, and the inherited host proxy, DNS, and TLS trust environment remains the admitted platform boundary",
+    "caller deploy JSON contains exactly action, target, signoff_block_id, and commit_sha",
+    "initial model grants remain unchanged; deploy-only admission derives elevation at the authority boundary, is pending, HIGH-IMPACT, uses an exact JSON-integer TTL of at most 300 seconds, carries one exact block-commit-target scope, and requires explicit operator confirmation of that displayed scope",
+    "the signed capability and private issued registry row carry the identical deploy scope, MAIN rejects a different block, commit, or target before relay, and ordinary capabilities cannot carry deploy scope",
+    "persisted request creation times, issued expiries, revocation times, transition creation times, and trusted deployment state timestamps are exact nonnegative JSON integers; strings, floats, and booleans fail closed before authorization or state reuse",
+    "proposal and latest signoff carry the identical canonical deploy ref for the requested commit and main, farm, or both scope; capability-authenticated deploy caller equals the mailbox signer and the two-party author/signer distinction remains enforced",
+    "ledger begin failure prevents mutation and every post-begin path attempts ledger finish",
+    "pre-mutation state is mode 600, atomic, directory-fsynced, globally locked, strictly bounded, and UNKNOWN never retries automatically",
+    "provider URL, authentication header, token, project, environment, services, queries, deployment ID, log options, timeout, redirect policy, and bounds are server-owned",
+    "trusted provider execution is exact argv curl --config - with shell disabled, private config only on stdin, a fresh minimal child environment with curl-specific default-config isolation and no general HOME/XDG overrides, HTTPS-only protocol, redirects disabled, fixed connect timeout and max-time 8, a fixed process deadline, body bound plus exact three-digit HTTP status capture, explicit 2xx enforcement, and no alternate Python HTTP path",
+    "MAIN and box reject deploy query parameters, wrong content types, oversized or invalid JSON, duplicate keys at every nesting level, nonobjects, missing or extra fields, and nonstring fields before dispatch",
+    "global state-lock acquisition is nonblocking and bounded to at most two seconds; state directories, files, and locks reject symlinks and nonregular objects",
+    "start and status validate stored provider, project, environment, and service identifiers against current trusted configuration before replay; status also binds the exact box-stored provider deployment ID and requested commit, and stale SUCCESS is rejected",
+    "terminal failure reads only a fixed bounded log query and returns no message text or message hash; severity output uses only a fixed vocabulary with unknown fallback, timestamps are strict timezone-bearing RFC3339 normalized to canonical UTC, and persisted summaries enforce availability, count, positive severity totals, and ordered timestamps",
+    "trusted_deploy.py installs beside box_ops.py and its adjacent-module fallback import is exercised",
+    "every manifest digest is exactly 64 lowercase hex, both manifests cover the exact overlay, and no rejected hosting-admin forward reference remains",
+    "git diff --check and high-confidence repository secret-pattern scan pass"
   ],
   "review_questions": [
-    "Does prepare perform no network access and leave curl --config - visibly top-level at the host boundary?",
-    "Does each prepare generate a fresh request ID and bind version, mode, operation, ID, exact body bytes, and normalized credential bytes?",
-    "Do admission and capability routes reject absent, malformed, or mismatched envelopes before any box relay, including designed __probe__?",
-    "Does verify require the returned request ID to equal the prepared ID?",
-    "Can a side-effecting request ID be relayed more than once after completion, conflict, concurrency, timeout, or an unknown result?",
-    "Are transition receipts private, persistent, count bounded, response-size bounded, and expired after the capability lifetime cannot remain valid?",
-    "Does operator-root recovery remain compatible while model boots receive no diagnostic, hosting, repository, mailbox, or deployment root?",
-    "Does any current model-facing helper still construct an alternate HTTP request or hold a capability directly?",
-    "Does the protocol remain independent of model and hosting provider while all unrelated tools remain available?",
-    "Does the B1 verifier refuse an unsuitable runtime before launching tests?",
-    "Do the corpus, code, tests, and exact manifests describe the same halted live boundary and corrected resume order?"
+    "Can a caller provide or influence any provider fact, credential, identifier, request, log option, or transport choice?",
+    "Can a repeated start, response loss, concurrent process, or crash window cause a duplicate provider mutation?",
+    "Does an unknown mutation outcome require explicit operator reconciliation rather than an inferred absence or automatic retry?",
+    "Can status accept any deployment other than the exact stored ID with the fixed target service and requested commit?",
+    "Can any provider error body, token, build-log message, transformed message, or message hash reach the caller or either ledger?",
+    "Are initial capabilities unchanged, and is deploy elevation deploy-only, operator-confirmed, and cryptographically plus registry-bound to the exact reviewed block, commit, and target scope?",
+    "Can a capability holder reuse a signed block or capability for any different commit or target?",
+    "Do MAIN then burn-in then FARM preserve the rollback peer and fit existing transport timeouts?",
+    "Can another provider be added only by reviewed trusted server code without changing the caller contract?"
   ],
   "live_resume_after_clean_review": [
-    "land the exact reviewed overlay without changing a byte",
-    "install and verify the corrected backward-compatible box unit, restart the workspace once, and repeat the bounded box proofs",
-    "verify the already-installed burn-in source bytes, then deploy and verify MAIN at the resulting reviewed commit while FARM remains rollback",
-    "invoke fixed restart_burnin through MAIN and require its active proof before deploying and verifying FARM",
-    "continue the Control boot, Worker boot, excluded-operation denial, expiry, revocation, and laptop-retirement proofs",
-    "prove an uncompiled valid-capability request receives HTTP 428 and does not reach the box"
+    "commit the exact independently accepted candidate locally without changing a byte",
+    "request operator authorization for that exact new commit before any push or live action",
+    "install box_ops.py and trusted_deploy.py together with exact hash readback, then restart and verify under the rollback engine",
+    "deploy MAIN through operator recovery start/status, restart and prove burn-in, then deploy FARM through an elevated signer capability start/status",
+    "complete Control and Worker approval, denial, expiry, and revocation proofs"
   ],
   "live_boundary": {
+    "credential_read": false,
+    "network": false,
     "push": false,
     "deploy": false,
     "box_install": false,

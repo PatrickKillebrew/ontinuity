@@ -6,6 +6,13 @@ import unittest
 import uuid
 
 
+DEPLOY_SCOPE = {
+    "signoff_block_id": "block-1",
+    "commit_sha": "a" * 40,
+    "target_scope": "both",
+}
+
+
 class CapabilityAdmissionSurfaceTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -57,6 +64,71 @@ class CapabilityAdmissionSurfaceTests(unittest.TestCase):
         self.assertNotIn("deploy", response.get_json()["allowed"])
         self.assertRegex(response.headers["X-Ontinuity-Request-ID"],
                          r"^[0-9a-f]{32}$")
+
+    def test_deploy_only_request_is_pending_elevated_and_ttl_bounded(self):
+        accepted = self.admission_post({
+            "seat": "worker1", "lineage": "openai:test",
+            "operations": ["deploy"], "ttl_seconds": 300,
+            "deploy_scope": DEPLOY_SCOPE,
+        })
+        self.assertEqual(accepted.status_code, 202)
+        row = accepted.get_json()
+        self.assertEqual(row["ops"], ["deploy"])
+        self.assertEqual(row["status"], "pending")
+        self.assertTrue(row["elevated"])
+        self.assertEqual(row["risk_tier"], "high-impact")
+        for ttl in (301, 3600, True, 300.9, "300"):
+            with self.subTest(ttl=ttl):
+                denied = self.admission_post({
+                    "seat": "worker1", "lineage": "openai:test",
+                    "operations": ["deploy"], "ttl_seconds": ttl,
+                    "deploy_scope": DEPLOY_SCOPE,
+                })
+                self.assertEqual(denied.status_code, 400)
+
+    def test_elevated_approval_requires_explicit_operator_confirmation(self):
+        requested = self.admission_post({
+            "seat": "worker1", "lineage": "openai:test",
+            "operations": ["deploy"], "ttl_seconds": 300,
+            "deploy_scope": DEPLOY_SCOPE,
+        }).get_json()
+        headers = {"X-Diag-Key": "operator-root-for-tests"}
+        denied = self.client.post(
+            "/diag/admission/approve", headers=headers,
+            json={"request_id": requested["request_id"]})
+        self.assertEqual(denied.status_code, 400)
+        approved = self.client.post(
+            "/diag/admission/approve", headers=headers,
+            json={"request_id": requested["request_id"],
+                  "elevated_confirmed": True})
+        self.assertEqual(approved.status_code, 200)
+        self.assertEqual(approved.get_json()["identity"]["ops"], ["deploy"])
+        self.assertEqual(
+            approved.get_json()["identity"]["deploy_scope"], DEPLOY_SCOPE)
+
+    def test_deploy_admission_requires_one_exact_immutable_scope(self):
+        base = {
+            "seat": "worker1", "lineage": "openai:test",
+            "operations": ["deploy"], "ttl_seconds": 300,
+        }
+        cases = (
+            base,
+            {**base, "deploy_scope": {**DEPLOY_SCOPE, "extra": "yes"}},
+            {**base, "deploy_scope": {**DEPLOY_SCOPE, "target_scope": "other"}},
+            {**base, "deploy_scope": DEPLOY_SCOPE, "provider": "railway"},
+        )
+        for body in cases:
+            with self.subTest(body=body):
+                self.assertEqual(self.admission_post(body).status_code, 400)
+
+    def test_other_noninitial_operations_remain_rejected(self):
+        for operation in ("restart_workspace", "write_file", "commit_self"):
+            with self.subTest(operation=operation):
+                response = self.admission_post({
+                    "seat": "worker1", "lineage": "openai:test",
+                    "operations": [operation], "ttl_seconds": 300,
+                })
+                self.assertEqual(response.status_code, 403)
 
     def test_admission_routes_reject_malformed_json_shapes(self):
         self.assertEqual(self.admission_post({

@@ -8,7 +8,7 @@ source of Ontinuity facts; model priors supply capability, not project history.
 Every HTTP action in this packet must first use reviewed local compiler
 `live/tools/ontinuity_https.sh`. `prepare` freezes the action into a private
 curl-config receipt and body snapshot; `check` proves they are unchanged. The only
-network transition is the literal top-level `curl --config - < REQUEST.curl`.
+network transition is the literal top-level `curl --disable --config - < REQUEST.curl`.
 Do not assemble flags, use Python HTTP, substitute a connector/browser, or
 reconstruct the request. `live/ONTINUITY_ENDPOINTS.conf` is the reviewed logical
 `main|farm` mapping, so the protocol is not tied to its current hosting provider.
@@ -35,7 +35,7 @@ Prepare and check locally, run the exact curl transition, then verify locally:
 ```sh
 live/tools/ontinuity_https.sh prepare admission main admission_request REQUEST_BODY.json - ADMISSION.curl
 live/tools/ontinuity_https.sh check ADMISSION.curl
-curl --config - < ADMISSION.curl
+curl --disable --config - < ADMISSION.curl
 live/tools/ontinuity_https.sh verify ADMISSION.curl
 ```
 
@@ -44,6 +44,13 @@ panel. If approved, receive the bearer capability privately and place it in a
 mode-600 ephemeral file. Never print, commit, mail, or return it. Set
 `ONTINUITY_CAPABILITY_FILE` to the file path, not the credential value. Do not seek
 any permanent or shared root.
+Deployment is absent from the initial worker grant. A worker may request the
+separate deploy-only elevated capability for at most 300 seconds only after an
+exact signed-off commit and explicit operator approval. The proposal and signoff
+carry one identical canonical ref; the request and signed token bind the same block
+and commit and may narrow, but never widen, the signed `main|farm|both` target
+scope. The worker never receives a hosting credential or chooses provider
+transport details.
 
 Every courier call uses the canonical executable in `capability` mode. The
 executable alone constructs the header-authenticated request.

@@ -18,15 +18,16 @@ cd "$ROOT"
         'Set B1_TEST_PYTHON to the existing project test environment.' >&2
     exit 69
 }
-
 printf 'B1_TEST_RUNTIME=%s\n' "$PYTHON_BIN"
 sh -n live/tools/ontinuity_https.sh
 "$PYTHON_BIN" -m py_compile \
     app.py capability_auth.py live/control_loop.py live/bootstrap/gate.py \
     live/box/box_ops.py live/box/file_server.py live/box/seat_mailbox.py \
+    live/box/trusted_deploy.py \
     live/shepherd_alert.py live/experiment/burnin_resident.py
 
 for module in \
+    tests.test_trusted_deploy \
     tests.test_capability_admission \
     tests.test_b1_bootstrap_gate \
     tests.test_b1_burnin_restart \

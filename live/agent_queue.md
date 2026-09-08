@@ -1402,3 +1402,42 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
 - Refreeze the exact corrected overlay, run its bounded verifier, and obtain a
   second clean independent review. Only an unchanged ACCEPT permits landing and
   resuming the existing B1 cutover order.
+
+## FOLD — exact-object and transport hardening refrozen — 2026-09-08
+
+**CORRECTION TO THE PRECEDING OPERATIONAL NEXT**
+- The preceding fold remains immutable history. Its instruction to obtain a
+  "second" review and its earlier `curl --config -` command are superseded by
+  this newest fold; neither is current boot guidance.
+
+**CURRENT CANDIDATE**
+- The uncommitted overlay on accepted local transport base `6f52063` binds deploy
+  authority end to end to one identical signoff block, lowercase 40-hex commit,
+  and `main|farm|both` target scope. MAIN checks that object before relay and the
+  box independently checks matching canonical proposal and signoff refs before
+  any provider action.
+- The sole model-seat network transition is now exactly
+  `curl --disable --config - < REQUEST.curl`. `--disable` is first so a user
+  `.curlrc` cannot modify the frozen receipt. The command intentionally inherits
+  the host's admitted proxy, DNS, and TLS trust environment; that environment is
+  the platform boundary that makes sandbox egress possible.
+- The boundary enforces protocol and authority, not executable attestation. A
+  platform that must make alternate clients powerless must hold the bearer in a
+  trusted transport executor while preserving the same provider-neutral intent
+  contract. No general model tool is disabled.
+
+**EVIDENCE AND STATE**
+- The complete current author-side verifier passes with provider
+  transitions mocked. Successive clean reviews rejected earlier bytes for real
+  defects; those rejections remain evidence and do not accept this refreeze.
+- MAIN remains live at `693435a`; FARM remains rollback `3476ed8`; the old box
+  process remains in memory; `shepherd_alert.py` remains the sole outstanding
+  pre-restart readback. No push, install, restart, deployment, live request, or
+  credential change occurred while producing this correction.
+
+**NEXT**
+- Obtain a new clean independent review of these exact manifest-frozen bytes. If
+  and only if the disposition is ACCEPT, commit the unchanged candidate locally
+  and request Patrick's authorization for that exact commit before any remote or
+  live action. Then resume the existing B1 fail-stop order; B3 remains next after
+  B1 and is not part of this correction.

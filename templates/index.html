@@ -1435,12 +1435,17 @@ async function refreshAdmission() {
       card.style.cssText = 'border:1px solid var(--border2);border-radius:6px;padding:10px;background:var(--surface2);';
       const detail = document.createElement('div');
       detail.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:10px;color:var(--text-dim);line-height:1.6;word-break:break-word;';
-      detail.textContent = `${row.status.toUpperCase()} · ${row.seat} · ${row.lineage} · ${row.ops.join(', ')} · ${row.ttl}s`;
+      const risk = row.elevated ? ' · ELEVATED / HIGH-IMPACT' : '';
+      const scope = row.deploy_scope
+        ? ` · block=${row.deploy_scope.signoff_block_id} · target=${row.deploy_scope.target_scope} · commit=${row.deploy_scope.commit_sha}`
+        : '';
+      detail.textContent = `${row.status.toUpperCase()}${risk} · ${row.seat} · ${row.lineage} · ${row.ops.join(', ')} · ${row.ttl}s${scope}`;
       card.appendChild(detail);
       const actions = document.createElement('div');
       actions.style.cssText = 'display:flex;gap:8px;margin-top:7px;';
       if (row.status === 'pending') {
-        actions.appendChild(admissionButton('Approve', 'approve-admission', () => approveAdmission(row.request_id)));
+        const label = row.elevated ? 'Approve elevated deploy' : 'Approve';
+        actions.appendChild(admissionButton(label, 'approve-admission', () => approveAdmission(row)));
       }
       if (row.status === 'approved' && row.jti) {
         actions.appendChild(admissionButton('Revoke', 'revoke-capability', () => revokeCapability(row.jti)));
@@ -1453,10 +1458,19 @@ async function refreshAdmission() {
   }
 }
 
-async function approveAdmission(requestId) {
+async function approveAdmission(row) {
+  const elevatedConfirmed = row.elevated === true;
+  const scope = row.deploy_scope || {};
+  if (elevatedConfirmed && !window.confirm(
+      `High-impact action: authorize this signer only for block ${scope.signoff_block_id}, target ${scope.target_scope}, commit ${scope.commit_sha}?`)) {
+    return;
+  }
   const response = await fetch('/diag/admission/approve', {
     method: 'POST', headers: admissionHeaders(), redirect: 'error', cache: 'no-store',
-    body: JSON.stringify({request_id: requestId})
+    body: JSON.stringify({
+      request_id: row.request_id,
+      elevated_confirmed: elevatedConfirmed
+    })
   });
   const data = await response.json();
   if (!response.ok) {
