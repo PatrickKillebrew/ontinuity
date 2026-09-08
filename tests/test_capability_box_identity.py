@@ -299,14 +299,14 @@ class CapabilityBoxIdentityTests(unittest.TestCase):
             "checks": [{"name": "MANUAL", "pass": False}],
         })
         headers = dict(self.headers)
-        headers["X-Ontinuity-Courier-Count"] = "19"
+        headers["X-Ontinuity-Courier-Count"] = "20"
         with mock.patch.object(self.box_ops, "_load_gate", return_value=gate):
             response = self.client.post(
                 "/op/bootstrap_gate", headers=headers,
                 json={"seat": "worker1", "lineage": "openai:test",
                       "role": "worker", "canonical_op_count": 1})
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(gate.CANONICAL_COURIER_OP_COUNT, 19)
+        self.assertEqual(gate.CANONICAL_COURIER_OP_COUNT, 20)
         gate.run_gate.assert_called_once()
 
     def test_capability_read_repo_cannot_expand_repo_or_add_token(self):

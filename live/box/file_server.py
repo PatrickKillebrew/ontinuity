@@ -1508,7 +1508,8 @@ def _ops_begin(operation, tier, caller, source_ip, args):
     CALLER-1: `caller` is a TRUSTED-NOT-AUTHENTICATED label. For seat ops it is the
     self-asserted seat name ('seat:<name>', threaded by the _ledger wrappers in
     seat_mailbox.py/box_ops.py from the request body); for this module's own routes
-    that carry no seat (register_egress/read_journal/restart_workspace) it stays the
+    that carry no seat
+    (register_egress/read_journal/restart_workspace/restart_burnin) it stays the
     auth-method label 'diag-key'. The shared diag key proves a keyholder called, NOT
     which seat — so caller records who CLAIMS to act, not proof. Authenticated only
     once per-identity keys derive the seat from the key (see
@@ -1581,6 +1582,61 @@ def op_restart_workspace():
         subprocess.Popen(["bash", "-c", "sleep 1 && systemctl restart ontinuity-workspace"],
                          start_new_session=True)
         return jsonify({"ok": True, "note": "restart dispatched; service returns in a few seconds — confirm via /status"}), 200
+    except Exception as e:
+        _ops_finish(op_id, "fail", str(e)[:200])
+        return jsonify({"error": str(e)[:200]}), 500
+
+
+# --- Scoped operation: restart_burnin (REVIEW, fixed service mutation) ------
+@app.route("/op/restart_burnin", methods=["POST"])
+def op_restart_burnin():
+    cfg = load_config()
+    dk = cfg.get("diag_key", "")
+    if not dk or not secrets.compare_digest(
+            request.headers.get("X-Diag-Key", ""), dk):
+        return jsonify({"error": "unauthorized"}), 401
+    raw_body = request.get_data(cache=True)
+    body = request.get_json(silent=True)
+    if (request.args or request.form
+            or request.mimetype != "application/json"
+            or raw_body != b"{}" or body != {}):
+        return jsonify({
+            "error": "restart_burnin requires the exact empty JSON object body",
+        }), 400
+
+    unit = "ontinuity-burnin"
+    op_id = _ops_begin(
+        "restart_burnin", "REVIEW", "diag-key", request.remote_addr,
+        {"unit": unit},
+    )
+    if op_id is None:
+        return jsonify({
+            "error": "restart_burnin refused: operation ledger unavailable",
+        }), 503
+    try:
+        restarted = subprocess.run(
+            ["systemctl", "restart", unit],
+            capture_output=True, text=True, timeout=30,
+        )
+        if restarted.returncode != 0:
+            result = f"restart rc={restarted.returncode}"
+            _ops_finish(op_id, "fail", result)
+            return jsonify({"ok": False, "unit": unit, "error": result}), 500
+
+        active = subprocess.run(
+            ["systemctl", "is-active", unit],
+            capture_output=True, text=True, timeout=10,
+        )
+        state = (active.stdout or active.stderr or "").strip()[:64]
+        if active.returncode != 0 or state != "active":
+            result = f"is-active rc={active.returncode}, state={state or 'empty'}"
+            _ops_finish(op_id, "fail", result)
+            return jsonify({
+                "ok": False, "unit": unit, "state": state or "unknown",
+            }), 503
+
+        _ops_finish(op_id, "ok", "restart rc=0, is-active=active")
+        return jsonify({"ok": True, "unit": unit, "state": "active"}), 200
     except Exception as e:
         _ops_finish(op_id, "fail", str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500

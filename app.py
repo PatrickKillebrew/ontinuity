@@ -4152,7 +4152,7 @@ def diag_relay(endpoint):
 # /op/* allowlist (corpus: scoped-op folds, June 10). Adding a box op = add
 # its name here too. This is a name-gate, NOT a contract relaxation: the box
 # remains the authority on args/tier/ledger.
-OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "backup_db"}
+OP_ALLOWED = {"read_journal", "restart_workspace", "restart_burnin", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "backup_db"}
 
 # B1 intentionally starts with a narrow model surface. Broader operations remain
 # available to the operator through the server-side root and require a later,
@@ -4371,6 +4371,7 @@ def diag_op_courier(name):
     request_id = None
     request_fingerprint = None
     if operator_call:
+        raw_body = request.get_data(cache=True)
         body = request.get_json(silent=True)
     else:
         try:
@@ -4383,6 +4384,13 @@ def diag_op_courier(name):
                 "capability", name, raw_body, token)
         except CapabilityError as exc:
             return jsonify({"error": str(exc)}), 428
+    if name == "restart_burnin" and (
+            request.args or request.form
+            or request.mimetype != "application/json"
+            or raw_body != b"{}"):
+        return _compiled_json({
+            "error": "restart_burnin requires the exact empty JSON object body",
+        }, 400, request_id)
     if body is None:
         body = {}
     if not isinstance(body, dict):

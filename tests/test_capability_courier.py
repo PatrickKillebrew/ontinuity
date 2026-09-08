@@ -123,6 +123,43 @@ class CapabilityCourierTests(unittest.TestCase):
         self.assertEqual(response.status_code, 401)
         post.assert_not_called()
 
+    def test_restart_burnin_rejects_noncanonical_input_before_relay(self):
+        headers = {"X-Diag-Key": os.environ["DIAG_KEY"]}
+        cases = (
+            ("query", "/diag/op/restart_burnin?unit=other", b"{}",
+             "application/json"),
+            ("form", "/diag/op/restart_burnin", b"unit=other",
+             "application/x-www-form-urlencoded"),
+            ("empty-text", "/diag/op/restart_burnin", b"", "text/plain"),
+            ("text", "/diag/op/restart_burnin", b"{}", "text/plain"),
+            ("json-null", "/diag/op/restart_burnin", b"null",
+             "application/json"),
+            ("json-list", "/diag/op/restart_burnin", b"[]",
+             "application/json"),
+            ("json-scalar", "/diag/op/restart_burnin", b"1",
+             "application/json"),
+            ("json-object", "/diag/op/restart_burnin",
+             b'{"unit":"other"}', "application/json"),
+        )
+        for label, path, body, content_type in cases:
+            with self.subTest(case=label), mock.patch.object(
+                    self.module.http_requests, "post") as post:
+                response = self.client.post(
+                    path, headers=headers, data=body, content_type=content_type)
+            self.assertEqual(response.status_code, 400)
+            post.assert_not_called()
+
+    def test_restart_burnin_relays_exact_empty_json_object(self):
+        with mock.patch.object(
+                self.module.http_requests, "post",
+                return_value=_Response()) as post:
+            response = self.client.post(
+                "/diag/op/restart_burnin",
+                headers={"X-Diag-Key": os.environ["DIAG_KEY"]},
+                data=b"{}", content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(post.call_args.kwargs["json"], {})
+
     def test_bootstrap_count_is_derived_by_engine_and_body_value_is_removed(self):
         token = self.issue(["bootstrap_gate"])["capability"]
         with mock.patch.object(

@@ -29,6 +29,7 @@ sh -n live/tools/ontinuity_https.sh
 for module in \
     tests.test_capability_admission \
     tests.test_b1_bootstrap_gate \
+    tests.test_b1_burnin_restart \
     tests.test_release_baseline \
     tests.test_b1_release_boundaries \
     tests.test_capability_admission_surface \

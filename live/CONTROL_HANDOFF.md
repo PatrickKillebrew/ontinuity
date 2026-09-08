@@ -63,7 +63,7 @@
 - Full live cockpit still exists at the Railway engine root (transcript, Researcher input, Keys modal). `ontinuity.org` is the static public site. Observe freely; do not casually Save the Keys modal—runtime config is process-global, outranks the vault, last-save-wins.
 - PROVENANCE DEFECT OPEN: session `model_a_string` still names the historical Claude occupant when ChatGPT answers the external mailbox. Use the September 3 conversation record + session ids as the honest join until identity is carried by the protocol.
 - Operator ruling: do not resume punch-list builds merely to keep motion going; this fold documents the milestone. The July 19 portable-tenant roadmap remains durable but is not the present instruction.
-- Engine healthy. Box hands LIVE. Courier allowlist now 19 ops (added mailbox_purge this shift).
+- Engine healthy. Box hands LIVE. Courier allowlist candidate now 20 ops; the B1 correction adds fixed `restart_burnin` while preserving the seven-operation initial model grant.
 - MAILBOX RESULT-CHANNEL FIXED end to end this shift (was the night's big blocker — see below).
   Queue healthy (was 419 stale results jammed; purged). Correlated fetch + ack confirmed working.
 - Laptop seat (laptop_seat.py on the HP, C:\donkeycar\) ALIVE and processing tasks (done-marking).

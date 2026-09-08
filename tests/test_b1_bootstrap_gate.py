@@ -1,3 +1,4 @@
+import ast
 import importlib.util
 import json
 import os
@@ -97,8 +98,8 @@ class B1BootstrapGateTests(unittest.TestCase):
                 self.assertFalse(self.gate.check_queue()["pass"])
 
     def test_manual_count_is_checked_against_engine_derived_value(self):
-        manual = "Allowlist (live, 19 ops): bounded."
-        self.gate.CANONICAL_COURIER_OP_COUNT = 19
+        manual = "Allowlist (live, 20 ops): bounded."
+        self.gate.CANONICAL_COURIER_OP_COUNT = 20
         with mock.patch.object(self.gate, "_get", return_value=(200, manual)):
             self.assertTrue(self.gate.check_manual()["pass"])
         self.gate.CANONICAL_COURIER_OP_COUNT = 18
@@ -106,7 +107,33 @@ class B1BootstrapGateTests(unittest.TestCase):
             self.assertFalse(self.gate.check_manual()["pass"])
 
     def test_committed_recovery_fallback_is_current(self):
-        self.assertEqual(self.gate.CANONICAL_COURIER_OP_COUNT, 19)
+        self.assertEqual(self.gate.CANONICAL_COURIER_OP_COUNT, 20)
+
+    def test_all_canonical_count_references_agree(self):
+        root = Path(__file__).resolve().parents[1]
+        app_module = ast.parse((root / "app.py").read_text(encoding="utf-8"))
+        op_allowed = None
+        for node in app_module.body:
+            if not isinstance(node, ast.Assign):
+                continue
+            if any(isinstance(target, ast.Name) and target.id == "OP_ALLOWED"
+                   for target in node.targets):
+                op_allowed = ast.literal_eval(node.value)
+                break
+        self.assertIsNotNone(op_allowed)
+        expected = len(op_allowed)
+        self.assertEqual(expected, 20)
+        self.assertEqual(self.gate.CANONICAL_COURIER_OP_COUNT, expected)
+
+        manual = (root / "live" / "OPERATING_MANUAL.md").read_text(
+            encoding="utf-8")
+        spec = (root / "live" / "specs" /
+                "verified_bootstrap_gate.md").read_text(encoding="utf-8")
+        self.assertIn(f"Allowlist (live, {expected} ops)", manual)
+        self.assertIn(f"currently {expected}", spec)
+        self.assertIn(f"fallback of {expected}", spec)
+        self.assertNotIn("currently 19", spec)
+        self.assertNotIn("fallback of 19", spec)
 
     def test_current_candidate_corpus_completes_all_six_checks(self):
         root = Path(__file__).resolve().parents[1]
@@ -131,7 +158,7 @@ class B1BootstrapGateTests(unittest.TestCase):
             row["key"]: row["canonical_statement"]
             for row in self.gate.MECHANICS_INVARIANTS
         }
-        self.gate.CANONICAL_COURIER_OP_COUNT = 19
+        self.gate.CANONICAL_COURIER_OP_COUNT = 20
         with mock.patch.object(self.gate, "_get", side_effect=fake_get), \
                 mock.patch.object(self.gate, "_post") as post:
             result = self.gate.run_gate(

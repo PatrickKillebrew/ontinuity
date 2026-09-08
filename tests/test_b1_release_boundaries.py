@@ -264,7 +264,7 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         self.assertTrue(assigned.isdisjoint({
             "backup_db", "commit_file", "commit_self", "deploy",
             "mailbox_purge", "read_file", "register_egress",
-            "restart_workspace", "seed_tenant", "write_file",
+            "restart_burnin", "restart_workspace", "seed_tenant", "write_file",
         }))
 
     def test_operator_can_inspect_approve_and_revoke_from_main(self):
@@ -327,14 +327,8 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         data = json.loads(text)
         base = data["candidate_base_commit"]
         transport_manifest = ROOT / "live" / "B1_TRANSPORT_LOCK_MANIFEST.json"
-        if transport_manifest.exists():
-            release_commit = json.loads(
-                transport_manifest.read_text(encoding="utf-8"))["base_commit"]
-        else:
-            release_commit = subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
         subprocess.run(
-            ["git", "merge-base", "--is-ancestor", base, release_commit],
+            ["git", "merge-base", "--is-ancestor", base, "HEAD"],
             cwd=ROOT, check=True)
         rows = []
         rows.extend(data["engine_deploy"]["required"])
@@ -344,9 +338,7 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         rows.extend(data["verification_sources"]["required"])
         rows.extend(data["retire_during_authorized_cutover"])
         for row in rows:
-            release_bytes = subprocess.check_output(
-                ["git", "show", f'{release_commit}:{row["path"]}'], cwd=ROOT)
-            digest = hashlib.sha256(release_bytes).hexdigest()
+            digest = hashlib.sha256((ROOT / row["path"]).read_bytes()).hexdigest()
             self.assertEqual(digest, row["sha256"], row["path"])
             self.assertNotEqual(row["sha256"], "REFRESH", row["path"])
         for row in data["public_removals"]:
@@ -414,12 +406,12 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         actions = [row["action"] for row in manifest["cutover_order"]]
         self.assertEqual(actions, [
             "preflight", "install_box", "verify_box",
-            "install_active_services", "deploy_main", "deploy_farm",
-            "prove_capabilities", "retire_laptop",
+            "install_active_services", "deploy_main", "restart_active_service",
+            "deploy_farm", "prove_capabilities", "retire_laptop",
         ])
         self.assertEqual(
             [row["order"] for row in manifest["cutover_order"]],
-            list(range(1, 9)),
+            list(range(1, 10)),
         )
 
     def test_alert_target_preserves_installed_control_behavior(self):

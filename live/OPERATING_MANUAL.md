@@ -63,8 +63,8 @@ get_effective_config precedence (app.py ~195): base CONFIG (empty for model_a) �
 - Health: GET `/diag/api/health` with `X-Diag-Key`.
 - Farm engine base: https://ontinuity-farm-production.up.railway.app  (same /diag/* routes)
 - Mailbox operator/service path: use X-Mailbox-Key on /mailbox/turn, /mailbox/respond, /agent/start, and /agent/stop. Never place the mailbox root in a URL or model request body; initial B1 model capabilities use the scoped seat mailbox operations instead.
-- Scoped-op courier: POST /diag/op/<name> with a short-lived bearer capability. The engine validates signed identity, operation, expiry, approval, and revocation, bounds model request bodies, then forwards them to the box over its server-to-server X-Diag-Key hop. Credential-bearing callers refuse redirects. Allowlist (live, 19 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, mailbox_purge, write_file, commit_self, read_file, commit_file, you_there, read_repo, bootstrap_gate, deploy, seed_tenant, backup_db. The B1 initial model policy exposes only seven executable safe ops plus __probe__: bootstrap_gate, read_repo, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, and you_there. Repository commit and box install remain two separate steps.
-- Bootstrap-gate B1 candidate state: MAIN derives the canonical 19-operation server count, strips caller overrides, and sends it through the authenticated box hop. The gate keeps roots out of URLs, refuses redirects, reads the latest queue fold rather than the oldest head, and binds hands to the relayed capability identity. This is candidate behavior, not live proof, until exact bytes are independently reviewed, deployed/installed, and exercised by both Control and Worker.
+- Scoped-op courier: POST /diag/op/<name> with a short-lived bearer capability. The engine validates signed identity, operation, expiry, approval, and revocation, bounds model request bodies, then forwards them to the box over its server-to-server X-Diag-Key hop. Credential-bearing callers refuse redirects. Allowlist (live, 20 ops): read_journal, restart_workspace, restart_burnin, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, mailbox_purge, write_file, commit_self, read_file, commit_file, you_there, read_repo, bootstrap_gate, deploy, seed_tenant, backup_db. The B1 initial model policy exposes only seven executable safe ops plus __probe__: bootstrap_gate, read_repo, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, and you_there. `restart_burnin` remains outside initial Control/Worker grants. Repository commit and box install remain two separate steps.
+- Bootstrap-gate B1 candidate state: MAIN derives the canonical 20-operation server count, strips caller overrides, and sends it through the authenticated box hop. The gate keeps roots out of URLs, refuses redirects, reads the latest queue fold rather than the oldest head, and binds hands to the relayed capability identity. This is candidate behavior, not live proof, until exact bytes are independently reviewed, deployed/installed, and exercised by both Control and Worker.
 - Capability-courier timing: `/diag/op/you_there` is the sole long-poll operation in the B1 initial surface. The box caps its wait at 90 seconds, so MAIN uses a bounded 100-second relay timeout (90-second wait plus transport margin). Other courier operations retain the 25-second timeout. The outer relay must never time out before the box can finish and claim a message for that request.
 
 ## WORKSPACE NETWORK BOUNDARY — CURRENT
@@ -119,6 +119,7 @@ An admitted Control or Worker seat performs privileged box actions through NAMED
 ### Live scoped operations (the named allowlist so far)
 - POST /op/read_journal {lines:1..200} — SAFE, read-only. Recent ontinuity-workspace journal lines. Use to check VPS history (e.g. blocked-connection IPs) without operator hands.
 - POST /op/restart_workspace — SAFE, reversible. Restarts the workspace service (detached, returns first, back in a few seconds; confirm via /status:401).
+- POST /op/restart_burnin — REVIEW, reversible. Requires the exact canonical empty JSON object body `{}` and rejects query parameters, form fields, alternate content types, JSON null/list/scalar values, nonempty objects, and all other caller input at both MAIN and the box. It synchronously runs fixed argv for `systemctl restart ontinuity-burnin`, then fixed argv for `systemctl is-active ontinuity-burnin`. It returns HTTP 200 only after the named service reports `active`; failures are dual-end ledgered. Header-only diagnostic auth is the tight interim guard. This operation is in the engine allowlist but excluded from initial Control/Worker capabilities.
 - POST /register_egress {cidr? optional} — SAFE. ufw-allow caller's own egress IP (or allowlisted CIDR) on 5001. (Obsolete since the gunicorn/key-auth fix; retained.)
 - POST /op/mailbox_send|fetch|ack|peek|reclaim|purge — seat-to-seat mailbox (seat_mailbox.py). send/ack are state changes, fetch is an ATOMIC claim (BEGIN IMMEDIATE), peek is read-only, reclaim returns expired claims to queue, and purge is explicitly scoped destructive cleanup that requires before/after counts. Carries coordination + corpus pointers (ref), never the canonical result. This is how parallel seats coordinate without the operator routing messages.
 - POST /op/you_there — claim-or-long-poll for task/proposal work; chat windows still need a platform turn, while resident API/engine workers can remain parked on this lifecycle.
@@ -210,11 +211,12 @@ The B1 cutover order is mechanical and must match `B1_INSTALL_MANIFEST.json`:
 1. Confirm the reviewed commit, idle engines, rollback bytes, persistent registry configuration, and matching server-side box/engine root.
 2. Install the backward-compatible five-file box unit, then restart the workspace once.
 3. Verify box health, exact installed hashes, header-only operator recovery, and old-engine compatibility.
-4. Install the persistent burn-in source, verify its hash, and restart only its named service.
-5. Deploy and verify MAIN at the reviewed commit while FARM remains the rollback peer.
-6. Deploy and verify FARM at the same reviewed commit.
-7. Prove distinct Control and Worker capability boots, excluded-operation denial, revocation, and expiry.
-8. Install the laptop tombstone, stop its resident loop, and record the final installed/process proof.
+4. Install the persistent burn-in source and verify its hash, but do not restart it yet.
+5. Deploy and verify MAIN at the reviewed commit while FARM remains the rollback peer; MAIN must expose `restart_burnin` before it is invoked.
+6. Invoke `restart_burnin` through MAIN with header-only operator recovery and require its fixed `is-active` proof. FARM remains rollback until this passes.
+7. Deploy and verify FARM at the same reviewed commit.
+8. Prove distinct Control and Worker capability boots, excluded-operation denial, revocation, and expiry.
+9. Install the laptop tombstone, stop its resident loop, and record the final installed/process proof.
 
 Do not reorder engine deployment ahead of the backward-compatible box install. Each step stops on failed health, hash, or authorization evidence and uses the preserved rollback bytes.
 

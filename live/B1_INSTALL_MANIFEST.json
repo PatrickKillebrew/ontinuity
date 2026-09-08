@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "candidate_base_commit": "3476ed8d373807dcefc6ea85e7c88d778efa4bda",
-  "state": "local_candidate_uncommitted_rejected_three_times_corrected_awaiting_fourth_review_not_live",
-  "generated_utc": "2026-09-07",
+  "state": "local_candidate_uncommitted_cutover_mechanism_corrected_awaiting_clean_review_not_live",
+  "generated_utc": "2026-09-08",
   "engine_deploy": {
     "targets": [
       "MAIN",
@@ -11,11 +11,11 @@
     "required": [
       {
         "path": "app.py",
-        "sha256": "126431d1a70ddd390fa09ed5305564536b9616ac2fc5a196eafabcdf5d31ac8e"
+        "sha256": "6abe4ff5627fc67d01c27d203c6bf6a063fb4e8c8c5f6d677cbd9074143b2f65"
       },
       {
         "path": "capability_auth.py",
-        "sha256": "346be5ca540610ba97d6e11cf1687adf8dc8518da1baa6fe4da95b750de0e49d"
+        "sha256": "75b92a2e5ca7bb43a67ebbdb1a15c1fa44d8fcf58092870ad3d5c0f0761be51b"
       },
       {
         "path": "templates/index.html",
@@ -28,7 +28,7 @@
     "required": [
       {
         "path": "live/box/file_server.py",
-        "sha256": "936c3c8503490a92a399375516e0331ef6779ddba1c23f48a4e21b48811c2f6c",
+        "sha256": "d78bc29f19c5cc1741573834ff8dff2ba9655fcd1b9e480d561bc13895a471d0",
         "target": "box_project/file_server.py"
       },
       {
@@ -43,7 +43,7 @@
       },
       {
         "path": "live/bootstrap/gate.py",
-        "sha256": "fb4fd8c39990aa5a3271b82e0d51828128d1e10f422ba95c10b03eeb0d79ab87",
+        "sha256": "cb9fe34dddc44c6b6b3100a4d5bf80ab19f8f72736fa1911afc68a2a35b18e5f",
         "target": "box_project/live/bootstrap/gate.py"
       },
       {
@@ -72,11 +72,11 @@
       },
       {
         "path": "live/ONTINUITY_1_0_BOARD.md",
-        "sha256": "85f1be2d0d36a61218d00832632d38dcf1772b19729c392d365e507dfad4152c"
+        "sha256": "f5f70e3f2fd60e2f913c3315921be9fff5f8e1ebe47efa77873f900e65ec725a"
       },
       {
         "path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md",
-        "sha256": "611a480740924a8b2a0c73695c1b2d1a2cb1ba3bb45be515ace24d8c39aa615d"
+        "sha256": "b6cf573172d163de9c4f28c34dfe072feecf9ac514f5e7bee5465a67e4343fe9"
       },
       {
         "path": "live/box/laptop_seat.py",
@@ -88,7 +88,7 @@
       },
       {
         "path": "live/control_loop.py",
-        "sha256": "e6549dcbbe8b4411bb0ba75235b59ce457957ade0d4e79d9bbfdb9074a0aa7cd"
+        "sha256": "b4a9401c8b03b7b24c00c3f40271ef7219e645bb48931ea5251994df8d504e66"
       },
       {
         "path": "live/governor/governor_relay.py",
@@ -104,27 +104,27 @@
       },
       {
         "path": "live/CONTROL_QUICKBOOT.md",
-        "sha256": "d69c05e0362dba779527d63ed4fc1e3265a0f579ab8e35b7f6ee43a396b2e72c"
+        "sha256": "a422812b3ab97211e98c4cd9e838e8ac753035b148b3ab6077601a50b4fe77db"
       },
       {
         "path": "live/CONTROL_QUICKBOOT_SNIPPET.md",
-        "sha256": "dbd7e53d76661b381bf92beac23450fbbebae159d554a698bcd39581e0076d06"
+        "sha256": "d018454f1bc3afda2557c2aadfe001e19a6ef0d28960af44d2fc6dd1a76e6770"
       },
       {
         "path": "live/WORKER_QUICKBOOT.md",
-        "sha256": "06e7cc9ce5e535b842057e4ee0fd38b988b0e78a50fbe532884e688e21d24195"
+        "sha256": "4eac90377438f7ecc81285098c734b3a80b3ac7489db6b66caae35b4fd480cc3"
       },
       {
         "path": "live/WORKER_BOOT_PACKET.md",
-        "sha256": "b4a37369927b2249f104c1a2fdaa4b7623b41d11d81f6cc8f85b32ddc947a3df"
+        "sha256": "80639a77643d070c31bf1ccb09302b35f4679051b16eb04bf496ccaa00a1cc36"
       },
       {
         "path": "live/WORKER_MANUAL.md",
-        "sha256": "ce01e34358e400aeb4ab0bb91aa7be40ea26f3014c0bc4869fb859d4fd452194"
+        "sha256": "6f8dad850495208ce8bbd92d12144e41e8ce82fd2af4ef17ab9266bc3e4a9e71"
       },
       {
         "path": "live/OPERATING_MANUAL.md",
-        "sha256": "724601aef2dd247f0eaa7b97079b8e8e9cd364cc96c57323f87bf5adc791c43d"
+        "sha256": "fdbb7d8f3517d5dd3accadaedfd6fc51b41cad3f96cb1dd36b0d164017a58c20"
       },
       {
         "path": "live/OPERATING_RUBRIC.md",
@@ -136,15 +136,15 @@
       },
       {
         "path": "live/CONTROL_HANDOFF.md",
-        "sha256": "6404d6a01c4492a6fbd26f1d072d6117489687838ef5d35095d8207c535a6472"
+        "sha256": "2eeff10774ed3cd87032939851931f819002267ad066bb23019d854d8764c245"
       },
       {
         "path": "live/PUNCH_LIST.md",
-        "sha256": "3d147d46592b344ce6ff5668fee28883b6dcf159ed24b1551d0130b58b543dba"
+        "sha256": "63feda6a9de4f5fd0c9a982f4d7f6b218e5404ba61134e9db3e41e3a547eb549"
       },
       {
         "path": "live/agent_queue.md",
-        "sha256": "d39ca53dcdac79ceeff17522cd4717dfb1c77f861c2e63282a4e98e25fdd9a94"
+        "sha256": "92a33d5355be6784d36453783a5a830cf2b38a0ab1d5315a7c556b6a6ed648fb"
       },
       {
         "path": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md",
@@ -152,7 +152,7 @@
       },
       {
         "path": "live/specs/verified_bootstrap_gate.md",
-        "sha256": "56c8261e071673367682caee2fdfb633a5fd59eed744e3e33bfdb5fada547526"
+        "sha256": "063420d0a7544371086486b5480647667c97105f820fda86c0de4f133a9dcd47"
       }
     ]
   },
@@ -160,27 +160,31 @@
     "required": [
       {
         "path": "tests/test_b1_bootstrap_gate.py",
-        "sha256": "4abed54196de873e3845fa045d0905e3704ec85b85dacd75641895b46a3a91e0"
+        "sha256": "b7be58858316fa5e2416fe73d28be052666e21cd476af36b424ecd5316945731"
+      },
+      {
+        "path": "tests/test_b1_burnin_restart.py",
+        "sha256": "eb68b2ca6b820892cfd95a58d522eae69b55bb9fd2c8215bc9aa8461177ce987"
       },
       {
         "path": "tests/test_b1_release_boundaries.py",
-        "sha256": "2783f9186f1cd0e8ac7a18d2ac669862d399438843463ceb25e8933b1c760553"
+        "sha256": "64e425e5b8c0cbe61e065227bdeedc3b1bba99a2e51e270a8c21751ecf1d6370"
       },
       {
         "path": "tests/test_capability_admission.py",
-        "sha256": "af6f7b5132b9e83927ef058841f24e43629faec2688b11caa7c20543750b4cff"
+        "sha256": "78684855f1bd587c860dc92d57b5605bca45e6ff0a9ec4791e7388fb6e67bf98"
       },
       {
         "path": "tests/test_capability_admission_surface.py",
-        "sha256": "dccb443f721b32a82043ead4d8be5bcff280b54a82cdf17a8788bbe7b70d1c5d"
+        "sha256": "398723e5efc2419240d61698f7fb267935e34a33e58f6fd1e65dad12a235bc95"
       },
       {
         "path": "tests/test_capability_box_identity.py",
-        "sha256": "d1591ec63183cd183093be1ab1139210682f64fb50bde6f05eb8686f6f14bf7a"
+        "sha256": "5034bbe67a40f75ed469aa73e1817ef267830432b0c3e683d381d6924d955118"
       },
       {
         "path": "tests/test_capability_courier.py",
-        "sha256": "c19b1db5d513f9f250b09c326e2f65d68f8f5442e3c7867cb3e3931b164e2c6b"
+        "sha256": "f43d8fc2755e3b6aa90ae992d6732d2698a3e98bb3a863a0d2e3237d2841f5d9"
       }
     ]
   },
@@ -212,29 +216,35 @@
     {
       "order": 4,
       "action": "install_active_services",
-      "instruction": "install the exact persistent burn-in source, verify its hash, and restart only its named service",
-      "proof": "active service bytes match the manifest and the service resumes without query credentials"
+      "instruction": "install the exact persistent burn-in source and verify its hash, but do not restart it before MAIN exposes the fixed restart_burnin operation",
+      "proof": "active service bytes match the manifest while MAIN and FARM remain at their pre-deploy versions"
     },
     {
       "order": 5,
       "action": "deploy_main",
       "instruction": "deploy MAIN at the reviewed commit while FARM remains the rollback peer",
-      "proof": "MAIN source identity, health, header-only recovery, admission UI, and public removals match the reviewed commit"
+      "proof": "MAIN source identity, health, header-only recovery, restart_burnin allowlist exposure, admission UI, and public removals match the reviewed commit"
     },
     {
       "order": 6,
+      "action": "restart_active_service",
+      "instruction": "invoke restart_burnin through MAIN using header-only operator recovery while FARM remains the rollback peer",
+      "proof": "the fixed operation accepts no caller-selected unit or command, dual-end ledgers the attempt, and returns HTTP 200 only after ontinuity-burnin reports active"
+    },
+    {
+      "order": 7,
       "action": "deploy_farm",
       "instruction": "deploy FARM at the same reviewed commit",
       "proof": "FARM source identity and health match MAIN and the reviewed commit"
     },
     {
-      "order": 7,
+      "order": 8,
       "action": "prove_capabilities",
       "instruction": "complete distinct Control and Worker capability boots, then prove excluded-operation denial, revocation, and expiry",
       "proof": "both gates orient through capabilities and denied/revoked/expired calls fail"
     },
     {
-      "order": 8,
+      "order": 9,
       "action": "retire_laptop",
       "instruction": "install the manifest tombstone at the laptop target and stop its resident loop",
       "proof": "installed tombstone hash matches and no laptop_seat resident process remains"
@@ -275,6 +285,7 @@
     "reviewed commit hash equals deployed MAIN and FARM source",
     "installed box bytes equal manifest hashes",
     "active service bytes equal manifest hashes before restart",
+    "MAIN exposes restart_burnin before invocation and its fixed status check proves ontinuity-burnin active while FARM remains rollback",
     "query-string roots are rejected and header-only operator recovery remains available",
     "Control boot passes with a short-lived capability",
     "Worker boot passes with a distinct short-lived capability",

@@ -29,8 +29,8 @@ import json, os, urllib.request, urllib.parse, urllib.error
 # derives its actual length and supplies it over the authenticated server hop.
 # The committed value below is the direct operator/recovery fallback and must
 # move in the same reviewed change as OP_ALLOWED; release tests enforce the
-# current 19-operation value and reject a caller-provided body override.
-CANONICAL_COURIER_OP_COUNT = 19
+# current 20-operation value and reject a caller-provided body override.
+CANONICAL_COURIER_OP_COUNT = 20
 
 # CHECK 3: corpus floor — monotonic non-decreasing last-known session count.
 CORPUS_SESSION_FLOOR = 307

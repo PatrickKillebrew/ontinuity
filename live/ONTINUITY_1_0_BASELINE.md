@@ -81,9 +81,9 @@ The repository-defined main engine is root `app.py`, launched by the root `Procf
 - intake: `/intake_chat`, `/intake_capture`, `/intake_resume`;
 - keyboard surface: `/kb`.
 
-The source-defined courier allowlist contains 19 operations:
+The source-defined courier allowlist contains 20 operations:
 
-`read_journal`, `restart_workspace`, `register_egress`, `mailbox_send`, `mailbox_fetch`, `mailbox_ack`, `mailbox_peek`, `mailbox_reclaim`, `mailbox_purge`, `write_file`, `commit_self`, `read_file`, `commit_file`, `you_there`, `read_repo`, `bootstrap_gate`, `deploy`, `seed_tenant`, `backup_db`.
+`read_journal`, `restart_workspace`, `restart_burnin`, `register_egress`, `mailbox_send`, `mailbox_fetch`, `mailbox_ack`, `mailbox_peek`, `mailbox_reclaim`, `mailbox_purge`, `write_file`, `commit_self`, `read_file`, `commit_file`, `you_there`, `read_repo`, `bootstrap_gate`, `deploy`, `seed_tenant`, `backup_db`.
 
 This count is a repository fact. It does not prove that the same source is deployed.
 
@@ -151,7 +151,7 @@ whether it remains a required 1.0 surface.
 The September 3 succession fold remains historical evidence for:
 
 - MAIN healthy and idle;
-- courier allowlist 19;
+- courier allowlist 20;
 - Challenger `cerebras:gemma-4-31b`;
 - Parietal `cerebras:gpt-oss-120b`;
 - one failed-closed session `2026-09-03_14-13-03`;
