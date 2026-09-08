@@ -273,21 +273,35 @@ Progress is measured by release conditions passing, not commits, corpus volume, 
 `DRIFT` result at `7abadca`; the resolved punch list and
 `ONTINUITY_1_0_BOARD.md` now provide the dependency-ordered release view.
 
-Resume the first two preserved runtime lanes in the board's order:
+The corrected B1 freeze passed its fourth clean review and landed as commit
+`693435a`. It was developed on `codex/b1-corrected` from rollback base
+`3476ed8`. Its live transition is fail-stopped before box restart while the
+recurring Control transport-path defect is corrected.
+The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
-1. Independently review the exact `live/B1_INSTALL_MANIFEST.json` candidate on
-   `codex/b1-corrected`, based on rollback commit `3476ed8`, against the mailbox
-   threat audit and RC-2 acceptance tests. This must be a fourth clean review:
-   three earlier freezes were independently rejected and corrected locally. The superseded
-   `codex/b1-scoped-identity` candidate is not a review or deployment target.
-2. Where review ownership remains distinct, reconcile B3 branch
-   `codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send
-   the exact successor bytes to a different non-author reviewer before any
-   deploy or live museum.
+The first clean review of local overlay `codex/b1-transport-lock` reproduced its
+exact freeze and all 142 tests but rejected process-local replay locking, unbounded
+relay-response intake, and contradictory handoff state. The defects are corrected
+locally with an interprocess SQLite transaction lock around the existing registry,
+bounded streamed response reads, and one authoritative current action.
+
+The single immediate action is to refreeze and obtain a second independent review
+of that exact corrected overlay. It replaces model-assembled HTTP with a local
+prepare/check compiler, the proven top-level `curl --config -` transition, local
+response/request-identity verification, and a reviewed logical endpoint registry.
+Candidate MAIN requires the exact v2 envelope before admission/capability relay and
+uses persistent bounded receipts to prevent duplicate execution of ambiguous
+mailbox transitions across engine processes. The old Python capability helper is local-only; the bounded
+verification entrypoint checks its selected project runtime before launching tests.
+Current boot surfaces are tested against reconstruction while unrelated tools remain available.
+After clean review and unchanged landing, resume the one remaining box readback
+and the existing B1 cutover order. B3 remains the next dependency lane after B1;
+do not mix it into this bounded correction.
 
 B5-P evidence preservation is operational; the comparative plan remains
-proposed, unfrozen, and unrun. Branch existence or local tests do not make B1 or
-B3 live.
+proposed, unfrozen, and unrun. Local transport tests do not make the overlay live,
+and the server-side enforcement remains unproved live until clean review,
+unchanged deployment, and cold Control/Worker boots.
 
 ---
 

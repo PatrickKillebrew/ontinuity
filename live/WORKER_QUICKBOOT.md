@@ -9,6 +9,14 @@ file `live/WORKER_BOOT_PACKET.md` from `PatrickKillebrew/ontinuity` using the pu
 repository source with cache busting. Do not substitute a platform connector or a
 remembered copy.
 
+The packet requires reviewed `live/tools/ontinuity_https.sh` and
+`live/ONTINUITY_ENDPOINTS.conf` from the same verified repository revision. They
+compile the request before the exact top-level `curl --config - < REQUEST.curl`.
+If either is unavailable, stop; do not reconstruct HTTP with another client.
+MAIN requires that compiled v2 envelope and echoes its request ID; an improvised
+admission, capability, or probe call fails before relay. Ambiguous mailbox-request
+duplicates fail closed rather than executing twice.
+
 Follow that packet to submit a non-authorizing, short-lived capability request.
 Report the request ID and wait for Patrick to inspect and approve it in MAIN's
 `ADMISSION` panel. Never request or handle a diagnostic, Railway, repository,

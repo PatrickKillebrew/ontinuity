@@ -2,19 +2,21 @@
 
 The master secret signs capabilities but is never placed in a capability or in
 the registry.  A capability binds seat, lineage, allowed operations, expiry,
-and a random identifier.  The registry keeps approval and revocation state;
-it never stores issued bearer tokens.
+and a random identifier. The registry keeps approval, revocation, and bounded
+side-effecting transition receipts; it never stores issued bearer tokens.
 """
 
 from __future__ import annotations
 
 import base64
+from contextlib import contextmanager
 import hashlib
 import hmac
 import json
 import os
 import re
 import secrets
+import sqlite3
 import threading
 import time
 import uuid
@@ -22,6 +24,9 @@ import uuid
 
 MAX_PENDING_REQUESTS = 200
 PENDING_REQUEST_TTL_SECONDS = 3600
+MAX_TRANSITION_RECORDS = 200
+TRANSITION_TTL_SECONDS = 86400
+MAX_REPLAY_BODY_BYTES = 65536
 
 
 class CapabilityError(ValueError):
@@ -44,20 +49,61 @@ class CapabilityAuthority:
             raise CapabilityError("capability signing secret is required")
         self._secret = str(secret).encode("utf-8")
         self.registry_path = registry_path
+        self.registry_lock_path = f"{registry_path}.lock.sqlite3"
         self._now = now or time.time
         self._lock = threading.Lock()
+
+    @contextmanager
+    def _registry_transaction(self):
+        """Serialize one JSON load/modify/replace transaction across processes.
+
+        The JSON registry remains human-inspectable and backward compatible.
+        A separate SQLite file supplies a provider-neutral, crash-releasing
+        interprocess write lock. ``BEGIN IMMEDIATE`` is acquired before the JSON
+        load and held through its atomic replacement, so two app processes cannot
+        both observe and claim the same transition as new.
+        """
+        parent = os.path.dirname(os.path.abspath(self.registry_path))
+        os.makedirs(parent, exist_ok=True)
+        with self._lock:
+            connection = None
+            try:
+                connection = sqlite3.connect(
+                    self.registry_lock_path, timeout=30,
+                    isolation_level=None)
+                os.chmod(self.registry_lock_path, 0o600)
+                connection.execute("PRAGMA busy_timeout = 30000")
+                connection.execute("BEGIN IMMEDIATE")
+                yield
+                connection.execute("COMMIT")
+            except sqlite3.Error as exc:
+                if connection is not None and connection.in_transaction:
+                    connection.execute("ROLLBACK")
+                raise CapabilityError(
+                    "capability registry transaction lock failed") from exc
+            except Exception:
+                if connection is not None and connection.in_transaction:
+                    connection.execute("ROLLBACK")
+                raise
+            finally:
+                if connection is not None:
+                    connection.close()
 
     def _load(self):
         try:
             with open(self.registry_path, encoding="utf-8") as handle:
                 data = json.load(handle)
         except FileNotFoundError:
-            return {"requests": {}, "issued": {}, "revoked": {}}
+            return {"requests": {}, "issued": {}, "revoked": {},
+                    "transitions": {}}
         except (json.JSONDecodeError, OSError) as exc:
             raise CapabilityError("capability registry is unreadable") from exc
         if (not isinstance(data, dict)
                 or not all(isinstance(data.get(key), dict)
                            for key in ("requests", "issued", "revoked"))):
+            raise CapabilityError("capability registry has an invalid shape")
+        transitions = data.setdefault("transitions", {})
+        if not isinstance(transitions, dict):
             raise CapabilityError("capability registry has an invalid shape")
         return data
 
@@ -85,6 +131,7 @@ class CapabilityAuthority:
         requests = data.setdefault("requests", {})
         issued = data.setdefault("issued", {})
         revoked = data.setdefault("revoked", {})
+        transitions = data.setdefault("transitions", {})
 
         for request_id, row in list(requests.items()):
             created_at = int(row.get("created_at", 0) or 0)
@@ -110,7 +157,114 @@ class CapabilityAuthority:
         )
         for request_id, _row in completed[MAX_PENDING_REQUESTS:]:
             requests.pop(request_id, None)
+
+        # Transition receipts are private, bounded replay state for capability
+        # operations whose effects must not be repeated after an ambiguous
+        # client-side transport result. They expire independently of grants.
+        for transition_id, row in list(transitions.items()):
+            created_at = int(row.get("created_at", 0) or 0)
+            if current - created_at >= TRANSITION_TTL_SECONDS:
+                transitions.pop(transition_id, None)
+        protected_count = sum(
+            1 for row in transitions.values()
+            if row.get("state") != "completed")
+        completed_transitions = sorted(
+            ((transition_id, row) for transition_id, row in transitions.items()
+             if row.get("state") == "completed"),
+            key=lambda item: int(item[1].get("created_at", 0) or 0),
+            reverse=True,
+        )
+        completed_limit = max(0, MAX_TRANSITION_RECORDS - protected_count)
+        for transition_id, _row in completed_transitions[completed_limit:]:
+            transitions.pop(transition_id, None)
         return data
+
+    @staticmethod
+    def _clean_transition_identity(request_id, fingerprint):
+        request_id = str(request_id or "").strip()
+        fingerprint = str(fingerprint or "").strip()
+        if not re.fullmatch(r"[0-9a-f]{32}", request_id):
+            raise CapabilityError("invalid Ontinuity request id")
+        if not re.fullmatch(r"[0-9a-f]{64}", fingerprint):
+            raise CapabilityError("invalid Ontinuity request fingerprint")
+        return request_id, fingerprint
+
+    def begin_transition(self, request_id, fingerprint):
+        """Atomically claim a side-effecting capability transition.
+
+        The return state is ``new`` for the sole caller allowed to relay,
+        ``completed`` with a cached response for a safe replay, or
+        ``in_progress``/``unknown``/``conflict`` for fail-stop outcomes.
+        """
+        request_id, fingerprint = self._clean_transition_identity(
+            request_id, fingerprint)
+        current = int(self._now())
+        with self._registry_transaction():
+            data = self._prune(self._load(), current)
+            transitions = data.setdefault("transitions", {})
+            row = transitions.get(request_id)
+            if row is None:
+                if len(transitions) >= MAX_TRANSITION_RECORDS:
+                    raise CapabilityError("transition receipt registry is full")
+                transitions[request_id] = {
+                    "fingerprint": fingerprint,
+                    "state": "in_progress",
+                    "created_at": current,
+                    "updated_at": current,
+                }
+                self._save(data)
+                return {"state": "new"}
+            if row.get("fingerprint") != fingerprint:
+                return {"state": "conflict"}
+            return dict(row)
+
+    def complete_transition(self, request_id, fingerprint, *, status,
+                            content_type, response_body):
+        request_id, fingerprint = self._clean_transition_identity(
+            request_id, fingerprint)
+        try:
+            status = int(status)
+        except (TypeError, ValueError) as exc:
+            raise CapabilityError("invalid transition response status") from exc
+        content_type = str(content_type or "application/json")[:200]
+        if any(ord(character) < 32 or ord(character) == 127
+               for character in content_type):
+            content_type = "application/json"
+        response_body = str(response_body)
+        encoded = response_body.encode("utf-8")
+        current = int(self._now())
+        with self._registry_transaction():
+            data = self._prune(self._load(), current)
+            row = data.setdefault("transitions", {}).get(request_id)
+            if (not row or row.get("fingerprint") != fingerprint
+                    or row.get("state") != "in_progress"):
+                raise CapabilityError("transition receipt state changed")
+            row["updated_at"] = current
+            row["status"] = status
+            row["content_type"] = content_type
+            row["response_sha256"] = hashlib.sha256(encoded).hexdigest()
+            if len(encoded) <= MAX_REPLAY_BODY_BYTES:
+                row["response_body"] = response_body
+                row["state"] = "completed"
+            else:
+                row["state"] = "unknown"
+                row["error"] = "response exceeded replay bound"
+            self._save(data)
+            return dict(row)
+
+    def abandon_transition(self, request_id, fingerprint, reason="relay outcome unknown"):
+        request_id, fingerprint = self._clean_transition_identity(
+            request_id, fingerprint)
+        current = int(self._now())
+        with self._registry_transaction():
+            data = self._prune(self._load(), current)
+            row = data.setdefault("transitions", {}).get(request_id)
+            if (row and row.get("fingerprint") == fingerprint
+                    and row.get("state") == "in_progress"):
+                row["state"] = "unknown"
+                row["updated_at"] = current
+                row["error"] = str(reason or "relay outcome unknown")[:200]
+                self._save(data)
 
     @staticmethod
     def _clean_identity(value, field):
@@ -150,7 +304,7 @@ class CapabilityAuthority:
         created_at = int(self._now())
         row = {"seat": seat, "lineage": lineage, "ops": operations,
                "ttl": ttl_seconds, "status": "pending", "created_at": created_at}
-        with self._lock:
+        with self._registry_transaction():
             data = self._prune(self._load(), created_at)
             pending_count = sum(
                 1 for request_row in data.setdefault("requests", {}).values()
@@ -164,7 +318,7 @@ class CapabilityAuthority:
 
     def list_requests(self):
         """Return operator-facing request metadata; bearer tokens are never stored."""
-        with self._lock:
+        with self._registry_transaction():
             data = self._prune(self._load())
             self._save(data)
         rows = []
@@ -179,7 +333,7 @@ class CapabilityAuthority:
 
     def approve(self, request_id):
         request_id = str(request_id or "").strip()
-        with self._lock:
+        with self._registry_transaction():
             data = self._prune(self._load())
             row = data.setdefault("requests", {}).get(request_id)
             if not row or row.get("status") != "pending":
@@ -204,7 +358,7 @@ class CapabilityAuthority:
         jti = str(jti or "").strip()
         if not jti:
             raise CapabilityError("jti is required")
-        with self._lock:
+        with self._registry_transaction():
             data = self._prune(self._load())
             if jti not in data.setdefault("issued", {}):
                 raise CapabilityError("issued capability not found")
@@ -268,7 +422,7 @@ class CapabilityAuthority:
         operation = str(operation or "").strip()
         if operation not in payload["ops"]:
             raise CapabilityError("operation not allowed")
-        with self._lock:
+        with self._registry_transaction():
             data = self._prune(self._load(), current)
         issued = data.get("issued", {}).get(payload["jti"])
         if not issued:

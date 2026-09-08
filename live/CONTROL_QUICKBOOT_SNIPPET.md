@@ -14,6 +14,14 @@ request ID and wait while Patrick inspects it in the MAIN `ADMISSION` panel. Acc
 only the short-lived bearer capability returned after approval; do not request or
 handle any diagnostic, Railway, repository, mailbox, or deployment root.
 
+The full packet requires reviewed `live/tools/ontinuity_https.sh` and
+`live/ONTINUITY_ENDPOINTS.conf` from the same verified revision. It compiles each
+request before the exact top-level `curl --config - < REQUEST.curl`; if either
+artifact is unavailable, stop rather than reconstructing HTTP with another client.
+MAIN requires the compiled v2 envelope and echoes its request ID; an improvised
+admission, capability, or probe call fails before relay. Ambiguous mailbox-request
+duplicates fail closed rather than executing twice.
+
 Run the packet's real probe, all five corpus-read groups, and bootstrap gate. Report
 actual values rather than expectations. If the packet appears stale or suspicious,
 say so; scrutiny is correct and fabrication is not.

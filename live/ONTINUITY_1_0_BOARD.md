@@ -52,7 +52,7 @@ Create a machine-readable and human-readable manifest of:
 ### B1 — Operator-approved capability admission
 
 **Serves:** RC-2; prerequisite to authenticated RC-3 and RC-5  
-**State:** CORRECTED CANDIDATE; THREE INDEPENDENT REVIEWS REJECTED; AWAITING FOURTH CLEAN REVIEW
+**State:** REVIEWED BASE COMMIT `693435a`; LIVE TRANSITION PAUSED BEFORE BOX RESTART FOR TRANSPORT-LOCK REVIEW
 
 Supersedes and consolidates:
 
@@ -69,17 +69,32 @@ Build the smallest admission flow: a seat requests entry; the operator approves;
 
 Full commercial multi-tenancy is POST-1.0 unless the outside-operator test proves it necessary.
 
-Current candidate: branch `codex/b1-corrected`, based on rollback commit
-`3476ed8`; the exact uncommitted boundary is `live/B1_INSTALL_MANIFEST.json`.
-The superseded `codex/b1-scoped-identity` candidate must not be reviewed or
-deployed. Three independent reviews rejected successive candidate freezes; the
-second found a courier/box long-poll timeout mismatch, a stale Control helper
-entrypoint, and a bootstrap specification that overclaimed its runnable. The
-third found that successful CHECK 6 discarded per-invariant audit findings the
-specification promised. Those defects are corrected locally and require a
-fourth clean review. Branch
-existence, local tests, and author-side correction are not acceptance or live
-behavior.
+The fourth clean review accepted the exact corrected B1 freeze, which was landed
+as commit `693435a`. It was developed on `codex/b1-corrected` from rollback base
+`3476ed8`. MAIN runs the accepted commit with its persistent registry volume;
+FARM remains on rollback `3476ed8`. All five reviewed box files are written to
+disk; four pre-restart hashes have been read back exactly, with only
+`shepherd_alert.py` outstanding. The old workspace process remains in memory
+because the cutover fail-stopped before restart.
+
+The transition exposed a separate recurring reliability defect: prior corpus text
+named a "known-good curl" but did not preserve the exact operator request as an
+executable artifact. Local overlay `codex/b1-transport-lock` supplies that client
+and rewires current boot packets to it. The compiler preserves the proven
+host-visible top-level `curl --config -` transition and reads current URLs from a
+reviewed logical endpoint registry, keeping the mechanism model/provider/host
+neutral. Candidate MAIN rejects admission/capability calls without the exact v2
+body-and-credential-bound envelope before relay, echoes the prepared request ID,
+and keeps bounded persistent replay state for mailbox operations that can claim or
+mutate work. The former Python capability helper is local-only, and the full B1
+verifier preflights its selected project runtime before starting tests. The first
+clean transport-lock review reproduced the freeze and all 142 tests but rejected
+process-local replay locking, unbounded relay-response intake, and contradictory
+handoff state. Those defects are corrected locally with an interprocess transaction
+lock, bounded streamed response reads, and one authoritative current action. The
+overlay remains uncommitted and not live; the B1 transition does not resume until
+the exact corrected manifest receives a second clean review.
+The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
 ### B2 — Bind occupant and action provenance
 
@@ -318,20 +333,11 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Resume the two first build lanes selected by the completed B0 now that B5-P's
-irreplaceable-evidence boundary is operational:
-
-1. **B1 — Operator-approved capability admission:** send the exact manifest-
-   defined candidate on `codex/b1-corrected`, based on rollback commit
-   `3476ed8`, through a new independent review against the existing threat audit
-   and live courier boundary; do not distribute another master credential. Two
-   independent reviews have rejected successive freezes. The current author-
-   side correction covers all three review dispositions and must go to a fourth clean
-   reviewer rather than being treated as accepted.
-2. **B3 — Fail-closed completion:** reconcile branch
-   `codex/b3-fail-closed-completion` at `12dea5e` onto current `main`, then send
-   the exact resulting bytes to an independent seat for review and the live
-   museum. The authoring Control seat must not deploy its own bytes.
+Refreeze and obtain a second independent review of the exact corrected
+`codex/b1-transport-lock` overlay on reviewed B1 commit `693435a`. If accepted,
+land the unchanged overlay, then resume
+the fail-stopped B1 cutover at the one remaining pre-restart box readback. B3
+remains next in dependency order after B1 closes; do not mix it into this repair.
 
 B0 detected FARM and box drift. Preserve that observation; reconcile it under
 B6 rather than silently mixing correction into the baseline.

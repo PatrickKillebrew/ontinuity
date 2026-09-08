@@ -20,7 +20,8 @@ import uuid
 import secrets
 from urllib.parse import urlparse
 import requests as http_requests
-from capability_auth import CapabilityAuthority, CapabilityError
+from capability_auth import (
+    CapabilityAuthority, CapabilityError, MAX_REPLAY_BODY_BYTES)
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'ontinuity-secret-key'
@@ -4124,15 +4125,14 @@ def diag_relay(endpoint):
 # CAN reach this engine's /diag/* relay, and this engine CAN reach the box.
 # So: sandbox -> this engine (courier) -> box /op/<name> -> back.
 #
-# This route is ONLY a courier. The box still enforces the full scoped-op
-# contract (bounded args, X-Diag-Key gate, operations_ledger dual-end log,
-# fail-safe). The engine adds nothing privileged: it gates on the SAME
-# DIAG_KEY as diag_relay, validates <name> against a small allowlist (so a
-# typo or not-yet-built op fails fast at the engine, not blindly forwarded),
-# forwards the bounded JSON body with X-Diag-Key (exactly as _register_egress
-# already does for the box), and returns the box's response VERBATIM
-# (status + body), so a box-side 401/403/400 surfaces cleanly instead of
-# being masked.
+# The box still enforces the scoped-op contract (bounded args, X-Diag-Key
+# server hop, operations_ledger log, fail-safe). B1 adds a model-seat boundary
+# at the engine: an operator-approved, short-lived capability binds identity
+# and operation; the v2 compiled envelope binds request id, body, and bearer;
+# and side-effecting mailbox request ids are claimed persistently before relay.
+# Operator-root calls remain a transition/recovery path. The engine forwards a
+# bounded JSON object with server-derived identity and returns the box status and
+# body without masking its application result.
 #
 # Mirrors diag_relay's gate verbatim and _register_egress's forward verbatim.
 # No new env var, no new key, no IP whitelisting. Built once -> every
@@ -4140,19 +4140,12 @@ def diag_relay(endpoint):
 #
 # ----------------------------------------------------------------------
 # MULTI-USER / OPEN-SOURCE NOTE (read before extending this for tenancy):
-# DIAG_KEY here is an OPERATOR-TRUST boundary, NOT a per-tenant AUTHORIZATION
-# layer. It answers "is the caller the operator of THIS deployment?" — it does
-# NOT answer "may this user act on THIS user's workspace." In the current
-# single-operator deployment those questions collapse into one. They do NOT
-# collapse once this ships multi-user: a single shared diag key means anyone
-# holding it can invoke box ops on the one shared box, which is exactly the
-# "a stranger inherits the operator's authority" failure tracked as the
-# HIGH product blocker (multi-tenancy + real auth) in PUNCH_LIST.md.
-# Do NOT mistake this courier (or its key gate) for an authorization layer
-# when adding tenancy. The courier is transport + a name-gate; per-user
-# authorization must be solved at the auth/tenancy layer ABOVE it, and the
-# op allowlist + ledger must then become tenant-scoped. Until that exists,
-# this endpoint assumes one trusted operator.
+# DIAG_KEY remains the server/operator trust root, not a tenant credential.
+# B1 capabilities provide scoped seat authorization for this single-operator
+# deployment, but do not establish account ownership, tenant isolation, or a
+# commercial identity system. A later multi-tenant layer must bind accounts,
+# resources, grants, allowlists, and ledgers to tenant scope; it must not hand
+# the shared server root to a user or model.
 # ----------------------------------------------------------------------
 
 # Engine-side allowlist of forwardable scoped ops. Mirrors the box's live
@@ -4208,30 +4201,92 @@ def _admission_json(payload, status=200):
     response = jsonify(payload)
     response.headers["Cache-Control"] = "no-store"
     response.headers["Pragma"] = "no-cache"
+    request_id = request.headers.get("X-Ontinuity-Request-ID", "").strip()
+    if re.fullmatch(r"[0-9a-f]{32}", request_id):
+        response.headers["X-Ontinuity-Request-ID"] = request_id
     return response, status
 
-def _bounded_request_json(max_bytes):
-    """Parse one JSON body without trusting Content-Length as the size bound."""
+def _compiled_json(payload, status, request_id):
+    response = jsonify(payload)
+    if request_id:
+        response.headers["X-Ontinuity-Request-ID"] = request_id
+    return response, status
+
+def _bounded_request_payload(max_bytes):
+    """Return exact request bytes and parsed JSON under one streaming bound."""
     if request.content_length is not None and request.content_length > max_bytes:
         raise CapabilityError("request body is too large")
     raw = request.stream.read(max_bytes + 1)
     if len(raw) > max_bytes:
         raise CapabilityError("request body is too large")
     if not raw.strip():
-        return {}
+        return raw, {}
     try:
-        return json.loads(raw)
+        return raw, json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise CapabilityError("request body is not valid JSON") from exc
+
+MAX_COURIER_READ_RESPONSE_BYTES = 16 * 1024 * 1024
+
+def _bounded_relay_response(response, max_bytes):
+    """Read a box response incrementally without trusting Content-Length."""
+    chunks = []
+    total = 0
+    for chunk in response.iter_content(chunk_size=65536):
+        if not chunk:
+            continue
+        total += len(chunk)
+        if total > max_bytes:
+            raise CapabilityError("box response body is too large")
+        chunks.append(chunk)
+    encoding = response.encoding or "utf-8"
+    return b"".join(chunks).decode(encoding, errors="replace")
+
+def _compiled_request_fingerprint(mode, operation, request_id, raw_body,
+                                  credential):
+    body_sha256 = hashlib.sha256(raw_body).hexdigest()
+    credential_sha256 = "-" if credential is None else hashlib.sha256(
+        credential.encode("utf-8")).hexdigest()
+    canonical = "\n".join((
+        "client_version=2",
+        f"mode={mode}",
+        f"operation={operation}",
+        f"request_id={request_id}",
+        f"body_sha256={body_sha256}",
+        f"credential_sha256={credential_sha256}",
+        "",
+    )).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+def _compiled_request_identity(mode, operation, raw_body, credential):
+    """Require the v2 compiled-request envelope and return its stable identity."""
+    version = request.headers.get("X-Ontinuity-Client-Version", "").strip()
+    request_id = request.headers.get("X-Ontinuity-Request-ID", "").strip()
+    supplied = request.headers.get("X-Ontinuity-Request-SHA256", "").strip()
+    if (version != "2" or not re.fullmatch(r"[0-9a-f]{32}", request_id)
+            or not re.fullmatch(r"[0-9a-f]{64}", supplied)):
+        raise CapabilityError(
+            "compiled Ontinuity request required; use "
+            "live/tools/ontinuity_https.sh")
+    expected = _compiled_request_fingerprint(
+        mode, operation, request_id, raw_body, credential)
+    if not secrets.compare_digest(supplied, expected):
+        raise CapabilityError("compiled Ontinuity request fingerprint mismatch")
+    return request_id, expected
 
 @app.route('/diag/admission/request', methods=['POST'])
 def capability_request():
     """Create a pending request. This grants no authority until operator approval."""
     try:
-        body = _bounded_request_json(16384)
+        raw_body, body = _bounded_request_payload(16384)
     except CapabilityError as exc:
         status = 413 if "too large" in str(exc) else 400
         return _admission_json({"error": str(exc)}, status)
+    try:
+        _compiled_request_identity(
+            "admission", "admission_request", raw_body, None)
+    except CapabilityError as exc:
+        return _admission_json({"error": str(exc)}, 428)
     if not isinstance(body, dict):
         return _admission_json({"error": "request must be a JSON object"}, 400)
     requested_ops = body.get("operations") or []
@@ -4309,28 +4364,44 @@ def diag_op_courier(name):
         except CapabilityError as exc:
             return jsonify({"error": str(exc)}), 401
 
-    # 2) Name-gate: only forward known scoped ops; unknown -> fail fast here.
-    if name not in OP_ALLOWED:
-        return jsonify({"error": "op not in courier allowlist", "allowed": sorted(OP_ALLOWED)}), 403
-
-    # 3) Need a box to forward to.
-    if not WORKSPACE_URL:
-        return jsonify({"error": "WORKSPACE_URL not configured"}), 503
-
-    # 4) Bounded body: forward only a JSON object (the op's bounded args), or {}.
+    # 2) Bounded body: forward only a JSON object (the op's bounded args), or {}.
     #    The box validates the args; the courier just refuses non-object bodies.
+    #    A capability call must prove the compiled envelope before even a
+    #    designed name-gate response such as __probe__ is returned.
+    request_id = None
+    request_fingerprint = None
     if operator_call:
         body = request.get_json(silent=True)
     else:
         try:
-            body = _bounded_request_json(65536)
+            raw_body, body = _bounded_request_payload(65536)
         except CapabilityError as exc:
             status = 413 if "too large" in str(exc) else 400
             return jsonify({"error": str(exc)}), status
+        try:
+            request_id, request_fingerprint = _compiled_request_identity(
+                "capability", name, raw_body, token)
+        except CapabilityError as exc:
+            return jsonify({"error": str(exc)}), 428
     if body is None:
         body = {}
     if not isinstance(body, dict):
-        return jsonify({"error": "op args must be a JSON object"}), 400
+        return _compiled_json(
+            {"error": "op args must be a JSON object"}, 400, request_id)
+
+    # 3) Name-gate: only forward known scoped ops; unknown -> fail fast here.
+    if name not in OP_ALLOWED:
+        headers = ({"X-Ontinuity-Request-ID": request_id}
+                   if request_id else {})
+        return jsonify({
+            "error": "op not in courier allowlist",
+            "allowed": sorted(OP_ALLOWED),
+        }), 403, headers
+
+    # 4) Need a box to forward to.
+    if not WORKSPACE_URL:
+        return _compiled_json(
+            {"error": "WORKSPACE_URL not configured"}, 503, request_id)
 
     # The bootstrap standard comes from this engine's actual courier surface.
     # A caller cannot weaken certification by supplying its own count.
@@ -4341,6 +4412,33 @@ def diag_op_courier(name):
     # 5) Forward to the box's /op/<name> with the box's diag-key gate header,
     #    exactly as _register_egress forwards to /register_egress. Return the
     #    box response verbatim so its status/body are not masked by the courier.
+    side_effecting = identity and name in {
+        "mailbox_ack", "mailbox_fetch", "mailbox_send", "you_there"}
+    if side_effecting:
+        try:
+            transition = _cap_authority().begin_transition(
+                request_id, request_fingerprint)
+        except CapabilityError as exc:
+            return _compiled_json({"error": str(exc)}, 503, request_id)
+        transition_state = transition.get("state")
+        if transition_state == "completed":
+            return (
+                transition["response_body"],
+                transition["status"],
+                {
+                    "Content-Type": transition.get(
+                        "content_type", "application/json"),
+                    "X-Ontinuity-Replayed": "true",
+                    "X-Ontinuity-Request-ID": request_id,
+                },
+            )
+        if transition_state != "new":
+            return _compiled_json({
+                "error": "capability transition was not relayed again",
+                "request_id": request_id,
+                "state": transition_state,
+            }, 409, request_id)
+
     try:
         relay_headers = {"X-Diag-Key": diag_key, "Content-Type": "application/json"}
         if name == "bootstrap_gate":
@@ -4364,10 +4462,52 @@ def diag_op_courier(name):
             json=body,
             timeout=relay_timeout,
             allow_redirects=False,
+            stream=True,
         )
-        return (r.text, r.status_code, {"Content-Type": r.headers.get("Content-Type", "application/json")})
+        try:
+            response_status = r.status_code
+            response_content_type = r.headers.get(
+                "Content-Type", "application/json")
+            response_body = _bounded_relay_response(
+                r,
+                MAX_REPLAY_BODY_BYTES if side_effecting
+                else MAX_COURIER_READ_RESPONSE_BYTES,
+            )
+        finally:
+            r.close()
+        if side_effecting:
+            try:
+                receipt = _cap_authority().complete_transition(
+                    request_id, request_fingerprint,
+                    status=response_status,
+                    content_type=response_content_type,
+                    response_body=response_body,
+                )
+            except CapabilityError:
+                return _compiled_json({
+                    "error": "capability transition outcome is unknown; "
+                             "receipt persistence failed",
+                    "request_id": request_id,
+                }, 503, request_id)
+            if receipt.get("state") != "completed":
+                return _compiled_json({
+                    "error": "capability transition completed but exceeded "
+                             "the replay receipt bound",
+                    "request_id": request_id,
+                }, 503, request_id)
+        response_headers = {"Content-Type": response_content_type}
+        if request_id:
+            response_headers["X-Ontinuity-Request-ID"] = request_id
+        return (response_body, response_status, response_headers)
     except Exception as e:
-        return jsonify({"error": f"courier relay error: {str(e)}"}), 502
+        if side_effecting:
+            try:
+                _cap_authority().abandon_transition(
+                    request_id, request_fingerprint)
+            except CapabilityError:
+                pass
+        return _compiled_json(
+            {"error": f"courier relay error: {str(e)}"}, 502, request_id)
 
 
 @app.route('/')

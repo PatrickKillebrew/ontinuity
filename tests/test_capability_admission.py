@@ -1,5 +1,6 @@
 import os
 import json
+import multiprocessing
 import stat
 import tempfile
 import unittest
@@ -7,6 +8,37 @@ from unittest import mock
 
 import capability_auth
 from capability_auth import CapabilityAuthority, CapabilityError
+
+
+class _CoordinatedLoadAuthority(CapabilityAuthority):
+    """Widen the old load/save race without entering the transaction lock."""
+
+    def __init__(self, *, load_count, both_loaded, **kwargs):
+        super().__init__(**kwargs)
+        self._test_load_count = load_count
+        self._test_both_loaded = both_loaded
+
+    def _load(self):
+        data = super()._load()
+        with self._test_load_count.get_lock():
+            self._test_load_count.value += 1
+            if self._test_load_count.value >= 2:
+                self._test_both_loaded.set()
+        # With the required interprocess transaction, process two cannot enter
+        # _load until process one saves and releases. Without it, both processes
+        # reach this window with the same pre-claim snapshot and both return new.
+        self._test_both_loaded.wait(2)
+        return data
+
+
+def _claim_transition_in_process(registry_path, start_event, result_queue,
+                                 load_count, both_loaded):
+    authority = _CoordinatedLoadAuthority(
+        secret="test-master-secret", registry_path=registry_path,
+        load_count=load_count, both_loaded=both_loaded)
+    start_event.wait(10)
+    result_queue.put(authority.begin_transition(
+        "f" * 32, "e" * 64)["state"])
 
 
 class CapabilityAdmissionTests(unittest.TestCase):
@@ -91,6 +123,12 @@ class CapabilityAdmissionTests(unittest.TestCase):
         self.assertNotIn(token, persisted)
         self.assertEqual(stat.S_IMODE(os.stat(self.authority.registry_path).st_mode),
                          0o600)
+        lock_path = self.authority.registry_lock_path
+        self.assertEqual(stat.S_IMODE(os.stat(lock_path).st_mode), 0o600)
+        with open(lock_path, "rb") as handle:
+            lock_bytes = handle.read()
+        self.assertNotIn(b"test-master-secret", lock_bytes)
+        self.assertNotIn(token.encode("utf-8"), lock_bytes)
 
     def test_corrupt_registry_fails_closed_without_overwrite(self):
         with open(self.authority.registry_path, "w", encoding="utf-8") as handle:
@@ -101,6 +139,59 @@ class CapabilityAdmissionTests(unittest.TestCase):
                 operations=["read_repo"], ttl_seconds=300)
         with open(self.authority.registry_path, encoding="utf-8") as handle:
             self.assertEqual(handle.read(), "{not-json")
+
+    def test_transition_receipt_replays_completed_response(self):
+        request_id = "a" * 32
+        fingerprint = "b" * 64
+        self.assertEqual(
+            self.authority.begin_transition(request_id, fingerprint)["state"],
+            "new",
+        )
+        completed = self.authority.complete_transition(
+            request_id, fingerprint, status=201,
+            content_type="application/json", response_body='{"id":7}')
+        self.assertEqual(completed["state"], "completed")
+        replay = self.authority.begin_transition(request_id, fingerprint)
+        self.assertEqual(replay["status"], 201)
+        self.assertEqual(replay["response_body"], '{"id":7}')
+
+    def test_transition_receipt_conflict_and_unknown_fail_closed(self):
+        request_id = "c" * 32
+        fingerprint = "d" * 64
+        self.authority.begin_transition(request_id, fingerprint)
+        self.assertEqual(
+            self.authority.begin_transition(request_id, "e" * 64)["state"],
+            "conflict",
+        )
+        self.authority.abandon_transition(request_id, fingerprint)
+        self.assertEqual(
+            self.authority.begin_transition(request_id, fingerprint)["state"],
+            "unknown",
+        )
+
+    def test_transition_claim_is_serialized_across_processes(self):
+        registry_path = os.path.join(self.tmp.name, "multiprocess.json")
+        context = multiprocessing.get_context("spawn")
+        start_event = context.Event()
+        result_queue = context.Queue()
+        load_count = context.Value("i", 0)
+        both_loaded = context.Event()
+        processes = [
+            context.Process(
+                target=_claim_transition_in_process,
+                args=(registry_path, start_event, result_queue,
+                      load_count, both_loaded),
+            )
+            for _ in range(2)
+        ]
+        for process in processes:
+            process.start()
+        start_event.set()
+        states = [result_queue.get(timeout=15) for _ in processes]
+        for process in processes:
+            process.join(timeout=15)
+            self.assertEqual(process.exitcode, 0)
+        self.assertEqual(sorted(states), ["in_progress", "new"])
 
     def test_registry_binds_the_approved_operation_set(self):
         token = self.approve(operations=["read_repo"])

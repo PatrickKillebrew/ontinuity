@@ -1,0 +1,71 @@
+{
+  "schema_version": 2,
+  "base_commit": "693435a8236caeb60f3c429d4728a7390f080dc1",
+  "branch": "codex/b1-transport-lock",
+  "state": "local_uncommitted_author_corrected_after_first_clean_reject_awaiting_second_clean_review_not_live",
+  "purpose": "Preserve the proven host-visible curl --config - transition, enforce its versioned envelope at the server, correlate and bound the response, and prevent duplicate side-effecting relays across engine processes without disabling unrelated model tools.",
+  "required": [
+    {"path": "app.py", "sha256": "c224a57c20d9a3e416a7b08ec6fd98ac1853b92a95447f2986554eb93b36e7f7"},
+    {"path": "capability_auth.py", "sha256": "75b92a2e5ca7bb43a67ebbdb1a15c1fa44d8fcf58092870ad3d5c0f0761be51b"},
+    {"path": "live/CONTROL_HANDOFF.md", "sha256": "cde242da55cc60260ffbc29fb1d39c3ab745c16fca5ed50c1f318a01ec9b3e3e"},
+    {"path": "live/CONTROL_QUICKBOOT.md", "sha256": "a422812b3ab97211e98c4cd9e838e8ac753035b148b3ab6077601a50b4fe77db"},
+    {"path": "live/CONTROL_QUICKBOOT_SNIPPET.md", "sha256": "d018454f1bc3afda2557c2aadfe001e19a6ef0d28960af44d2fc6dd1a76e6770"},
+    {"path": "live/ONTINUITY_1_0_BOARD.md", "sha256": "f5f70e3f2fd60e2f913c3315921be9fff5f8e1ebe47efa77873f900e65ec725a"},
+    {"path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md", "sha256": "b6cf573172d163de9c4f28c34dfe072feecf9ac514f5e7bee5465a67e4343fe9"},
+    {"path": "live/ONTINUITY_ENDPOINTS.conf", "sha256": "7863863916f3e64778a2d26a52975bc31311c3f421e18a828a4f4f3ff2317236"},
+    {"path": "live/OPERATING_MANUAL.md", "sha256": "7dd338165263f2443cd5f7165fbeb2fc0e4a2ab6671cd4d2acabb0a364630dc3"},
+    {"path": "live/PUNCH_LIST.md", "sha256": "63feda6a9de4f5fd0c9a982f4d7f6b218e5404ba61134e9db3e41e3a547eb549"},
+    {"path": "live/WORKER_BOOT_PACKET.md", "sha256": "80639a77643d070c31bf1ccb09302b35f4679051b16eb04bf496ccaa00a1cc36"},
+    {"path": "live/WORKER_MANUAL.md", "sha256": "6f8dad850495208ce8bbd92d12144e41e8ce82fd2af4ef17ab9266bc3e4a9e71"},
+    {"path": "live/WORKER_QUICKBOOT.md", "sha256": "4eac90377438f7ecc81285098c734b3a80b3ac7489db6b66caae35b4fd480cc3"},
+    {"path": "live/agent_queue.md", "sha256": "92a33d5355be6784d36453783a5a830cf2b38a0ab1d5315a7c556b6a6ed648fb"},
+    {"path": "live/control_loop.py", "sha256": "b4a9401c8b03b7b24c00c3f40271ef7219e645bb48931ea5251994df8d504e66"},
+    {"path": "live/specs/ontinuity_https_protocol.md", "sha256": "ee4376a5ad1b73a55ab62921646c301946e5884e277859697e07cfda9eee772a"},
+    {"path": "live/tools/b1_verify.sh", "sha256": "ebfc339bb9877d84d87154239c0720dc86992cae0974b17c0559f8b61733bc8b"},
+    {"path": "live/tools/ontinuity_https.sh", "sha256": "5f1e441b74a5b61bd342ad902049a9b20a300fdfd41dbac7f77ff3bec3f1df10"},
+    {"path": "tests/test_b1_release_boundaries.py", "sha256": "be5377074b17002dec16dbc489e8d388cb36c0004d9d4ac1958229b3d8044032"},
+    {"path": "tests/test_capability_admission.py", "sha256": "78684855f1bd587c860dc92d57b5605bca45e6ff0a9ec4791e7388fb6e67bf98"},
+    {"path": "tests/test_capability_admission_surface.py", "sha256": "398723e5efc2419240d61698f7fb267935e34a33e58f6fd1e65dad12a235bc95"},
+    {"path": "tests/test_capability_courier.py", "sha256": "a43d86e785292bb57b3d9be62660135ec57d8b8e96f1f5bd40dd9b3b6485da6e"},
+    {"path": "tests/test_ontinuity_https_client.py", "sha256": "d048c07bb95d801953e06cac9c9fc86d05cb73caa146b1186c49c4fb0738c641"}
+  ],
+  "required_checks": [
+    "B1_TEST_PYTHON=<existing-project-python> live/tools/b1_verify.sh",
+    "selected Python imports flask, flask_socketio, and requests before any suite starts",
+    "all 147 tests pass in nine bounded module invocations",
+    "real curl parses a prepared stdin receipt under --version without opening a network connection",
+    "missing or mismatched compiled admission, capability, and __probe__ envelopes fail before relay",
+    "a two-process claim permits exactly one new relay; completed duplicates replay once; conflict, in-progress, and unknown states do not relay again",
+    "chunked box responses are streamed and bounded before decoding; oversized mutable responses become unknown and cannot relay again",
+    "sh -n passes for both shell entrypoints",
+    "Python compilation, both JSON manifests, git diff --check, exact changed-file coverage, and high-confidence repository secret-pattern scan pass"
+  ],
+  "review_questions": [
+    "Does prepare perform no network access and leave curl --config - visibly top-level at the host boundary?",
+    "Does each prepare generate a fresh request ID and bind version, mode, operation, ID, exact body bytes, and normalized credential bytes?",
+    "Do admission and capability routes reject absent, malformed, or mismatched envelopes before any box relay, including designed __probe__?",
+    "Does verify require the returned request ID to equal the prepared ID?",
+    "Can a side-effecting request ID be relayed more than once after completion, conflict, concurrency, timeout, or an unknown result?",
+    "Are transition receipts private, persistent, count bounded, response-size bounded, and expired after the capability lifetime cannot remain valid?",
+    "Does operator-root recovery remain compatible while model boots receive no diagnostic, hosting, repository, mailbox, or deployment root?",
+    "Does any current model-facing helper still construct an alternate HTTP request or hold a capability directly?",
+    "Does the protocol remain independent of model and hosting provider while all unrelated tools remain available?",
+    "Does the B1 verifier refuse an unsuitable runtime before launching tests?",
+    "Do the corpus, code, tests, and exact manifest describe the same candidate behavior and the same one remaining live readback?"
+  ],
+  "live_resume_after_clean_review": [
+    "land the exact reviewed overlay without changing a byte",
+    "deploy MAIN and FARM at the resulting reviewed commit and prove source identity",
+    "resume the existing B1 install manifest at the sole remaining shepherd_alert.py pre-restart readback",
+    "continue the existing box restart, health, active-service, Control boot, Worker boot, denial, expiry, revocation, and laptop-retirement proofs",
+    "prove an uncompiled valid-capability request receives HTTP 428 and does not reach the box"
+  ],
+  "live_boundary": {
+    "push": false,
+    "deploy": false,
+    "box_install": false,
+    "service_restart": false,
+    "credential_change": false,
+    "resume_existing_b1_cutover_before_clean_review": false
+  }
+}

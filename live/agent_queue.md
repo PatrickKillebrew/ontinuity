@@ -1224,3 +1224,181 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
 
 **NEXT**
 - Send these unchanged, manifest-frozen bytes to a fourth clean independent reviewer; only a clean disposition may advance to an explicitly authorized commit/cutover.
+
+## FOLD — recurring Work transport-path drift reopened — 2026-09-08
+
+**OPERATOR RULING**
+- The approximately twentieth repeat of “egress unavailable -> substitute clients ->
+  eventually mirror the documented curl -> success” is a serious harness failure,
+  not an acceptable model quirk. The correct route must stop depending on a model
+  remembering or reconstructing prose.
+
+**OBSERVED**
+- The 2026-09-04 fold and resolved punch item correctly classified a pre-HTTP denial
+  as `WORK_EGRESS_DENIED`, required header authentication and one credential-bearing
+  request per Work tool call, and forbade Python-client substitution.
+- They nevertheless referred to a “known-good curl” without preserving the exact
+  operator request as a canonical executable. Current quick-boots still assembled
+  raw HTTP themselves. The exact successful operator form survived in conversation
+  tool history, not as the sole runnable artifact.
+- During the authorized B1 transition, Control repeated the failure: after an
+  execution-layer cancellation it tried alternate request packaging, declared the
+  Railway hostname unavailable, and only recovered after the operator required a
+  transcript lookup and exact mirroring. The unchanged direct `curl --config -`
+  path then succeeded.
+
+**LOCAL CORRECTION**
+- Cutover is fail-stopped before box restart. MAIN is at reviewed B1 commit
+  `693435a`; FARM remains rollback `3476ed8`; all five reviewed box files are on
+  disk. The mechanical direct-curl test returned HTTP 200 for `gate.py`; its
+  18,383-byte content hash exactly matched reviewed candidate
+  `fb4fd8c39990aa5a3271b82e0d51828128d1e10f422ba95c10b03eeb0d79ab87`.
+  Four of five pre-restart readbacks are now proved; only `shepherd_alert.py`
+  remains. No restart occurred.
+- Separate local branch `codex/b1-transport-lock` adds
+  `live/tools/ontinuity_https.sh`. Its local `prepare` compiles admission/
+  capability/operator mode, logical `main|farm`, a bounded operation, JSON body,
+  and mode-600 credential into a private curl-config receipt and frozen body.
+  Local `check` proves those bytes. The network step is not wrapped: it is the exact
+  host-visible `curl --config - < REQUEST.curl` form that previously succeeded.
+  Local `verify` interprets the fixed response files. Reviewed
+  `live/ONTINUITY_ENDPOINTS.conf` separates logical engines from current hosting.
+- Live exercise disproved the first wrapper design: three identical wrapper sends,
+  a file-backed direct curl, and repeated literal inline direct curls were canceled
+  before execution. No HTTP status existed. Railway remains admitted and had been
+  used successfully earlier the same day; cancellation is therefore an unresolved
+  Work execution event, not evidence that Railway, Ontinuity, or the credential is
+  unavailable. The direct request shape is preserved unchanged rather than
+  “solved” by another HTTP client. A later unchanged direct
+  `curl --config - < REQUEST.curl` execution succeeded with HTTP 200, proving that
+  the compiler preserves the admitted path and that the earlier cancellations did
+  not revoke Railway access.
+- Current Control and Worker surfaces now require prepare/check, literal top-level
+  curl, and verify. An explicit pre-start host denial permits only the identical
+  curl retry after admission; an ambiguous post-start failure is UNKNOWN and
+  fail-stops because replay could duplicate a mutation.
+
+**TOOL-COEXISTENCE BOUNDARY**
+- GPT's general tools remain available for their valid purposes. Ontinuity narrows
+  only its own action transition: prepare and check the settled intent before
+  generic tool selection, then expose the single host-visible curl transition and
+  verify locally. The model need not suppress imagination globally; the harness
+  prevents it from reopening an already-settled transport decision.
+- This local overlay makes substitution detectable and release-blocking. A future
+  engine requirement for the receipt provenance header can make noncanonical
+  successful capability calls fail closed without disabling other tools. That
+  server-side hardening is not claimed deployed here.
+
+**STATE LEFT**
+- The transport overlay is local, uncommitted, unreviewed, and not live. No overlay
+  byte was pushed, deployed, installed, or used to restart the box.
+
+**NEXT**
+- Freeze and independently review the exact overlay; then resume the two
+  remaining readbacks and the existing B1 manifest's fail-stop cutover order.
+
+## FOLD — transport protocol enforcement completed locally — 2026-09-08
+
+**CORRECTION TO THE PRECEDING FOLD**
+- Its final NEXT line says two pre-restart readbacks remained. The state recorded
+  immediately above it is the correct count: four of five passed and only
+  `shepherd_alert.py` remains. No workspace restart has occurred.
+
+**RELEASE CONDITION**
+- B1 model-seat access must stop depending on a model remembering the known-good
+  path. The exact request must be generated mechanically, accepted only through a
+  versioned server contract, correlated to its response, and prevented from
+  executing a side-effecting duplicate after an ambiguous result. Unrelated model
+  tools remain available.
+
+**LOCAL CORRECTION**
+- `live/tools/ontinuity_https.sh` now gives every prepare a fresh 128-bit request
+  ID and binds version, mode, operation, ID, exact body bytes, and normalized
+  bearer bytes into `X-Ontinuity-Request-SHA256`. Local verification requires the
+  server to echo the prepared ID. The only network transition remains the proven
+  host-visible `curl --config - < REQUEST.curl`.
+- Candidate MAIN requires that envelope for public admission and every capability
+  call, including the designed `__probe__` 403. Missing, malformed, or mismatched
+  envelopes return HTTP 428 before any box relay. This is protocol conformance,
+  not cryptographic proof of which executable produced the request.
+- Before relaying `mailbox_send`, `mailbox_fetch`, `mailbox_ack`, or `you_there`,
+  MAIN atomically claims the request ID in the private persistent capability
+  registry. A completed duplicate returns its bounded saved response without a
+  second relay. Conflicting, in-progress, and unknown duplicates return HTTP 409
+  and stop. Records are count-, size-, and time-bounded.
+- Boundary scanning found `live/control_loop.py` still carrying an alternate
+  Python HTTP capability client. It is now a local-only transformer of verified
+  `mailbox_peek` and `you_there` response files and holds no capability. The exact
+  provider-neutral wire contract is recorded in
+  `live/specs/ontinuity_https_protocol.md`.
+- `live/tools/b1_verify.sh` selects and checks the existing project test runtime
+  before launching any suite. This mechanically prevents the default-runtime
+  Flask surprise encountered during author verification; no dependency failure is
+  reclassified as an Ontinuity defect.
+
+**TEST RESULT**
+- The refrozen candidate passes all 142 tests in nine bounded, network-mocked or
+  dependency-free module invocations through the preflighted project runtime.
+  This includes must-refuse tests for uncompiled admission, capability, and probe
+  requests; exact-body/capability binding; response-ID mismatch; one-relay replay;
+  ambiguous-outcome denial; normalized credential bytes; server body bounds; and
+  the real installed curl parser without a network connection.
+- Python compilation, both shell syntax checks, both JSON manifests,
+  `git diff --check`, exact overlay coverage, and a private value-equality secret
+  scan pass. This is author-side evidence, not independent acceptance.
+
+**STATE LEFT**
+- Overlay branch `codex/b1-transport-lock` remains local, uncommitted,
+  independently unreviewed, and not live. MAIN remains at reviewed B1 commit
+  `693435a`; FARM remains rollback `3476ed8`; the old box process remains in
+  memory; no additional box write, restart, deployment, or credential change
+  occurred during this correction.
+
+**NEXT**
+- Obtain one clean independent review of the exact transport-lock manifest. If it
+  passes unchanged, land and deploy the overlay, then resume the existing B1
+  fail-stop order at the sole remaining `shepherd_alert.py` pre-restart readback.
+
+## FOLD — first transport-lock review rejected; bounded correction — 2026-09-08
+
+**INDEPENDENT DISPOSITION**
+- A clean reviewer with no conversation history reproduced manifest
+  `b82310113f23610b09fc22fcabb11bca4d687e2d4314f16cf45798465f89886a`,
+  all 23 required hashes, exact delta coverage, and all 142 then-current tests.
+  It returned REJECT rather than treating those mechanical passes as acceptance.
+- Three release blockers were established: the JSON replay transaction used only
+  a process-local lock; the box response was fully loaded before the replay bound;
+  and `CONTROL_HANDOFF.md` retained an obsolete B1 candidate as a second current
+  action. The manifest also overstated its secret check as private-value equality
+  when the runnable performs a high-confidence repository pattern scan.
+
+**LOCAL CORRECTION**
+- A private mode-600 SQLite lock database now serializes each complete JSON
+  load/prune/modify/replace transaction across engine processes. SQLite releases
+  its lock on process death; the existing JSON record and its deployment path stay
+  backward compatible. A two-process claim regression requires exactly one `new`
+  result and one `in_progress` result for the same request ID.
+- The courier now requests streamed responses and counts bytes before decoding.
+  Side-effecting responses are capped at the 64 KiB replay ceiling; other B1
+  courier responses are capped at 16 MiB so the existing 2 MiB repository-read
+  contract remains usable. Oversized or interrupted mutable responses leave the
+  receipt unknown and cannot be relayed again. Both oversized paths close the
+  upstream response and have chunked-response regressions.
+- The handoff has one current action. Its predecessor and September 7 action are
+  explicitly historical. Board, completion plan, punch list, protocol, and this
+  latest fold agree that the corrected overlay is local, uncommitted, not live,
+  and awaiting a second clean review.
+- The transport manifest now names the check it actually performs: a
+  high-confidence repository secret-pattern scan. No private credential was read
+  or required for this correction.
+
+**STATE LEFT**
+- MAIN remains at reviewed B1 commit `693435a`; FARM remains at rollback
+  `3476ed8`; the old box process remains in memory; `shepherd_alert.py` remains the
+  sole outstanding pre-restart readback. No repository remote, deployment, box,
+  service, laptop, or credential state changed.
+
+**NEXT**
+- Refreeze the exact corrected overlay, run its bounded verifier, and obtain a
+  second clean independent review. Only an unchanged ACCEPT permits landing and
+  resuming the existing B1 cutover order.

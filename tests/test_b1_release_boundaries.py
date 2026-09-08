@@ -108,7 +108,6 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
             "live/shepherd.py",
             "live/shepherd_alert.py",
             "live/experiment/burnin_resident.py",
-            "live/control_loop.py",
             "live/governor/governor_relay.py",
             "live/governor/governor_routes.py",
         )
@@ -163,16 +162,49 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
     def test_model_request_and_repo_response_bounds_do_not_trust_length_header(self):
         app_source = (ROOT / "app.py").read_text(encoding="utf-8")
         bounded = re.search(
-            r"def _bounded_request_json\(max_bytes\):(?P<body>.*?)(?=\n\ndef )",
+            r"def _bounded_request_payload\(max_bytes\):(?P<body>.*?)(?=\n\ndef )",
             app_source, re.DOTALL)
         self.assertIsNotNone(bounded)
         self.assertIn("request.stream.read(max_bytes + 1)", bounded.group("body"))
-        self.assertGreaterEqual(app_source.count("_bounded_request_json("), 3)
+        self.assertGreaterEqual(app_source.count("_bounded_request_payload("), 3)
 
         box_source = (ROOT / "live" / "box" / "box_ops.py").read_text(
             encoding="utf-8")
         self.assertIn(
             "r.read(_MAX_REPO_API_RESPONSE_BYTES + 1)", box_source)
+
+    def test_courier_streams_and_bounds_box_responses_before_decoding(self):
+        app_source = (ROOT / "app.py").read_text(encoding="utf-8")
+        bounded = re.search(
+            r"def _bounded_relay_response\(response, max_bytes\):"
+            r"(?P<body>.*?)(?=\n\ndef )",
+            app_source, re.DOTALL)
+        self.assertIsNotNone(bounded)
+        self.assertIn("iter_content", bounded.group("body"))
+        self.assertIn("total > max_bytes", bounded.group("body"))
+        courier = re.search(
+            r"def diag_op_courier\(name\):(?P<body>.*?)(?=\n\n@app\.route)",
+            app_source, re.DOTALL)
+        self.assertIsNotNone(courier)
+        self.assertIn("stream=True", courier.group("body"))
+        self.assertIn("MAX_REPLAY_BODY_BYTES if side_effecting",
+                      courier.group("body"))
+        self.assertNotIn("r.text", courier.group("body"))
+
+    def test_transport_manifest_and_handoff_state_are_not_self_contradictory(self):
+        handoff = (ROOT / "live" / "CONTROL_HANDOFF.md").read_text(
+            encoding="utf-8")
+        self.assertEqual(handoff.count("**SINGLE NEXT ACTION:**"), 1)
+        self.assertNotIn("CURRENT CONTROLLING ACTION", handoff)
+        self.assertIn("HISTORICAL PREDECESSOR", handoff)
+        self.assertIn("SUPERSEDED BY THE CURRENT OVERRIDE", handoff)
+
+        manifest = json.loads(
+            (ROOT / "live" / "B1_TRANSPORT_LOCK_MANIFEST.json").read_text(
+                encoding="utf-8"))
+        checks = "\n".join(manifest["required_checks"])
+        self.assertNotIn("private secret equality scan", checks)
+        self.assertIn("high-confidence repository secret-pattern scan", checks)
 
     def test_resident_mailbox_callers_use_headers_not_urls_or_bodies(self):
         for relative in ("live/shepherd.py", "live/experiment/burnin_resident.py"):
@@ -294,11 +326,16 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
 
         data = json.loads(text)
         base = data["candidate_base_commit"]
-        self.assertEqual(
-            subprocess.check_output(
-                ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip(),
-            base,
-        )
+        transport_manifest = ROOT / "live" / "B1_TRANSPORT_LOCK_MANIFEST.json"
+        if transport_manifest.exists():
+            release_commit = json.loads(
+                transport_manifest.read_text(encoding="utf-8"))["base_commit"]
+        else:
+            release_commit = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+        subprocess.run(
+            ["git", "merge-base", "--is-ancestor", base, release_commit],
+            cwd=ROOT, check=True)
         rows = []
         rows.extend(data["engine_deploy"]["required"])
         rows.extend(data["box_install"]["required"])
@@ -307,7 +344,9 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         rows.extend(data["verification_sources"]["required"])
         rows.extend(data["retire_during_authorized_cutover"])
         for row in rows:
-            digest = hashlib.sha256((ROOT / row["path"]).read_bytes()).hexdigest()
+            release_bytes = subprocess.check_output(
+                ["git", "show", f'{release_commit}:{row["path"]}'], cwd=ROOT)
+            digest = hashlib.sha256(release_bytes).hexdigest()
             self.assertEqual(digest, row["sha256"], row["path"])
             self.assertNotEqual(row["sha256"], "REFRESH", row["path"])
         for row in data["public_removals"]:
@@ -322,6 +361,9 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         covered = {row["path"] for row in rows}
         covered.update(row["path"] for row in data["public_removals"])
         covered.update(row["receipt"] for row in data["public_removals"])
+        if transport_manifest.exists():
+            overlay = json.loads(transport_manifest.read_text(encoding="utf-8"))
+            covered.update(row["path"] for row in overlay["required"])
         changed = set(subprocess.check_output(
             ["git", "diff", "--name-only"], cwd=ROOT, text=True
         ).splitlines())
@@ -333,7 +375,10 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
             path for path in changed | untracked
             if "__pycache__" not in Path(path).parts
             and not path.endswith(".pyc")
-            and path != "live/B1_INSTALL_MANIFEST.json"
+            and path not in {
+                "live/B1_INSTALL_MANIFEST.json",
+                "live/B1_TRANSPORT_LOCK_MANIFEST.json",
+            }
         }
         self.assertEqual(relevant - covered, set())
         retirement = data["retire_during_authorized_cutover"]
@@ -412,19 +457,24 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
                 runpy.run_path(str(script), run_name="__main__")
         self.assertEqual(stopped.exception.code, 1)
 
-    def test_control_loop_entrypoint_fails_cleanly_without_capability(self):
+    def test_control_loop_is_local_only_and_requires_compiled_responses(self):
         script = ROOT / "live" / "control_loop.py"
-        env = dict(os.environ)
-        env.pop("ONTINUITY_CAPABILITY", None)
         completed = subprocess.run(
-            [sys.executable, str(script)], cwd=ROOT, env=env,
+            [sys.executable, str(script)], cwd=ROOT,
             text=True, capture_output=True, timeout=10, check=False)
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(
             json.loads(completed.stdout),
-            {"error": "ONTINUITY_CAPABILITY is not configured"},
+            {
+                "error": "compiled mailbox_peek and you_there response files are required",
+                "transport": "curl --config - < REQUEST.curl",
+            },
         )
-        self.assertNotIn("/home/claude", script.read_text(encoding="utf-8"))
+        source = script.read_text(encoding="utf-8")
+        self.assertNotIn("/home/claude", source)
+        self.assertNotIn("urllib", source)
+        self.assertNotIn("Authorization", source)
+        self.assertNotIn("ONTINUITY_CAPABILITY", source)
 
 
 if __name__ == "__main__":

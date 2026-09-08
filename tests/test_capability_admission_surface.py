@@ -1,6 +1,9 @@
+import hashlib
+import json
 import os
 import tempfile
 import unittest
+import uuid
 
 
 class CapabilityAdmissionSurfaceTests(unittest.TestCase):
@@ -21,20 +24,45 @@ class CapabilityAdmissionSurfaceTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.tmp.cleanup()
 
+    def admission_post(self, body):
+        raw_body = json.dumps(body, separators=(",", ":")).encode("utf-8")
+        request_id = uuid.uuid4().hex
+        canonical = "\n".join((
+            "client_version=2",
+            "mode=admission",
+            "operation=admission_request",
+            f"request_id={request_id}",
+            f"body_sha256={hashlib.sha256(raw_body).hexdigest()}",
+            "credential_sha256=-",
+            "",
+        )).encode("utf-8")
+        return self.client.post(
+            "/diag/admission/request",
+            headers={
+                "Content-Type": "application/json",
+                "X-Ontinuity-Client-Version": "2",
+                "X-Ontinuity-Request-ID": request_id,
+                "X-Ontinuity-Request-SHA256": hashlib.sha256(
+                    canonical).hexdigest(),
+            },
+            data=raw_body,
+        )
+
     def test_public_request_cannot_ask_for_high_impact_operation(self):
-        response = self.client.post("/diag/admission/request", json={
+        response = self.admission_post({
             "seat": "worker1", "lineage": "openai:test",
             "operations": ["read_repo", "deploy"], "ttl_seconds": 300,
         })
         self.assertEqual(response.status_code, 403)
         self.assertNotIn("deploy", response.get_json()["allowed"])
+        self.assertRegex(response.headers["X-Ontinuity-Request-ID"],
+                         r"^[0-9a-f]{32}$")
 
     def test_admission_routes_reject_malformed_json_shapes(self):
-        self.assertEqual(self.client.post(
-            "/diag/admission/request",
-            json={"seat": "worker1", "lineage": "openai:test",
-                  "operations": [{"name": "read_repo"}]},
-        ).status_code, 400)
+        self.assertEqual(self.admission_post({
+            "seat": "worker1", "lineage": "openai:test",
+            "operations": [{"name": "read_repo"}],
+        }).status_code, 400)
         headers = {"X-Diag-Key": "operator-root-for-tests"}
         self.assertEqual(self.client.post(
             "/diag/admission/approve", headers=headers, json=["bad"]
@@ -44,7 +72,7 @@ class CapabilityAdmissionSurfaceTests(unittest.TestCase):
         ).status_code, 400)
 
     def test_operator_can_list_approve_and_revoke_without_url_auth(self):
-        requested = self.client.post("/diag/admission/request", json={
+        requested = self.admission_post({
             "seat": "worker1", "lineage": "openai:test",
             "operations": ["read_repo"], "ttl_seconds": 300,
         })
@@ -83,6 +111,14 @@ class CapabilityAdmissionSurfaceTests(unittest.TestCase):
             "/diag/admission/requests", headers=headers).get_json()["requests"]
         row = next(row for row in listed if row["request_id"] == request_id)
         self.assertEqual(row["status"], "revoked")
+
+    def test_public_request_without_compiled_envelope_is_refused(self):
+        response = self.client.post("/diag/admission/request", json={
+            "seat": "worker1", "lineage": "openai:test",
+            "operations": ["read_repo"], "ttl_seconds": 300,
+        })
+        self.assertEqual(response.status_code, 428)
+        self.assertIn("ontinuity_https.sh", response.get_json()["error"])
 
     def test_diagnostic_root_in_query_string_is_rejected(self):
         response = self.client.get(

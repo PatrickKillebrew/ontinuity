@@ -1,8 +1,34 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-07 by successor Control (`chatgpt-work:gpt-5.6-sol`) — corrected B1 candidate assembled locally on the rollback tree; uncommitted, rejected three times and corrected, awaiting fourth review, and not live.
+# Updated 2026-09-08 by successor Control (`chatgpt-work:gpt-5.6-sol`) — the first clean transport-lock review rejected three release blockers; all three are corrected locally and the exact refreeze awaits a second clean review. The live B1 cutover remains fail-stopped before box restart.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
 ## STATE AT FOLD
+- **CURRENT OVERRIDE:** MAIN runs reviewed B1 commit `693435a` with its persistent
+  capability-registry volume attached. FARM remains on rollback `3476ed8`. The
+  reviewed five-file box unit has been written to disk; pre-restart readback passed
+  for `file_server.py`, `box_ops.py`, `seat_mailbox.py`, and `gate.py`;
+  `shepherd_alert.py` still requires readback. The workspace has not restarted, so
+  the old process remains in memory. Do not restart until all five disk hashes pass.
+- **TRANSPORT DEFECT REOPENED:** the 2026-09-04 correction preserved the correct
+  `WORK_EGRESS_DENIED` classification but not the exact known-good operator request
+  as an executable artifact. Control reconstructed and client-shopped the path
+  again during cutover. Local overlay branch `codex/b1-transport-lock` preserves
+  the successful top-level `curl --config -` form through a local
+  prepare/check/curl/verify state machine and a reviewed logical endpoint registry.
+  Candidate MAIN now requires the exact v2 envelope for admission and capability
+  traffic, echoes the request identity, and persists bounded replay state for the
+  four mailbox operations that can mutate or claim work. Missing/mismatched
+  envelopes fail before relay; ambiguous duplicates are not executed again. The
+  old capability-bearing Python control helper is now a local-only response
+  transformer. The bounded B1 verifier preflights its selected Python runtime.
+  The first clean review reproduced the exact freeze and all 142 tests but rejected
+  process-local replay locking, unbounded relay-response intake, and contradictory
+  handoff state. The correction uses an interprocess transaction lock, bounded
+  streamed response reads, and one authoritative current action. It remains local,
+  uncommitted, and not live.
+- **SINGLE NEXT ACTION:** independently review the exact corrected and refrozen
+  transport-lock overlay. Only after clean acceptance may the fail-stopped B1 transition resume
+  with the one remaining pre-restart read.
 - B0 is complete at commit `7abadca`; its authenticated read-only report
   honestly returned `DRIFT`. The original observation remains the baseline even
   where later work repaired part of the observed box divergence.
@@ -19,7 +45,7 @@
   upheld, retracted, and replaced with a falsifiable paired-control plan at
   `live/experiment/B5P_LIVE_2026-09-05_COMPARATIVE_TEST_PLAN.md`. That plan has
   not been run.
-- The previous seven-file B1 candidate was rejected by integration review and
+- **HISTORICAL PREDECESSOR:** The previous seven-file B1 candidate was rejected by integration review and
   rolled back. Its capability/identity core was salvaged into corrected local
   branch `codex/b1-corrected` on rollback commit `3476ed8`. The corrected
   candidate is uncommitted, has no clean review, and is not live. Its exact file boundary
@@ -134,8 +160,8 @@ seam). The actual deploy was done control-side via Railway GraphQL (serviceInsta
 engine + write_file/restart for the box, under direct operator instruction (system-building, not
 autonomous worker work).
 
-## THE SINGLE NEXT ACTION
-**CURRENT CONTROLLING ACTION (2026-09-07): independently review the exact
+## HISTORICAL 2026-09-07 ACTION — SUPERSEDED BY THE CURRENT OVERRIDE
+**The action at that fold was to independently review the exact
 manifest-defined corrected B1 candidate on `codex/b1-corrected`.** It is based
 on rollback commit `3476ed8`, is uncommitted, has been rejected three times and
 corrected locally, and is not live. The next disposition must come from a fourth
@@ -148,7 +174,9 @@ authorization may the exact reviewed bytes be committed, transitioned,
 deployed, or installed and the Control/Worker capability boots proved. Credential
 rotation is deferred launch/cutover hygiene by operator ruling and is not a
 current B1 review gate. Do not resume B3 until this B1 review disposition is
-durably recorded. B0's original `DRIFT` record stays immutable.
+durably recorded. B0's original `DRIFT` record stays immutable. That review was
+subsequently accepted and landed as `693435a`; this paragraph is retained only as
+history and is not an instruction.
 
 **HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 """
-Control-seat self-draining triage loop.
+Control-seat local triage helper.
 ============================================================================
-Lets the CONTROL seat process worker acks WITHIN one turn instead of waiting on
-a per-ack human nudge — the operator is not the router. Spec: SHEP-1 doc
-live/specs/control_you_there_loop.md.
+Transforms response files already captured by the canonical Ontinuity HTTPS
+receipt flow. It performs no network access and holds no capability material.
+The model-facing transition remains visibly and exclusively:
 
-WHAT IT AUTOMATES (the routing): within one turn, the control seat calls this to
-DRAIN AND TRIAGE — collect every pending worker ack (kind=result/note addressed
-to control), follow each ref to see what's staged, and produce a single ranked
-review queue. No per-ack nudge; no human routing.
+    curl --config - < REQUEST.curl
+
+WHAT IT AUTOMATES (the routing): within one turn, the control seat gives this the
+two verified response files. It filters pending worker acks, preserves their refs,
+and produces a single ranked review queue without another network transition.
 
 WHAT IT DOES NOT AUTOMATE (the judgment): it does NOT commit. Committing a staged
 artifact needs the GitHub token the control seat holds IN-CONTEXT, and a worker
@@ -30,28 +31,17 @@ acks as work). It is to use TWO channels:
     to the worker-facing filter.
 
 ACROSS-TURN LIMIT (honest): control is a chat node too. When its turn budget ends,
-the turn ends; software can't give a chat window a turn. So across turn budgets
-control needs the SHEP-1 shepherd-alert + one human nudge per budget, exactly like
-any worker node. Within a turn: self-draining. Across turns: shepherd-surfaced nudge.
+the turn ends; software cannot give a chat window a turn. The shepherd can surface
+work, but the next model turn must prepare and execute a new canonical receipt.
 
-RUN: this is a control-seat helper. The control seat calls triage() each turn to
-get its review queue, acts on it (read_file the staged artifact, review, commit_file,
-fold), then loops. It is NOT a detached daemon — it runs inside the control seat's
-live turn so the seat can exercise judgment on what it surfaces.
+RUN: prepare, check, send, and verify separate mailbox_peek and you_there receipts,
+then pass their captured response JSON paths to this helper. It is not a detached
+daemon and cannot create an alternate transport path.
 """
-import json, os, urllib.request, urllib.parse
+import argparse
+import json
+import os
 from datetime import datetime, timezone
-
-ENGINE = "https://web-production-7eaf8.up.railway.app"
-CAPABILITY = os.environ.get("ONTINUITY_CAPABILITY", "").strip()
-
-
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
-_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
 
 SEEN_FILE = os.environ.get(
     "ONTINUITY_CONTROL_SEEN_FILE",
@@ -60,17 +50,12 @@ SEEN_FILE = os.environ.get(
 )
 
 
-def _op(name, body):
-    if not CAPABILITY:
-        raise RuntimeError("ONTINUITY_CAPABILITY is not configured")
-    url = f"{ENGINE}/diag/op/{name}"
-    data = json.dumps(body).encode()
-    req = urllib.request.Request(
-        url, data=data,
-        headers={"Content-Type": "application/json",
-                 "Authorization": "Bearer " + CAPABILITY}, method="POST")
-    with _NO_REDIRECT_OPENER.open(req, timeout=90) as r:  # 90 = you_there cap
-        return json.loads(r.read().decode())
+def _read_response(path):
+    with open(path, encoding="utf-8") as handle:
+        result = json.load(handle)
+    if not isinstance(result, dict):
+        raise ValueError("captured response must be a JSON object")
+    return result
 
 
 def _load_seen():
@@ -86,11 +71,12 @@ def _save_seen(seen):
     os.replace(tmp, SEEN_FILE)
 
 
-def collect_pending_acks():
+def collect_pending_acks(peek):
     """READ-ONLY: peek control's inbox for result/note acks not yet surfaced.
     Returns a list of {msg_id, block_id, from_seat, ref, summary} ranked oldest-first
     (oldest pending review first). Does NOT claim — acks are pointers, not work."""
-    peek = _op("mailbox_peek", {"seat": "control", "limit": 50})
+    if not isinstance(peek, dict) or peek.get("ok") is not True:
+        raise ValueError("mailbox_peek response is not a successful object")
     seen = _load_seen()
     pending = []
     for m in peek.get("messages", []):
@@ -114,20 +100,14 @@ def collect_pending_acks():
     return pending
 
 
-def claim_review_work(wait_seconds=75):
-    """you_there for a claimable REVIEW item (proposal awaiting sign-off) addressed
-    to control. Returns the claimed message or None. NOSELF-1 guarantees control is
-    never handed its own proposal."""
-    return _op("you_there", {"roles": ["any_reviewer"],
-                             "wait_seconds": min(wait_seconds, 90)}).get("message")
-
-
-def triage(mark_surfaced=True):
+def triage(peek, review_response, mark_surfaced=True):
     """One triage pass for the control seat. Returns the review queue the seat then
     acts on with its own judgment + token. Marks surfaced acks as seen so they are
     not re-surfaced (the seat clears them by acting; re-running won't spam)."""
-    acks = collect_pending_acks()
-    review = claim_review_work(wait_seconds=5)   # short poll; don't block triage long
+    acks = collect_pending_acks(peek)
+    if not isinstance(review_response, dict):
+        raise ValueError("you_there response must be a JSON object")
+    review = review_response.get("message")
     if mark_surfaced and acks:
         seen = _load_seen()
         seen.update(a["msg_id"] for a in acks)
@@ -142,7 +122,7 @@ def triage(mark_surfaced=True):
             "review -> commit_file (with your token) -> fold the queue. The COMMIT is "
             "yours; this loop only routed + summarized. If claimed_review_item is set, "
             "review/sign-off that proposal too."),
-        "boundary": "drain-and-triage automated; commit + judgment stay with the control seat.",
+        "boundary": "local triage automated; transport, commit, and judgment remain explicit.",
     }
     return out
 
@@ -156,7 +136,19 @@ def reset_seen():
 
 
 if __name__ == "__main__":
-    if not CAPABILITY:
-        print(json.dumps({"error": "ONTINUITY_CAPABILITY is not configured"}))
+    parser = argparse.ArgumentParser(
+        description="Triage canonical Ontinuity response files locally")
+    parser.add_argument("--peek-response")
+    parser.add_argument("--review-response")
+    args = parser.parse_args()
+    if not args.peek_response or not args.review_response:
+        print(json.dumps({
+            "error": "compiled mailbox_peek and you_there response files are required",
+            "transport": "curl --config - < REQUEST.curl",
+        }))
     else:
-        print(json.dumps(triage(mark_surfaced=False), indent=2))
+        print(json.dumps(triage(
+            _read_response(args.peek_response),
+            _read_response(args.review_response),
+            mark_surfaced=False,
+        ), indent=2))

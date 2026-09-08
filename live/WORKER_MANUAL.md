@@ -25,9 +25,25 @@ approved seat receives one short-lived bearer capability. The signed grant binds
 seat, lineage, operation allowlist, expiry, and revocable ID. Request-body identity
 cannot replace the signed identity.
 
-Every call uses POST {engine}/diag/op/<name> with an Authorization bearer header
-and a JSON body. Credential-bearing callers refuse redirects. Never request or
-handle diagnostic, Railway, repository, mailbox, or deployment roots.
+Every call uses reviewed local compiler `live/tools/ontinuity_https.sh`. First
+prepare and check a `capability` request from the named logical engine, operation,
+JSON-body file, and mode-600 capability file; then run only the emitted top-level
+`curl --config - < REQUEST.curl` and locally `verify` it. The compiler—not the
+worker—selects POST, the reviewed `live/ONTINUITY_ENDPOINTS.conf` mapping,
+Authorization header, timeouts, HTTPS-only transport, response capture, request
+identifier, body/credential-bound v2 digest, and redirect denial. MAIN rejects a
+missing or mismatched compiled envelope with HTTP 428 before relay, and local
+`verify` requires the echoed request ID. Never reconstruct raw HTTP or client-shop after a
+pre-execution platform denial. The receipt survives for an identical retry only
+when the host explicitly says curl never started; an ambiguous post-start outcome
+fails closed. Other model tools remain available for local and non-Ontinuity work;
+they are not alternate transitions for a prepared request.
+
+MAIN records each side-effecting mailbox request ID before relay. A completed
+duplicate returns its bounded saved response without a second execution. A
+conflicting, in-progress, or unknown duplicate returns HTTP 409 and must stop. Use a
+new prepare only for an intentional new operation. The exact provider-neutral wire
+contract is `live/specs/ontinuity_https_protocol.md`.
 
 The B1 initial worker grant contains only:
 
