@@ -2,6 +2,40 @@
 
 *Status: PROPOSE-ONLY (no build). Authored by worker1 (claude:opus-4.8) under block ERL-1, dispatched by control. Grounded in the live corpus (established_results schema + 0-row count), the live app.py read from the repo, and the Projenius system prompt's SYNTHESIZE format. Inferences labeled.*
 
+## CURRENT-SOURCE ADDENDUM — 2026-09-09
+
+This memo is preserved as the historical decision record it was when authored;
+it is **not** an accurate description of every current ERL layer. Source review
+at accepted B1 commit `0ef62d7dfce76891cebae7b2484ca592dd663246`
+established the following later state:
+
+- Session-local `active_session["session_ledger"]` and `results_board` are active
+  execution/adjudication memory.
+- Commit `28ba127` added a project/branch-scoped, GitHub-backed file ERL.
+  `run_projenius_synthesize()` supplies its current complete contents;
+  `write_erl_ledger()` writes the returned complete ledger wholesale with a
+  truncation guard. Commit `8aefd5e` preserved one real result file as
+  `erl_main_main.txt`.
+- The structured SQLite `established_results` schema and its DB methods still
+  have no production writer call from `app.py`. The memo's “NO PERSIST PATH”
+  diagnosis is therefore superseded for the file ERL but remains applicable to
+  the structured table.
+- The ORIENT contract in `prompts/projenius_system.txt` requires the ERL, branch
+  registry, Knowtext Active Frameworks/Open Questions, and objective.
+  `run_projenius_orient()` currently supplies only the objective and the
+  Knowtext working-context extraction. Existing box `/api/ledger` and
+  `/api/project_state` feeds are not consumed by current `app.py`.
+- `write_erl_ledger()` does not propagate the Boolean result of
+  `github_push_erl()`. A local write can be counted and announced even when
+  remote persistence failed; the helper emits a separate error but the final
+  success wording is not proof of GitHub durability.
+- No focused current test module establishes these ERL boundary properties.
+
+Do not implement the old recommendation directly. The controlling board still
+selects work. Revisit the ledger authority and the smallest necessary join under
+B5/B7 only after B1 and B3, using
+`live/notes/POST_B1_ALIGNMENT_RECOVERY.md` as the recovery inventory.
+
 ## THE DIAGNOSIS (confirmed from code + corpus, not recalled)
 established_results has 0 rows across all sessions. The table is well-formed (result_id, result_text verbatim, confidence ESTABLISHED/PROVISIONAL/RETRACTED, supporting_sessions JSON, confirmation_count, retraction fields, established_at). It is empty for two independent reasons, BOTH of which must be fixed for structured persistence to work:
 

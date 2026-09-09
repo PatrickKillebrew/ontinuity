@@ -287,26 +287,29 @@ mode-600 file supplies exactly the four non-secret provider UUIDs; the Railway
 token remains environment-only. Strict schema, UUID, type, size, regular-file,
 permission, duplicate-key, and symlink checks fail closed. No new route, shell,
 SSH path, settings service, model capability, or alternate HTTP transport is
-introduced. The complete current bounded verifier passes author-side. This
-advances RC-2 by unblocking the trusted deploy and RC-7 by turning the missing
-Hetzner configuration into a documented reproducible step.
+introduced. After a first clean review found and caused correction of filesystem
+alias/containment, special-file, and verifier-artifact defects, a different clean
+reviewer accepted exact commit
+`0ef62d7dfce76891cebae7b2484ca592dd663246`. It reproduced 216/216 tests,
+both manifests and coverage relations, and an unchanged repository-byte digest.
+The accepted commit remains local and is the immutable B1 deploy object.
 
-The single immediate action is to apply the complete independent-authority gate
-to the exact corrected candidate: obtain a clean independent ACCEPT, resolve and
-commit the unchanged candidate, create a fresh proposal/signoff ref bound to that
-resulting SHA, and obtain Patrick's explicit authorization to publish and deploy
-that exact SHA. The earlier authorization and signed ref for `b596d3c` do not
-transfer. After authorization, publish the exact commit, install its box unit and
+The single immediate action is to create a fresh proposal and distinct-seat
+signoff whose canonical deploy ref binds exact commit `0ef62d7...`, then obtain
+Patrick's explicit authorization to publish and deploy that same SHA. The
+earlier authorization and signed ref for `b596d3c` do not transfer. After
+authorization, publish `0ef62d7`, install its manifest-defined box unit and
 separately generated private UUID document, restart the workspace once, and
-deploy MAIN then FARM at that same reviewed commit according to
-`B1_INSTALL_MANIFEST.json`. B3 remains the next dependency lane after B1 and is
-not part of this correction.
+deploy MAIN then FARM through the accepted trusted boundary. Record the live
+proof before starting B3, which remains the next dependency lane.
 The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
 B5-P evidence preservation is operational; the comparative plan remains
-proposed, unfrozen, and unrun. Local transport tests do not make the overlay live,
-and the server-side enforcement remains unproved live until clean review,
-unchanged deployment, and cold Control/Worker boots.
+proposed, unfrozen, and unrun. The source recovery inventory at
+`live/notes/POST_B1_ALIGNMENT_RECOVERY.md` is deferred input to B5/B6; it does
+not interrupt B1, B3, or authorize any dormant path. Local acceptance does not
+make the overlay live, and the server-side enforcement remains unproved live
+until unchanged deployment and cold Control/Worker boots.
 
 ---
 

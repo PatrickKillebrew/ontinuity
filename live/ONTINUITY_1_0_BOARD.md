@@ -52,7 +52,7 @@ Create a machine-readable and human-readable manifest of:
 ### B1 — Operator-approved capability admission
 
 **Serves:** RC-2; prerequisite to authenticated RC-3 and RC-5  
-**State:** ACCEPTED `b596d3c` PUBLIC AND INSTALLED AS THE SIX-FILE BOX UNIT; LIVE MAIN REMAINS `693435a`, FARM REMAINS ROLLBACK `3476ed8`; NARROW PRIVATE PROVIDER-CONFIG CORRECTION AWAITS CLEAN REVIEW AND A NEW EXACT-SHA GATE
+**State:** SUCCESSOR `0ef62d7` ACCEPTED LOCALLY AS THE EXACT B1 DEPLOY OBJECT; NOT YET PUBLIC, INSTALLED, OR LIVE. PUBLIC/BOX REMAIN `b596d3c`; MAIN REMAINS `693435a`; FARM REMAINS ROLLBACK `3476ed8`
 
 Supersedes and consolidates:
 
@@ -92,18 +92,22 @@ verifier preflights its selected project runtime before starting tests. Successi
 clean reviews forced correction of process-local replay locking, unbounded relay-
 response intake, contradictory handoff state, deploy authority not bound to the
 exact block/commit/target object, loose persisted-schema typing, and curl's implicit
-user default configuration. The narrow local correction now reuses the existing
+user default configuration. The narrow correction now reuses the existing
 operator-only `write_file`, persistent box-project storage, and
 `restart_workspace` path for an exact mode-600 file containing only the four
 non-secret provider UUIDs. The token remains environment-only; no new route,
 shell, SSH path, settings service, model capability, or HTTP transport is added.
-The complete current bounded verifier passes author-side; that success is not
-authority. The B1 transition resumes only after these
-exact corrected bytes receive a clean independent ACCEPT, their resulting commit
-SHA is resolved, a fresh proposal/signoff binds that SHA, and Patrick explicitly
-authorizes publishing and deploying that exact SHA. MAIN and FARM must then
-deploy that same reviewed commit; the earlier `b596d3c` authorization and signoff
-do not transfer to its successor.
+After one clean review rejected path-alias, containment, special-file, and
+verifier-artifact defects, a different clean reviewer accepted the corrected
+freeze unchanged. Exact commit
+`0ef62d7dfce76891cebae7b2484ca592dd663246` passed 216/216 bounded tests and
+both manifest/coverage checks with a byte-preserving review. The accepted commit
+is local only. Its next gate is a fresh proposal and distinct-seat signoff bound
+to that exact SHA, followed by Patrick's explicit authorization to publish and
+deploy that same SHA. Only then may the manifest-defined box unit and private
+four-UUID document be installed, the workspace restarted once, and MAIN then
+FARM deployed at `0ef62d7`. The earlier `b596d3c` authorization and signoff do
+not transfer.
 The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
 ### B2 — Bind occupant and action provenance
@@ -218,6 +222,16 @@ Consolidates:
 
 Decompose `app.py` only where a measured test, ownership boundary, or reproducibility failure requires it.
 
+Recovery inventory `live/notes/POST_B1_ALIGNMENT_RECOVERY.md` records machinery
+already present and must be read before B6 design. In particular, reuse the
+legacy workspace's project/config/state/history/rollback/audit/search substrate;
+repair its string-prefix `safe_path()` and post-write `changed` failure before
+trusting it; declare one canonical copy of duplicated root/live sources; and
+selectively port any still-needed Governor delta rather than rebuilding or
+merging an old branch wholesale. The exact-string `shell=True` `/run` and mutable
+`/settings` allowlist are legacy operator surfaces, not trusted model/deploy
+machinery.
+
 **Acceptance:** provision a clean environment from a tagged release using only documented operator-owned credential and approval steps. It reports its own versions and detects repo-versus-box-versus-deployment drift.
 
 ### B7 — Complete three cold boots
@@ -284,6 +298,10 @@ Package three review requests rather than asking anyone to evaluate the entire w
 - Standalone Project Corpus Standard as the whole product: retained as documentation material under B6.
 - Global master Keys modal as the credential architecture: may remain for local recovery during transition, but is not the 1.0 identity solution.
 - Self-enforcing deploy proposal that depends on a separate JSONL provenance source: re-evaluate under B4/B5; do not create a competing source of truth by default.
+- IP-whitelist `register_egress`: the network design is retired. Its remaining
+  engine allowlist, direct-start call, and box `ufw` route are B6 active-surface
+  residue; remove only after compatibility and museum checks, and do not copy
+  the obsolete action into new machinery.
 
 ### Absorbed into release blocks
 
@@ -295,7 +313,7 @@ Package three review requests rather than asking anyone to evaluate the entire w
 | Museum formalization; close/open gates; signoff/reject guard | B4 |
 | Execution log; catches; operator inputs; review lifecycle; cycle IDs | B5 |
 | Portable tenant; The Package; drift; backup; active-surface cleanup | B6 |
-| Governor worker-status/cockpit consolidation candidate (`codex/governor-observability` at `5e3310d`; not live) | B6; minimum observation needed for B9 |
+| Governor consolidation: current `app.py` already serves `/governor`, `/governor/data`, and `/governor/workers`; preserved branch `codex/governor-observability` at `5e3310d` adds reusable activity/punch-list deltas but must not be merged wholesale | B6; minimum observation needed for B9 |
 | Worker boot tuning and cross-vendor boot tests | B7 |
 | Friction/behavioral comparison and burn-in evidence | B8 |
 | Minimum onboarding and operator surface | B9 |
@@ -343,16 +361,15 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Apply the review/authorization gate to the exact manifest-frozen private
-provider-configuration correction on `codex/b1-transport-lock`. Its complete
-current bounded verifier passes, but that is author-side evidence. Require an
-independent ACCEPT, resolve and commit the unchanged candidate, create a fresh
-proposal/signoff ref bound to the resulting exact SHA, and request Patrick's
-authorization to publish and deploy that same SHA before any remote or live
-action. The prior `b596d3c` authorization and signoff do not transfer. Only then
-install the corrected box unit and private four-UUID document, restart once, and
-deploy MAIN then FARM at the same reviewed commit. B3 remains next after B1 and
-must not be mixed into this correction.
+Create a fresh proposal and distinct-seat signoff bound to exact accepted B1
+commit `0ef62d7dfce76891cebae7b2484ca592dd663246`, then request Patrick's
+authorization to publish and deploy that same SHA. The prior `b596d3c`
+authorization and signoff do not transfer. Only after exact-SHA authorization,
+publish `0ef62d7`, install its manifest-defined box unit plus the separately
+generated private four-UUID document, restart once, and deploy MAIN then FARM
+through the accepted trusted boundary. Record the live proof before beginning
+B3. The post-B1 recovery register is background evidence for B5/B6 and must not
+be allowed to interrupt this order.
 
 B0 detected FARM and box drift. Preserve that observation; reconcile it under
 B6 rather than silently mixing correction into the baseline.

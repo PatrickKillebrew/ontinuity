@@ -1,19 +1,21 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-08 — exact commit `b596d3c` was independently accepted,
-# operator-authorized, published to public main, and installed as the exact
-# six-file box unit. The workspace restarted once and all six hashes plus MAIN/FARM
-# rollback compatibility passed. Engine deployment then failed closed before any
-# provider request because the box lacked provider UUID configuration.
+# Updated 2026-09-09 — successor B1 commit `0ef62d7` has a clean independent
+# ACCEPT and is the immutable deploy object. It remains local: no proposal/signoff
+# for that exact SHA, publication authorization, push, box install, restart, or
+# engine deployment has occurred. Public/box remain `b596d3c`; MAIN remains
+# `693435a`; FARM remains rollback `3476ed8`.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
 ## STATE AT FOLD
-- **CURRENT OVERRIDE:** Public main is exact accepted commit `b596d3c`. The exact
-  six-file box unit (`file_server.py`, `box_ops.py`, `trusted_deploy.py`,
-  `seat_mailbox.py`, `live/bootstrap/gate.py`, and `shepherd_alert.py`) is
-  installed, the workspace restarted once, and every installed hash passed. MAIN
-  still runs `693435a`; FARM remains rollback `3476ed8` because
-  trusted deployment refused before provider dispatch. Persistent burn-in source
-  already matches its manifest and was not restarted.
+- **CURRENT OVERRIDE:** Exact commit
+  `0ef62d7dfce76891cebae7b2484ca592dd663246` is the independently accepted B1
+  successor and immutable deploy object. It passed 216/216 bounded tests, both
+  manifest/coverage checks, and byte-preserving clean review. It remains local
+  and has not changed the public repository, box, MAIN, FARM, or burn-in service.
+- **LAST VERIFIED LIVE STATE:** Public main and the installed six-file box unit
+  remain `b596d3c`. The workspace had restarted once at that version and all six
+  installed hashes passed. MAIN still runs `693435a`; FARM remains rollback
+  `3476ed8`; persistent burn-in source matches its manifest but was not restarted.
 - **PUBLIC REPOSITORY STATE:** `origin/main` is exact accepted and
   operator-authorized commit `b596d3c`. Its public presence is corroborating
   repository evidence; the separately verified box installation and live engine
@@ -22,7 +24,7 @@
   `curl --disable --config -` engine path, exact request envelope, interprocess replay lock,
   bounded response intake, fixed ledgered `restart_burnin`, and the reviewed
   logical endpoint registry. It does not govern hosting-provider administration.
-- **TRUSTED DEPLOY GAP CORRECTED LOCALLY:** the existing box-side `/op/deploy`
+- **TRUSTED DEPLOY GAP ACCEPTED LOCALLY:** the existing box-side `/op/deploy`
   accepts only a two-phase provider-neutral tuple: action, logical target,
   signoff block, and exact commit. The box alone holds provider configuration and
   credentials, records a pre-mutation state, captures the exact provider deployment
@@ -32,13 +34,19 @@
   traversal/symlink/nonregular targets, and is installed by mode-600 atomic
   replacement; the verifier performs syntax compilation without repository
   bytecode artifacts.
-- **SINGLE NEXT ACTION:** independently review the narrow private provider-ID file
-  wiring built from existing `write_file`, persistent box-project storage, and
-  `restart_workspace`. If accepted unchanged, resolve and commit the exact
-  candidate, create a fresh two-party deploy ref bound to that resulting SHA, and
-  obtain Patrick's exact-SHA publication/deployment authorization. Only then may
-  it be published, installed with a separately generated mode-600 four-UUID
-  document, restarted, and deployed MAIN then FARM at that same reviewed SHA.
+- **SINGLE NEXT ACTION:** create a fresh proposal and distinct-seat signoff whose
+  canonical deploy ref binds exact commit `0ef62d7...`, then obtain Patrick's
+  explicit authorization to publish and deploy that same SHA. The earlier
+  `b596d3c` signoff and authorization do not transfer. Only then publish the exact
+  commit, install its manifest-defined box unit plus separately generated
+  mode-600 four-UUID document, restart once, and deploy MAIN then FARM through
+  the accepted trusted boundary. Record live proofs before starting B3.
+- **POST-B1 ALIGNMENT RECOVERY:** read
+  `live/notes/POST_B1_ALIGNMENT_RECOVERY.md` after B1/B3 when B5/B6 reaches the
+  relevant seams. It records the three ERL layers, existing box workspace and
+  Governor machinery, canonical-source ambiguity, dormant DB/app wiring, and
+  retired `register_egress` residue. It is evidence, not a work selector, and
+  must not interrupt the current dependency order.
 - B0 is complete at commit `7abadca`; its authenticated read-only report
   honestly returned `DRIFT`. The original observation remains the baseline even
   where later work repaired part of the observed box divergence.
@@ -79,11 +87,18 @@
 - Laptop seat (laptop_seat.py on the HP, C:\donkeycar\) ALIVE and processing tasks (done-marking).
 - Credentials: LLaves keys live and in use; pre-public risk accepted by operator. Rotation = launch
   hygiene, not a current blocker.
-- ChatGPT Work access rule: first admit command networking in Settings -> Data
-  controls -> Work network access. Use the documented curl and one narrowly
-  scoped credential-bearing remote request per tool call. A DNS/host/policy
-  denial before HTTP is `WORK_EGRESS_DENIED`, not evidence about Railway or the
-  credential. Browser reachability is observation only, not authenticated hands.
+- Egress selection is mechanical. For model-seat engine requests, use the
+  reviewed compiler and execute only its exact top-level
+  `curl --disable --config - < REQUEST.curl` transition; do not reconstruct the
+  URL, header, or request in a reviewer tool call. Hosting administration uses
+  the accepted `/op/deploy` boundary: only the box owns Railway provider facts,
+  token, GraphQL, and status reconciliation. Direct Railway GraphQL is an
+  operator-recovery path, not a model-selected alternative. A pre-HTTP denial is
+  not evidence about Railway or a credential, and browser reachability is
+  observation only, not authenticated hands.
+
+### HISTORICAL B1 REVIEW ARC — retained as evidence; the current override above governs
+
 - The corrected local B1 candidate now derives the bootstrap operation count
   from the server allowlist, removes the caller override, reads the latest
   bounded queue fold, requires capability proof, refuses authenticated

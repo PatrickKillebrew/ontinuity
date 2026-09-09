@@ -1625,3 +1625,100 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
   the exact refrozen candidate to a different clean reviewer. Only an unchanged
   ACCEPT permits resolving and committing the successor SHA; its fresh signoff
   and Patrick's exact-SHA authorization remain mandatory before remote/live work.
+
+## FOLD — B1 successor accepted; post-B1 dormant-wiring alignment inventory — 2026-09-09
+
+**RELEASE CONDITION**
+- B1 remains the active block for RC-2/RC-7. The source-alignment findings are
+  recovery evidence for later B5/B6/B7 work and do not select a new task. B3
+  remains the next dependency lane after B1.
+
+**B1 ACCEPTANCE**
+- The corrected freeze passed the complete byte-preserving verifier: 216/216
+  bounded tests, exact manifest hashes, exact coverage, syntax/static checks,
+  secret gates, and diff hygiene.
+- A different clean reviewer reproduced that evidence, adversarially rechecked
+  the rejected path-alias/containment/special-file/verifier-artifact cases, and
+  returned ACCEPT with the repository byte digest unchanged.
+- The unchanged accepted candidate was committed locally as
+  `0ef62d7dfce76891cebae7b2484ca592dd663246`, parent `da846fbb206580de08c049b44e43a3ad91cd839e`,
+  tree `ae5b68302c1b24e7efc085e53f007e57ea3dc3ae`.
+- Install-manifest SHA-256 is
+  `18690b97a1a1ae7f50e1ff6ac682c8210f7d5d60807e50786a25e454a7413214`;
+  transport-manifest SHA-256 is
+  `6279166a9f25c21405f5f51bfc048345547b16ab7e8603ff852f4eadc1324c0b`.
+- This acceptance does not transfer the prior `b596d3c` proposal, signoff, or
+  authorization. No push, credential read, box install, restart, provider call,
+  or deployment followed it.
+
+**ALIGNMENT QUESTION**
+- The operator asked Control to search the corpus and `app.py` for pre-laid or
+  dormant machinery—especially Hetzner operations and the Established Results
+  Ledger—before inventing further components. The full source-grounded result is
+  preserved at `live/notes/POST_B1_ALIGNMENT_RECOVERY.md`; the historical ERL
+  proposal now carries a current-source addendum.
+
+**ESTABLISHED SOURCE FINDINGS**
+- “ERL” currently names three different layers: active session-local
+  `session_ledger`/`results_board`; an implemented project/branch file ERL with
+  SYNTHESIZE, truncation guard, and GitHub push attempt; and a structured SQLite
+  `established_results` schema whose writer methods have no production caller.
+  The file layer landed in `28ba127` and one real ledger file in `8aefd5e`; the
+  old propose-only memo's blanket no-persistence diagnosis is superseded only for
+  that file layer.
+- Projenius ORIENT's prompt requires the ERL and branch registry, but current
+  `run_projenius_orient()` supplies only the objective and Knowtext working
+  context. Box `/api/ledger` and `/api/project_state` feeds exist but current
+  `app.py` does not consume them. `write_erl_ledger()` also counts a local write
+  without propagating `github_push_erl()` failure. These are later acceptance
+  questions, not B1 blockers.
+- The manifest-defined courier already exposes twenty named Hetzner operations,
+  while B1 deliberately grants models only seven safe operations plus the probe
+  and gives deploy a separate confirmed short-lived scope. Existing operations
+  are the extension point; no SSH, free-form shell, alternate HTTP client, or
+  reconstructed Railway route is warranted.
+- `live/box/file_server.py` already contains persistent project/config/workspace
+  state, decisions/sessions/context, history, rollback, audit, manifest, search,
+  DB feeds, Governor, settings, and status. B6 should reuse that substrate, but
+  first correct its string-prefix `safe_path()` and its `/write` use of `changed`
+  after mutation but before assignment. Legacy `shell=True` `/run` and mutable
+  `/settings` are not trusted-deploy/model surfaces.
+- Current `app.py` already serves Governor root/data/workers. Preserved branch
+  `codex/governor-observability` at `5e3310d` contains reusable activity and
+  punch-list deltas but diverges from B1 and must not be merged wholesale.
+- Canonical-source cleanup remains real: root `box_ops.py` is a stale predecessor
+  of manifest-defined `live/box/box_ops.py`; root/live `db.py` and
+  `workspace_db_endpoint.py` pairs are byte-identical; two Governor HTML copies
+  match while the box copy differs. Preserve B0's historical DRIFT while B6
+  selects one canonical source per deployed surface.
+- The IP-whitelist design is explicitly retired, but `register_egress` remains
+  in the engine allowlist/direct-start path and box `ufw` route. That is B6
+  active-surface residue, not a transport path to reuse.
+- Most ordinary `app.py` helpers are connected. Remaining isolated helpers and
+  the unused `get_status` UI event are narrow compatibility/dormancy seams; they
+  do not justify a general refactor.
+
+**DISPOSITION**
+- The findings form one recovery register, not a new parallel backlog. B5 checks
+  ERL/evidence authority and joins; B6 reconciles canonical sources, workspace,
+  Governor, and retired surfaces; B7 tests whether orientation retrieves durable
+  truth. Intake and minor compatibility residue remain watch-only unless a
+  release acceptance test reproduces a failure.
+- A separate documentation branch preserves this fold and register so accepted
+  B1 commit `0ef62d7` remains byte-for-byte immutable. The B1 manifests are the
+  historical deploy contract and are not regenerated for documentation prose.
+
+**STATE LEFT**
+- Public main and installed box unit remain `b596d3c`; MAIN remains `693435a`;
+  FARM remains rollback `3476ed8`; burn-in remains un-restarted. The accepted
+  B1 object `0ef62d7` remains local. No live, credential, network, or remote
+  mutation occurred in the alignment/documentation pass.
+
+**NEXT**
+- Create a fresh proposal and distinct-seat signoff for canonical ref binding
+  exact `0ef62d7`, obtain Patrick's exact-SHA publication/deployment
+  authorization, then publish/install/deploy through the accepted trusted
+  boundary in manifest order. Preserve live proof, then begin B3. A fresh Control
+  conversation should orient from `CONTROL_HANDOFF.md`, the board, this fold,
+  and `live/notes/POST_B1_ALIGNMENT_RECOVERY.md` rather than reconstructing the
+  work from conversation memory.
