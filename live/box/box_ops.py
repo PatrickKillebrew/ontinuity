@@ -20,7 +20,7 @@ WHY:
     consistent with the no-credentials-on-box posture.
 """
 
-import os, json, base64, subprocess, secrets, re, urllib.parse, urllib.request, urllib.error
+import os, json, base64, subprocess, secrets, re, stat, tempfile, urllib.parse, urllib.request, urllib.error
 from flask import Blueprint, request, jsonify
 
 try:
@@ -158,8 +158,69 @@ def _ledger_finish(op_id, status, result=""):
 
 def _safe_box_path(name):
     """Resolve name against the box dir; refuse traversal."""
-    full = os.path.normpath(os.path.join(_BASE_DIR, name))
-    return full if full.startswith(os.path.normpath(_BASE_DIR)) else None
+    if not isinstance(name, str) or not name or os.path.isabs(name):
+        return None
+    base = os.path.realpath(_BASE_DIR)
+    full = os.path.abspath(os.path.join(base, name))
+    try:
+        if os.path.commonpath((base, full)) != base or full == base:
+            return None
+        parent = os.path.realpath(os.path.dirname(full))
+        if os.path.commonpath((base, parent)) != base:
+            return None
+        if os.path.lexists(full) and not stat.S_ISREG(os.lstat(full).st_mode):
+            return None
+    except ValueError:
+        return None
+    return full
+
+
+def _read_private_regular(path):
+    """Read the prior private config without following or blocking on special files."""
+    if not os.path.lexists(path):
+        return None
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    fd = os.open(path, flags)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError("trusted deploy config target must be a regular file")
+        data = os.read(fd, trusted_deploy._MAX_CONFIG_BYTES + 1)
+        if len(data) > trusted_deploy._MAX_CONFIG_BYTES:
+            raise ValueError("existing trusted deploy config is oversized")
+        return data.decode("utf-8")
+    finally:
+        os.close(fd)
+
+
+def _write_private_atomic(path, content):
+    """Install validated config privately and atomically in its trusted directory."""
+    parent = os.path.dirname(path)
+    os.makedirs(parent, mode=0o700, exist_ok=True)
+    old = _read_private_regular(path)
+    fd, temporary = tempfile.mkstemp(prefix=".trusted-deploy-config-", dir=parent)
+    try:
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            fd = -1
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        temporary = None
+        directory_fd = os.open(parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+        return old
+    finally:
+        if fd >= 0:
+            os.close(fd)
+        if temporary is not None:
+            try:
+                os.unlink(temporary)
+            except FileNotFoundError:
+                pass
 
 
 @box_ops_bp.route("/op/write_file", methods=["POST"])
@@ -177,23 +238,36 @@ def op_write_file():
     full = _safe_box_path(name)
     if not full:
         return jsonify({"error": "path traversal rejected"}), 403
-    op_id = _ledger_begin("write_file", {"path": name, "bytes": len(str(content))})
+    canonical_name = os.path.relpath(full, os.path.realpath(_BASE_DIR)).replace(os.sep, "/")
+    private_trusted_config = (
+        os.path.normcase(full)
+        == os.path.normcase(os.path.abspath(trusted_deploy.TRUSTED_CONFIG_PATH))
+    )
+    if private_trusted_config:
+        try:
+            trusted_deploy.validate_config_document(content)
+        except trusted_deploy.DeployError as exc:
+            return jsonify({"error": str(exc)}), 400
+    op_id = _ledger_begin("write_file", {"path": canonical_name, "bytes": len(str(content))})
     try:
-        old = None
-        if os.path.exists(full):
-            with open(full, "r", encoding="utf-8", errors="replace") as f:
-                old = f.read()
-        os.makedirs(os.path.dirname(full) or ".", exist_ok=True)
-        with open(full, "w", encoding="utf-8") as f:
-            f.write(content)
+        if private_trusted_config:
+            old = _write_private_atomic(full, content)
+        else:
+            old = None
+            if os.path.exists(full):
+                with open(full, "r", encoding="utf-8", errors="replace") as f:
+                    old = f.read()
+            os.makedirs(os.path.dirname(full) or ".", exist_ok=True)
+            with open(full, "w", encoding="utf-8") as f:
+                f.write(content)
         # record in the box's change history if file_server exposes it
         try:
             import file_server
-            file_server.record_change(name, old, content, b.get("description", "via /op/write_file"))
+            file_server.record_change(canonical_name, old, content, b.get("description", "via /op/write_file"))
         except Exception:
             pass
-        _ledger_finish(op_id, "ok", f"wrote {len(content)} bytes to {name}")
-        return jsonify({"ok": True, "path": name, "bytes": len(content)})
+        _ledger_finish(op_id, "ok", f"wrote {len(content)} bytes to {canonical_name}")
+        return jsonify({"ok": True, "path": canonical_name, "bytes": len(content)})
     except Exception as e:
         _ledger_finish(op_id, "fail", str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500

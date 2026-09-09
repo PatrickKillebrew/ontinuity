@@ -90,6 +90,24 @@ parsing the body. The child receives a fresh minimal environment and isolates
 curl's user default configuration without repurposing general home/configuration
 variables. There is no alternate Python HTTP fallback.
 
+The Railway token remains environment-only. The existing operator-root
+`write_file` operation installs the non-secret provider identifiers in a dedicated
+mode-600 `trusted_deploy_config.json` beside the adapter. That file contains
+exactly four canonical UUID fields: project, environment, MAIN service, and FARM
+service. `write_file` canonicalizes and confines the resolved path, treats path
+aliases as the same protected target, rejects symlink and nonregular targets,
+and installs the validated document by private mode-600 atomic replacement. The
+adapter accepts either a complete server environment identifier set or that
+complete private file, never a mixture. It reads and validates the file without
+following symlinks. The default state directory is the fixed
+`.workspace/deploy-state` beneath the persistent box project. This deliberately
+reuses existing box persistence and `restart_workspace`; it creates no new route,
+shell, SSH, settings service, or model capability.
+
+The bounded verifier performs syntax compilation in memory. It does not invoke
+`py_compile` or create repository bytecode, so a read-only reviewer can prove the
+candidate's whole-tree byte digest is unchanged before and after verification.
+
 Failure-log message bytes are read only to validate and bound the provider
 response. No message text, transformed message, or message hash reaches the caller,
 provenance ledger, or operations ledger. The caller receives only bounded count,
@@ -105,12 +123,16 @@ timestamps.
 ## Cutover order
 
 1. Install exact `box_ops.py` and `trusted_deploy.py` beside one another, install
-   the rest of the box manifest, restart the workspace under the rollback engine,
-   and verify every installed hash.
-2. Using operator transition/recovery authority and the existing two-party block,
-   call `start` for MAIN at the exact reviewed commit. Recover with `status` using
-   the same tuple; fail-stop on UNKNOWN, wrong ID, wrong service, wrong commit, or
-   provider failure.
+   the rest of the box manifest, write the separately generated exact private
+   provider-ID document through operator `write_file`, restart the workspace
+   under the rollback engine, and verify every installed hash and configuration
+   fact without returning values.
+2. After the correction is independently accepted and committed, record a fresh
+   proposal and distinct-seat signoff bound to that resulting exact commit. Using
+   operator transition/recovery authority, call `start` for MAIN with that tuple.
+   Recover with `status` using the same tuple; fail-stop on UNKNOWN, wrong ID,
+   wrong service, wrong commit, or provider failure. Authorization or signoff for
+   a predecessor commit never transfers.
 3. After MAIN returns at that commit, invoke fixed `restart_burnin` and prove the
    named resident service active while FARM remains rollback.
 4. Issue an explicitly approved deploy-only capability to the FARM signer. Use

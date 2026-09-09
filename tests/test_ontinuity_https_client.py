@@ -404,6 +404,9 @@ class OntinuityHttpsClientTests(unittest.TestCase):
         self.assertLess(dependency_probe, first_suite)
         self.assertIn("B1_TEST_PYTHON", source)
         self.assertIn("B1_VERIFY_REFUSED", source)
+        self.assertIn("export PYTHONDONTWRITEBYTECODE=1", source)
+        self.assertNotIn("-m py_compile", source)
+        self.assertIn('compile(path.read_bytes(), str(path), "exec")', source)
 
     def test_transport_overlay_manifest_covers_exact_delta(self):
         manifest_path = ROOT / "live" / "B1_TRANSPORT_LOCK_MANIFEST.json"

@@ -1,25 +1,23 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-08 — the accepted transport-lock and fixed burn-in restart are
-# committed at `6f52063`; the later implementation reached public main as
-# `b596d3c` during review but was not accepted. Its local metadata correction is
-# manifest-frozen under the review/exact-HEAD authorization gate. Public or local
-# commit state is not deployment authority, and live deployment is unverified.
+# Updated 2026-09-08 — exact commit `b596d3c` was independently accepted,
+# operator-authorized, published to public main, and installed as the exact
+# six-file box unit. The workspace restarted once and all six hashes plus MAIN/FARM
+# rollback compatibility passed. Engine deployment then failed closed before any
+# provider request because the box lacked provider UUID configuration.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
 ## STATE AT FOLD
-- **CURRENT OVERRIDE:** MAIN runs reviewed B1 commit `693435a` with its persistent
-  capability-registry volume attached. FARM remains on rollback `3476ed8`. The
-  five files from the earlier B1 box unit have been written to disk; pre-restart readback passed
-  for `file_server.py`, `box_ops.py`, `seat_mailbox.py`, and `gate.py`;
-  `shepherd_alert.py` still requires readback. The workspace has not restarted, so
-  the old process remains in memory. The corrected candidate expands this to the
-  exact six-file unit by adding `trusted_deploy.py` beside `box_ops.py`; it is not
-  installed. Do not restart until all six candidate disk hashes pass during an
-  authorized cutover.
-- **PUBLIC REPOSITORY OBSERVATION:** local remote-tracking reflog records a push
-  of `b596d3c` to `origin/main` during the review interval. The review rejected
-  that commit's stale operational state text. Do not infer acceptance, operator
-  authorization, installation, or live deployment from its public presence.
+- **CURRENT OVERRIDE:** Public main is exact accepted commit `b596d3c`. The exact
+  six-file box unit (`file_server.py`, `box_ops.py`, `trusted_deploy.py`,
+  `seat_mailbox.py`, `live/bootstrap/gate.py`, and `shepherd_alert.py`) is
+  installed, the workspace restarted once, and every installed hash passed. MAIN
+  still runs `693435a`; FARM remains rollback `3476ed8` because
+  trusted deployment refused before provider dispatch. Persistent burn-in source
+  already matches its manifest and was not restarted.
+- **PUBLIC REPOSITORY STATE:** `origin/main` is exact accepted and
+  operator-authorized commit `b596d3c`. Its public presence is corroborating
+  repository evidence; the separately verified box installation and live engine
+  revisions remain distinct facts.
 - **TRANSPORT LOCK ACCEPTED:** commit `6f52063` preserves the successful top-level
   `curl --disable --config -` engine path, exact request envelope, interprocess replay lock,
   bounded response intake, fixed ledgered `restart_burnin`, and the reviewed
@@ -29,11 +27,18 @@
   signoff block, and exact commit. The box alone holds provider configuration and
   credentials, records a pre-mutation state, captures the exact provider deployment
   identifier, and verifies that stored identifier's service and commit. A caller
-  cannot select transport details or satisfy status with a stale success.
-- **SINGLE NEXT ACTION:** apply the review/authorization gate to the exact
-  manifest-frozen object-bound deploy and transport-hardening candidate: require
-  an independent ACCEPT, then resolve the exact candidate HEAD and obtain
-  Patrick's authorization for that hash. An author does not deploy these bytes.
+  cannot select transport details or satisfy status with a stale success. The
+  private UUID file is identified from its canonical resolved path, rejects
+  traversal/symlink/nonregular targets, and is installed by mode-600 atomic
+  replacement; the verifier performs syntax compilation without repository
+  bytecode artifacts.
+- **SINGLE NEXT ACTION:** independently review the narrow private provider-ID file
+  wiring built from existing `write_file`, persistent box-project storage, and
+  `restart_workspace`. If accepted unchanged, resolve and commit the exact
+  candidate, create a fresh two-party deploy ref bound to that resulting SHA, and
+  obtain Patrick's exact-SHA publication/deployment authorization. Only then may
+  it be published, installed with a separately generated mode-600 four-UUID
+  document, restarted, and deployed MAIN then FARM at that same reviewed SHA.
 - B0 is complete at commit `7abadca`; its authenticated read-only report
   honestly returned `DRIFT`. The original observation remains the baseline even
   where later work repaired part of the observed box divergence.

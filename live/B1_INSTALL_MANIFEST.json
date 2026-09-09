@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "candidate_base_commit": "3476ed8d373807dcefc6ea85e7c88d778efa4bda",
-  "state": "local_exact_object_and_transport_hardening_candidate_awaiting_clean_review_not_live",
+  "state": "local_private_provider_configuration_correction_awaiting_clean_review_and_new_exact_sha_not_live",
   "generated_utc": "2026-09-08",
   "engine_deploy": {
     "targets": [
@@ -33,12 +33,12 @@
       },
       {
         "path": "live/box/box_ops.py",
-        "sha256": "b22b4f7aad00699239a3a54549f1741e9640366b809865b90e2d5fb0c6356c2c",
+        "sha256": "848ea20edc68d3c5abe3ebed06bb62acf30b0d1f39423bfb26fe14d145df5360",
         "target": "box_project/box_ops.py"
       },
       {
         "path": "live/box/trusted_deploy.py",
-        "sha256": "e9bc7064c2723f4b2e515d9fffacdfc69071c3b30b182f3fa322fe5580cfdf31",
+        "sha256": "7de289b08624d914a76a8bb0183ef1d21dddffe81a8a01744568a8f65663b435",
         "target": "box_project/trusted_deploy.py"
       },
       {
@@ -77,11 +77,11 @@
       },
       {
         "path": "live/ONTINUITY_1_0_BOARD.md",
-        "sha256": "9e7ff56856d1bcf0f3e75e2e5e2735c63675130297697e9f29bf21492f6e82be"
+        "sha256": "96e23b4034a0411d96f283bf089812547460ad061d5453bda3f4350e51db26b7"
       },
       {
         "path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md",
-        "sha256": "db5b2b4b6f21381814a097390609deec578647522a7f8dcf11c836233f50b2af"
+        "sha256": "c25a4a2c2f1ffd4261f832f1f250d829afad09a32b90b9b66d7b38f7d871e6e3"
       },
       {
         "path": "live/ONTINUITY_1_0_BASELINE.md",
@@ -117,7 +117,7 @@
       },
       {
         "path": "live/specs/trusted_deploy_protocol.md",
-        "sha256": "09cbb008b2188b9e65cce023aeb81477eb51cfc3827574fc135f56eb8a8dcf75"
+        "sha256": "50b7d7169cfe278da0c1f7a17e09ab7fed6dbf0a83e1f5d3fbf1f77d43c78cac"
       },
       {
         "path": "live/specs/ontinuity_https_protocol.md",
@@ -149,7 +149,7 @@
       },
       {
         "path": "live/OPERATING_MANUAL.md",
-        "sha256": "2eb13c39de40414539321396630b7ad32932c0e0a8fcdb405a697b267db30a98"
+        "sha256": "b156c0a6060d49dadf6196beee3bdca2845b57d8ac26c0e207b57c3fd82efaec"
       },
       {
         "path": "live/OPERATING_RUBRIC.md",
@@ -161,15 +161,15 @@
       },
       {
         "path": "live/CONTROL_HANDOFF.md",
-        "sha256": "76ed12280466e5ccacfde41eb122016b013da2742685566caa86b06943adb958"
+        "sha256": "42f84f1a6ebc783ec341f3a6aa6217bbcde09528d92c969d2808315fa0bdfd2b"
       },
       {
         "path": "live/PUNCH_LIST.md",
-        "sha256": "3365f231b3f186470588e6b5197512c800033169897b3aecedd0629661729e5e"
+        "sha256": "8e5329ccee6e7c3bb39e326cebd9601db0b520071b3cfa28247b1688cc78b03d"
       },
       {
         "path": "live/agent_queue.md",
-        "sha256": "55a118b013ab15b5334dd7d5fc3f074e6031070cbcaa7829c7aedcf922bec3bc"
+        "sha256": "8938bc835f8cd21c67a87eae5786d89b3c139a8364cf8ea750127c177d3f9eda"
       },
       {
         "path": "live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md",
@@ -185,7 +185,7 @@
     "required": [
       {
         "path": "live/tools/b1_verify.sh",
-        "sha256": "b07613286ac792e2aa137c1b581e9693114cb08431d585f6d1d3acb90a4e7eff"
+        "sha256": "c4d715679bab269f381fc0a3172e332b8e9c6224252d617d76ba506d47eebab1"
       },
       {
         "path": "tests/test_b1_bootstrap_gate.py",
@@ -197,7 +197,7 @@
       },
       {
         "path": "tests/test_b1_release_boundaries.py",
-        "sha256": "2d4cefe5371540a915f45c34190a3991b71c9a108bc2c8112523cf70d326abd2"
+        "sha256": "d0f1d991d71986a372dfb30762a7b7b011ba826a092b5c04c34e1c96b2778639"
       },
       {
         "path": "tests/test_capability_admission.py",
@@ -209,7 +209,7 @@
       },
       {
         "path": "tests/test_capability_box_identity.py",
-        "sha256": "5f6a4b3556efad52816f3a0fc957e364c03f6d5ff7a1c2025dd449c297916f24"
+        "sha256": "94baa71aef9c349e0ecc7b49a050897d722b8f0e2044e506dee909c6bfdb6af3"
       },
       {
         "path": "tests/test_capability_courier.py",
@@ -217,18 +217,19 @@
       },
       {
         "path": "tests/test_trusted_deploy.py",
-        "sha256": "f7bf0d200ec92d111a3f795fdf98a630c7ce0f9ac66cd0f327ff6d0fb2741822"
+        "sha256": "153c129ee9d52dd92c27752f8a6adf38922782db78864e3e48932bb2149aa82d"
       },
       {
         "path": "tests/test_ontinuity_https_client.py",
-        "sha256": "f942d38a8c6274825cdbcd8233fb3d049913aa3a28c3deeea935de6d7cc61180"
+        "sha256": "4a0d83f4f4fcc2527a3c9064d279c6d4f7ae2361c8f8b8e5aa018fb3528227db"
       }
     ]
   },
   "configuration_requirements": [
     "MAIN and FARM keep DIAG_KEY server-side; no model boot packet receives it",
     "the box alone holds hosting credentials and fixed project, environment, and MAIN/FARM service identifiers; no deploy caller supplies provider facts",
-    "ONTINUITY_DEPLOY_STATE_DIR names a private persistent box path whose directory is mode 700 and whose atomic state and single global lock are mode 600",
+    "the Railway token remains box-environment-only; operator write_file canonically identifies and confines trusted_deploy_config.json, rejects symlink/nonregular targets, validates exactly four non-secret provider UUIDs, and installs it by private mode-600 atomic replacement",
+    "the fixed box-project .workspace/deploy-state default or optional ONTINUITY_DEPLOY_STATE_DIR names a private persistent path whose directory is mode 700 and whose atomic state and single global lock are mode 600",
     "ONTINUITY_CAPABILITY_REGISTRY points to a private persistent writable path, or RAILWAY_VOLUME_MOUNT_PATH supplies its parent",
     "WORKSPACE_URL identifies the box hop and the box diagnostic root matches the engine root during the authorized transition",
     "SHEPHERD_ALERT_TO_SEAT defaults to control; any different target is an explicit operator choice"
@@ -237,14 +238,14 @@
     {
       "order": 1,
       "action": "preflight",
-      "instruction": "confirm the reviewed commit, idle MAIN and FARM, preserved rollback bytes, persistent capability and deploy-state configuration, matching server-side box/engine diagnostic root, and complete trusted provider configuration without displaying values",
+      "instruction": "confirm the reviewed commit, idle MAIN and FARM, preserved rollback bytes, persistent capability storage, matching server-side box/engine diagnostic root, and authoritative provider UUID sources without displaying values",
       "proof": "reviewed commit and rollback identifiers recorded; both engines idle; required configuration present without displaying values"
     },
     {
       "order": 2,
       "action": "install_box",
-      "instruction": "install the exact backward-compatible box unit including trusted_deploy.py beside box_ops.py, then restart the workspace once under the rollback engine",
-      "proof": "all box_install targets report the manifest hashes after restart"
+      "instruction": "install the exact backward-compatible box unit including trusted_deploy.py beside box_ops.py; install the separately generated exact four-UUID trusted_deploy_config.json through operator write_file; then restart the workspace once under the rollback engine",
+      "proof": "all box_install targets report the manifest hashes after restart; trusted provider configuration passes without returning values and its file is mode 600"
     },
     {
       "order": 3,
@@ -261,7 +262,7 @@
     {
       "order": 5,
       "action": "deploy_main",
-      "instruction": "record proposal and distinct-seat signoff with the identical canonical both-target ref for the exact reviewed commit, then use operator transition/recovery authority to call deploy start for MAIN with that block and commit; recover with separate status calls using the same tuple while FARM remains rollback",
+      "instruction": "after the correction is independently accepted and committed, record a fresh proposal and distinct-seat signoff with the identical canonical both-target ref for that resulting exact reviewed commit; predecessor authorization and signoff do not transfer; then use operator transition/recovery authority to call deploy start for MAIN with the fresh block and commit, recovering with separate status calls using the same tuple while FARM remains rollback",
       "proof": "the box returns only its deterministic tracking id; status binds the stored provider deployment id to the fixed MAIN service and exact commit, MAIN health and restart_burnin exposure match the reviewed commit, and failure logs disclose metadata only"
     },
     {

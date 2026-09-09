@@ -212,10 +212,12 @@ The private admission registry must resolve to a writable persistent engine path
 
 The box install is an exact six-file unit: `file_server.py`, `box_ops.py`, `trusted_deploy.py`, `seat_mailbox.py`, `live/bootstrap/gate.py`, and `shepherd_alert.py`. `trusted_deploy.py` must be installed beside `box_ops.py`; neither file is installed or restarted alone. The box's running Governor routes live inside `file_server.py`; the separate `live/governor/governor_routes.py` is a maintained source fragment, not a separately imported runtime module. The persistent burn-in target remains `/opt/ontinuity/burnin_resident.py`. `SHEPHERD_ALERT_TO_SEAT` defaults to `control`, preserving the observed installed behavior; changing the target is an explicit operator configuration decision.
 
+Trusted deployment reuses the box project's existing persistent file and restart wiring. The Railway token remains only in the box process environment. The four non-secret UUIDs live in `trusted_deploy_config.json` beside `trusted_deploy.py`, with exactly the keys `railway_project_id`, `railway_environment_id`, `railway_service_id_main`, and `railway_service_id_farm`. Install that document only through operator-root `write_file`: the route resolves and confines the canonical path, recognizes equivalent spellings as the same protected file, validates the exact schema and canonical UUIDs, rejects symlink/nonregular targets, and performs a private mode-600 atomic replacement. The adapter refuses missing, partial, oversized, symlinked, nonregular, permissive, duplicate-key, or extra-key configuration. Its default deploy-state directory is the fixed private `.workspace/deploy-state` beneath the persistent box project; `ONTINUITY_DEPLOY_STATE_DIR` remains an optional server-side override. Do not use `/run`, `/settings`, SSH, a shell command, or a model capability to configure this boundary.
+
 The B1 cutover order is mechanical and must match `B1_INSTALL_MANIFEST.json`:
 
-1. Confirm the reviewed commit, idle engines, rollback bytes, persistent registry configuration, and matching server-side box/engine root.
-2. Install the backward-compatible six-file box unit, including adjacent `box_ops.py` and `trusted_deploy.py`, then restart the workspace once.
+1. Confirm the reviewed commit, idle engines, rollback bytes, persistent registry configuration, authoritative provider UUID sources, and matching server-side box/engine root.
+2. Install the backward-compatible six-file box unit plus the separately generated private `trusted_deploy_config.json` through operator `write_file`, then restart the workspace once.
 3. Verify box health, exact installed hashes, header-only operator recovery, and old-engine compatibility.
 4. Install the persistent burn-in source and verify its hash, but do not restart it yet.
 5. Deploy and verify MAIN at the reviewed commit while FARM remains the rollback peer; MAIN must expose `restart_burnin` before it is invoked.

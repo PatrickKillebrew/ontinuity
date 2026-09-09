@@ -52,7 +52,7 @@ Create a machine-readable and human-readable manifest of:
 ### B1 — Operator-approved capability admission
 
 **Serves:** RC-2; prerequisite to authenticated RC-3 and RC-5  
-**State:** PUBLIC MAIN OBSERVED AT `b596d3c` WITHOUT ACCEPTANCE; LIVE MAIN LAST VERIFIED AT `693435a`, FARM AT ROLLBACK `3476ed8`; LOCAL METADATA CORRECTION UNDER THE REVIEW/EXACT-HEAD AUTHORIZATION GATE
+**State:** ACCEPTED `b596d3c` PUBLIC AND INSTALLED AS THE SIX-FILE BOX UNIT; LIVE MAIN REMAINS `693435a`, FARM REMAINS ROLLBACK `3476ed8`; NARROW PRIVATE PROVIDER-CONFIG CORRECTION AWAITS CLEAN REVIEW AND A NEW EXACT-SHA GATE
 
 Supersedes and consolidates:
 
@@ -69,13 +69,14 @@ Build the smallest admission flow: a seat requests entry; the operator approves;
 
 Full commercial multi-tenancy is POST-1.0 unless the outside-operator test proves it necessary.
 
-The fourth clean review accepted the exact corrected B1 freeze, which was landed
-as commit `693435a`. It was developed on `codex/b1-corrected` from rollback base
-`3476ed8`. MAIN runs the accepted commit with its persistent registry volume;
-FARM remains on rollback `3476ed8`. All five reviewed box files are written to
-disk; four pre-restart hashes have been read back exactly, with only
-`shepherd_alert.py` outstanding. The old workspace process remains in memory
-because the cutover fail-stopped before restart.
+The fourth clean review accepted the corrected B1 freeze landed as commit
+`693435a`, developed from rollback base `3476ed8`. The later transport and exact-
+deploy-object implementation was independently accepted, explicitly authorized,
+and published as `b596d3c`. Its exact six-file box unit was installed, the
+workspace restarted once, all six post-restart hashes passed, and rollback-engine
+compatibility was proved. MAIN still runs `693435a` and FARM remains on
+`3476ed8`: the first trusted MAIN deployment refused before provider dispatch
+because the box process lacked a complete set of fixed Railway UUIDs.
 
 The transition exposed a separate recurring reliability defect: prior corpus text
 named a "known-good curl" but did not preserve the exact operator request as an
@@ -91,14 +92,18 @@ verifier preflights its selected project runtime before starting tests. Successi
 clean reviews forced correction of process-local replay locking, unbounded relay-
 response intake, contradictory handoff state, deploy authority not bound to the
 exact block/commit/target object, loose persisted-schema typing, and curl's implicit
-user default configuration. The implementation was committed and pushed as
-`b596d3c` during the clean-review interval, but that review rejected its stale
-commit-state instructions; public presence is not acceptance or evidence of live
-deployment. A local manifest-frozen metadata correction derived from accepted
-transport base `6f52063` passes the complete current author-side verifier.
-Local commit state is not authority. The B1 transition resumes only when these
-exact manifest-frozen bytes have a clean independent ACCEPT, the candidate HEAD
-has then been resolved mechanically, and Patrick has authorized that exact hash.
+user default configuration. The narrow local correction now reuses the existing
+operator-only `write_file`, persistent box-project storage, and
+`restart_workspace` path for an exact mode-600 file containing only the four
+non-secret provider UUIDs. The token remains environment-only; no new route,
+shell, SSH path, settings service, model capability, or HTTP transport is added.
+The complete current bounded verifier passes author-side; that success is not
+authority. The B1 transition resumes only after these
+exact corrected bytes receive a clean independent ACCEPT, their resulting commit
+SHA is resolved, a fresh proposal/signoff binds that SHA, and Patrick explicitly
+authorizes publishing and deploying that exact SHA. MAIN and FARM must then
+deploy that same reviewed commit; the earlier `b596d3c` authorization and signoff
+do not transfer to its successor.
 The superseded `codex/b1-scoped-identity` candidate remains prohibited.
 
 ### B2 — Bind occupant and action provenance
@@ -338,13 +343,16 @@ Package three review requests rather than asking anyone to evaluate the entire w
 
 ## 4. CURRENT SINGLE NEXT ACTION
 
-Apply the review/authorization gate to the exact manifest-frozen
-`codex/b1-transport-lock` candidate derived from accepted local transport commit
-`6f52063`: require an independent ACCEPT, then resolve the exact candidate HEAD
-and request Patrick's authorization for that hash before any push, install,
-restart, or deployment. Only then resume the fail-
-stopped B1 cutover at the remaining pre-restart box readback. B3 remains the next
-dependency lane after B1; do not mix it into this bounded correction.
+Apply the review/authorization gate to the exact manifest-frozen private
+provider-configuration correction on `codex/b1-transport-lock`. Its complete
+current bounded verifier passes, but that is author-side evidence. Require an
+independent ACCEPT, resolve and commit the unchanged candidate, create a fresh
+proposal/signoff ref bound to the resulting exact SHA, and request Patrick's
+authorization to publish and deploy that same SHA before any remote or live
+action. The prior `b596d3c` authorization and signoff do not transfer. Only then
+install the corrected box unit and private four-UUID document, restart once, and
+deploy MAIN then FARM at the same reviewed commit. B3 remains next after B1 and
+must not be mixed into this correction.
 
 B0 detected FARM and box drift. Preserve that observation; reconcile it under
 B6 rather than silently mixing correction into the baseline.

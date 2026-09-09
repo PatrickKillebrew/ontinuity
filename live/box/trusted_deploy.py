@@ -29,6 +29,14 @@ class DeployError(Exception):
 
 
 RAILWAY_ENDPOINT = "https://backboard.railway.app/graphql/v2"
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TRUSTED_CONFIG_PATH = os.path.join(_BASE_DIR, "trusted_deploy_config.json")
+DEFAULT_STATE_DIR = os.path.join(_BASE_DIR, ".workspace", "deploy-state")
+_MAX_CONFIG_BYTES = 4096
+_TRUSTED_CONFIG_KEYS = {
+    "railway_project_id", "railway_environment_id",
+    "railway_service_id_main", "railway_service_id_farm",
+}
 RAILWAY_DEPLOY_MUTATION = (
     "mutation B1Deploy($serviceId:String!,$environmentId:String!,"
     "$commitSha:String!){serviceInstanceDeployV2(serviceId:$serviceId,"
@@ -141,6 +149,45 @@ def _canonical_uuid(value, label):
     return value
 
 
+def validate_config_document(raw):
+    """Validate the dedicated non-secret box configuration exactly."""
+    if isinstance(raw, str):
+        raw = raw.encode("utf-8")
+    if not isinstance(raw, bytes) or len(raw) > _MAX_CONFIG_BYTES:
+        raise DeployError("trusted deploy configuration is invalid", status=503)
+    value = _strict_json(raw)
+    if not isinstance(value, dict) or set(value) != _TRUSTED_CONFIG_KEYS:
+        raise DeployError("trusted deploy configuration is invalid", status=503)
+    return {
+        key: _canonical_uuid(item, key.replace("_", " "))
+        for key, item in value.items()
+    }
+
+
+def _file_provider_ids():
+    try:
+        info = os.lstat(TRUSTED_CONFIG_PATH)
+        if (not stat.S_ISREG(info.st_mode) or stat.S_ISLNK(info.st_mode)
+                or stat.S_IMODE(info.st_mode) != 0o600):
+            raise DeployError(
+                "trusted deploy configuration is not a private regular file",
+                status=503,
+            )
+        descriptor = os.open(
+            TRUSTED_CONFIG_PATH,
+            os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0),
+        )
+        try:
+            raw = os.read(descriptor, 4097)
+        finally:
+            os.close(descriptor)
+    except FileNotFoundError as exc:
+        raise DeployError(
+            "trusted deploy configuration is unavailable", status=503,
+        ) from exc
+    return validate_config_document(raw)
+
+
 def _provider_config(target):
     provider = os.environ.get("HOSTING_PROVIDER", "railway").strip().lower()
     if provider != "railway":
@@ -149,20 +196,36 @@ def _provider_config(target):
     if (not token or len(token) > 4096
             or any(ord(char) < 33 or ord(char) == 127 for char in token)):
         raise DeployError("trusted provider credential is unavailable or invalid", status=503)
+    env_ids = {
+        "railway_project_id": os.environ.get("RAILWAY_PROJECT_ID", "").strip(),
+        "railway_environment_id": os.environ.get("RAILWAY_ENVIRONMENT_ID", "").strip(),
+        "railway_service_id_main": os.environ.get("RAILWAY_SERVICE_ID_MAIN", "").strip(),
+        "railway_service_id_farm": os.environ.get("RAILWAY_SERVICE_ID_FARM", "").strip(),
+    }
+    if all(env_ids.values()):
+        provider_ids = {
+            key: _canonical_uuid(value, key.replace("_", " "))
+            for key, value in env_ids.items()
+        }
+    elif any(env_ids.values()):
+        raise DeployError(
+            "trusted provider environment identifiers are incomplete",
+            status=503,
+        )
+    else:
+        provider_ids = _file_provider_ids()
     config = {
         "token": token,
-        "project_id": _canonical_uuid(os.environ.get("RAILWAY_PROJECT_ID", ""), "project id"),
-        "environment_id": _canonical_uuid(os.environ.get("RAILWAY_ENVIRONMENT_ID", ""), "environment id"),
-        "service_id": _canonical_uuid(
-            os.environ.get("RAILWAY_SERVICE_ID_" + target.upper(), ""),
-            "service id",
-        ),
+        "project_id": provider_ids["railway_project_id"],
+        "environment_id": provider_ids["railway_environment_id"],
+        "service_id": provider_ids["railway_service_id_" + target],
     }
     return provider, config
 
 
 def _state_dir():
-    path = os.environ.get("ONTINUITY_DEPLOY_STATE_DIR", "").strip()
+    path = os.environ.get(
+        "ONTINUITY_DEPLOY_STATE_DIR", DEFAULT_STATE_DIR).strip()
     if not path or not os.path.isabs(path):
         raise DeployError("ONTINUITY_DEPLOY_STATE_DIR must be an absolute persistent path", status=503)
     try:

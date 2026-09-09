@@ -2,8 +2,8 @@
   "schema_version": 4,
   "base_commit": "6f52063ac2f2fe28180c16eaff295b2563dba721",
   "branch": "codex/b1-transport-lock",
-  "state": "local_manifest_frozen_candidate_not_live_review_accept_and_exact_head_operator_authorization_required",
-  "purpose": "Bind trusted deployment to one exact reviewed object, prevent user curl defaults from altering the compiled model-seat transition, and preserve unchanged initial model grants.",
+  "state": "local_uncommitted_private_box_provider_configuration_correction_awaiting_clean_review_not_live",
+  "purpose": "Reuse the existing persistent box write-and-restart path for exact private provider identifiers without adding a route, shell, SSH path, settings service, or model capability.",
   "required": [
     {
       "path": "app.py",
@@ -15,11 +15,11 @@
     },
     {
       "path": "live/B1_INSTALL_MANIFEST.json",
-      "sha256": "38a41d55e8049ac7906eb7d325c7a38af8ac647509325d06ad87b55a94e3e2ba"
+      "sha256": "18690b97a1a1ae7f50e1ff6ac682c8210f7d5d60807e50786a25e454a7413214"
     },
     {
       "path": "live/CONTROL_HANDOFF.md",
-      "sha256": "76ed12280466e5ccacfde41eb122016b013da2742685566caa86b06943adb958"
+      "sha256": "42f84f1a6ebc783ec341f3a6aa6217bbcde09528d92c969d2808315fa0bdfd2b"
     },
     {
       "path": "live/CONTROL_QUICKBOOT.md",
@@ -31,19 +31,19 @@
     },
     {
       "path": "live/ONTINUITY_1_0_BOARD.md",
-      "sha256": "9e7ff56856d1bcf0f3e75e2e5e2735c63675130297697e9f29bf21492f6e82be"
+      "sha256": "96e23b4034a0411d96f283bf089812547460ad061d5453bda3f4350e51db26b7"
     },
     {
       "path": "live/ONTINUITY_1_0_COMPLETION_PLAN.md",
-      "sha256": "db5b2b4b6f21381814a097390609deec578647522a7f8dcf11c836233f50b2af"
+      "sha256": "c25a4a2c2f1ffd4261f832f1f250d829afad09a32b90b9b66d7b38f7d871e6e3"
     },
     {
       "path": "live/OPERATING_MANUAL.md",
-      "sha256": "2eb13c39de40414539321396630b7ad32932c0e0a8fcdb405a697b267db30a98"
+      "sha256": "b156c0a6060d49dadf6196beee3bdca2845b57d8ac26c0e207b57c3fd82efaec"
     },
     {
       "path": "live/PUNCH_LIST.md",
-      "sha256": "3365f231b3f186470588e6b5197512c800033169897b3aecedd0629661729e5e"
+      "sha256": "8e5329ccee6e7c3bb39e326cebd9601db0b520071b3cfa28247b1688cc78b03d"
     },
     {
       "path": "live/WORKER_BOOT_PACKET.md",
@@ -59,15 +59,15 @@
     },
     {
       "path": "live/agent_queue.md",
-      "sha256": "55a118b013ab15b5334dd7d5fc3f074e6031070cbcaa7829c7aedcf922bec3bc"
+      "sha256": "8938bc835f8cd21c67a87eae5786d89b3c139a8364cf8ea750127c177d3f9eda"
     },
     {
       "path": "live/box/box_ops.py",
-      "sha256": "b22b4f7aad00699239a3a54549f1741e9640366b809865b90e2d5fb0c6356c2c"
+      "sha256": "848ea20edc68d3c5abe3ebed06bb62acf30b0d1f39423bfb26fe14d145df5360"
     },
     {
       "path": "live/box/trusted_deploy.py",
-      "sha256": "e9bc7064c2723f4b2e515d9fffacdfc69071c3b30b182f3fa322fe5580cfdf31"
+      "sha256": "7de289b08624d914a76a8bb0183ef1d21dddffe81a8a01744568a8f65663b435"
     },
     {
       "path": "live/control_loop.py",
@@ -79,11 +79,11 @@
     },
     {
       "path": "live/specs/trusted_deploy_protocol.md",
-      "sha256": "09cbb008b2188b9e65cce023aeb81477eb51cfc3827574fc135f56eb8a8dcf75"
+      "sha256": "50b7d7169cfe278da0c1f7a17e09ab7fed6dbf0a83e1f5d3fbf1f77d43c78cac"
     },
     {
       "path": "live/tools/b1_verify.sh",
-      "sha256": "b07613286ac792e2aa137c1b581e9693114cb08431d585f6d1d3acb90a4e7eff"
+      "sha256": "c4d715679bab269f381fc0a3172e332b8e9c6224252d617d76ba506d47eebab1"
     },
     {
       "path": "live/tools/ontinuity_https.sh",
@@ -95,7 +95,7 @@
     },
     {
       "path": "tests/test_b1_release_boundaries.py",
-      "sha256": "2d4cefe5371540a915f45c34190a3991b71c9a108bc2c8112523cf70d326abd2"
+      "sha256": "d0f1d991d71986a372dfb30762a7b7b011ba826a092b5c04c34e1c96b2778639"
     },
     {
       "path": "tests/test_capability_admission.py",
@@ -107,7 +107,7 @@
     },
     {
       "path": "tests/test_capability_box_identity.py",
-      "sha256": "5f6a4b3556efad52816f3a0fc957e364c03f6d5ff7a1c2025dd449c297916f24"
+      "sha256": "94baa71aef9c349e0ecc7b49a050897d722b8f0e2044e506dee909c6bfdb6af3"
     },
     {
       "path": "tests/test_capability_courier.py",
@@ -115,17 +115,18 @@
     },
     {
       "path": "tests/test_ontinuity_https_client.py",
-      "sha256": "f942d38a8c6274825cdbcd8233fb3d049913aa3a28c3deeea935de6d7cc61180"
+      "sha256": "4a0d83f4f4fcc2527a3c9064d279c6d4f7ae2361c8f8b8e5aa018fb3528227db"
     },
     {
       "path": "tests/test_trusted_deploy.py",
-      "sha256": "f7bf0d200ec92d111a3f795fdf98a630c7ce0f9ac66cd0f327ff6d0fb2741822"
+      "sha256": "153c129ee9d52dd92c27752f8a6adf38922782db78864e3e48932bb2149aa82d"
     }
   ],
   "required_checks": [
     "B1_TEST_PYTHON=<existing-project-python> live/tools/b1_verify.sh",
     "selected Python imports flask, flask_socketio, and requests before any suite starts",
     "all bounded tests pass with every provider transition mocked",
+    "syntax compilation is in-memory and a read-only verifier run creates no repository bytecode or other candidate artifact",
     "model-seat transport is the exact top-level curl --disable --config - command, --disable is first, a hostile user curl default is ignored, and the inherited host proxy, DNS, and TLS trust environment remains the admitted platform boundary",
     "caller deploy JSON contains exactly action, target, signoff_block_id, and commit_sha",
     "initial model grants remain unchanged; deploy-only admission derives elevation at the authority boundary, is pending, HIGH-IMPACT, uses an exact JSON-integer TTL of at most 300 seconds, carries one exact block-commit-target scope, and requires explicit operator confirmation of that displayed scope",

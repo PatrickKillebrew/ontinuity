@@ -1510,3 +1510,118 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
 - Require an independent ACCEPT of the exact manifest-frozen local correction,
   then resolve the exact candidate HEAD mechanically and obtain Patrick's authorization
   for that exact hash before any further remote or live action.
+
+## FOLD — accepted B1 box install exposed private provider-configuration gap — 2026-09-08
+
+**RELEASE CONDITION**
+- RC-2 operator-approved scoped identity and RC-7 reproducible system, within the
+  existing B1 dependency block. B3 remains outside this correction.
+
+**CLAIM TESTED**
+- Whether accepted implementation `b596d3c` could complete the exact trusted
+  MAIN-then-FARM deploy using only box-owned provider facts and credentials.
+
+**EVIDENCE READ**
+- Public `origin/main` was verified at accepted and explicitly authorized commit
+  `b596d3c`. The exact six-file box unit was installed, the workspace restarted
+  once, all six post-restart hashes matched, and header-only recovery plus
+  compatibility with MAIN `693435a` and rollback FARM `3476ed8` passed.
+- The persistent burn-in source matched its manifest and was not restarted.
+- Trusted deploy `start` returned HTTP 503 before provider dispatch because the
+  box had the Railway token but lacked a complete canonical project/environment/
+  MAIN-service/FARM-service UUID set. No provider deployment ID or trusted-deploy
+  state file was created; MAIN and FARM did not change.
+
+**CHANGE MADE**
+- Reused the existing operator-only `write_file`, persistent box-project storage,
+  and `restart_workspace` wiring. `trusted_deploy_config.json` contains exactly
+  four non-secret canonical UUIDs beside `trusted_deploy.py`; the Railway token
+  remains environment-only.
+- `write_file` validates that exact document before replacement and forces mode
+  600. The adapter accepts either a complete four-ID environment set or the
+  complete private file, never a mixture, and rejects missing, partial,
+  oversized, nonregular, permissive, symlinked, duplicate-key, extra-key,
+  wrong-type, or noncanonical UUID configuration.
+- The default trusted-deploy state location is the fixed persistent box-project
+  `.workspace/deploy-state`; the existing server-side override remains optional.
+- No new route, shell, SSH path, settings service, model capability, or alternate
+  HTTP transport was added. Provider calls remain the single fixed
+  `curl --config -` subprocess with private configuration on stdin.
+
+**TEST RESULT**
+- The complete current bounded no-network verifier passes all declared modules,
+  manifest coverage, listed hashes, syntax/static gates, secret scanning, and
+  diff hygiene. This is author-side evidence, not independent acceptance.
+
+**NEW DEBT**
+- The four-UUID document must be generated from authoritative provider facts
+  without displaying values and installed separately because deployment-specific
+  configuration does not belong in the public repository.
+- This correction will produce a successor to `b596d3c`. The predecessor's
+  proposal, signoff, and operator authorization do not transfer to the new SHA.
+
+**STATE LEFT**
+- Public main and the installed six-file box unit remain at `b596d3c`. MAIN
+  remains `693435a`; FARM remains `3476ed8`; burn-in was not restarted. No live
+  request, provider dispatch, deployment, box write, restart, credential access,
+  or remote mutation occurred while authoring this correction.
+
+**NEXT**
+- Refreeze the reconciled manifests and obtain a clean independent review. If and
+  only if accepted unchanged, resolve and commit the exact candidate, create a
+  fresh two-party ref bound to that resulting SHA, and obtain Patrick's explicit
+  publication/deployment authorization for that same SHA before any remote or
+  live action. Then install and deploy in the manifest's MAIN-then-FARM order.
+
+## FOLD — first private provider-config review rejected; path and verifier correction — 2026-09-09
+
+**RELEASE CONDITION**
+- RC-2 and RC-7 inside B1. The dormant-wiring/alignment inventory requested by
+  the operator remains queued behind acceptance of this exact correction.
+
+**CLAIM TESTED**
+- Whether the private provider-ID installation boundary and nominally read-only
+  verifier remain safe under alternate filesystem spellings and special targets.
+
+**EVIDENCE READ**
+- A clean independent reviewer reproduced both manifests, every listed hash and
+  coverage relation, and all then-current bounded tests, then returned REJECT.
+- Raw caller path equality allowed `./trusted_deploy_config.json` and
+  `x/../trusted_deploy_config.json` to reach the protected file without its
+  special validation/mode branch. String-prefix containment admitted a sibling
+  prefix, and existing symlink/nonregular targets were not rejected before open.
+- The verifier's explicit `py_compile` step created untracked bytecode, so its
+  whole-tree digest changed even though tracked candidate bytes did not.
+
+**CHANGE MADE**
+- `write_file` now uses canonical common-path containment, checks the real parent,
+  refuses existing symlink/nonregular targets, derives protected-file identity
+  from the resolved path, returns a canonical relative name, and installs the
+  validated private config through a same-directory mode-600 atomic replacement
+  with file and directory fsync.
+- Alternate spellings now enter the same protected validation path. Regression
+  tests cover aliases, sibling-prefix traversal, symlink targets, FIFO targets,
+  canonical response naming, preservation after invalid writes, and private mode.
+- The verifier compiles declared Python sources in memory rather than invoking
+  `py_compile`; its regression prohibits reintroducing that artifact-producing
+  path. No runtime transport or live configuration changed.
+
+**TEST RESULT**
+- The prior green suite is superseded because these bytes changed. Refreeze and
+  complete current bounded verification are required before independent review.
+
+**NEW DEBT**
+- None beyond the already recorded need to generate and install the deployment-
+  specific four-UUID document after exact-SHA review and authorization.
+
+**STATE LEFT**
+- Public main and installed box unit remain `b596d3c`; MAIN remains `693435a`;
+  FARM remains `3476ed8`; burn-in remains un-restarted. No live request, provider
+  dispatch, deployment, box write, restart, credential access, or remote mutation
+  occurred during review or correction.
+
+**NEXT**
+- Regenerate both manifests, run the complete byte-preserving verifier, and send
+  the exact refrozen candidate to a different clean reviewer. Only an unchanged
+  ACCEPT permits resolving and committing the successor SHA; its fresh signoff
+  and Patrick's exact-SHA authorization remain mandatory before remote/live work.

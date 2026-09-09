@@ -169,6 +169,77 @@ class TrustedDeployTests(unittest.TestCase):
                     deploy.start("block-1", "main", COMMIT)
                 provider.assert_not_called()
 
+    def test_private_file_supplies_complete_provider_ids(self):
+        config_path = Path(self.tmp.name) / "trusted_deploy_config.json"
+        config_path.write_text(json.dumps({
+            "railway_project_id": PROJECT,
+            "railway_environment_id": ENVIRONMENT,
+            "railway_service_id_main": MAIN_SERVICE,
+            "railway_service_id_farm": FARM_SERVICE,
+        }), encoding="utf-8")
+        config_path.chmod(0o600)
+        cleared = {
+            "RAILWAY_PROJECT_ID": "", "RAILWAY_ENVIRONMENT_ID": "",
+            "RAILWAY_SERVICE_ID_MAIN": "", "RAILWAY_SERVICE_ID_FARM": "",
+        }
+        with mock.patch.dict(os.environ, cleared), \
+                mock.patch.object(deploy, "TRUSTED_CONFIG_PATH", str(config_path)):
+            provider, config = deploy._provider_config("farm")
+        self.assertEqual(provider, "railway")
+        self.assertEqual(config["project_id"], PROJECT)
+        self.assertEqual(config["environment_id"], ENVIRONMENT)
+        self.assertEqual(config["service_id"], FARM_SERVICE)
+        self.assertEqual(config["token"], "server-only-token")
+
+    def test_provider_id_sources_fail_closed_on_partial_or_unsafe_file(self):
+        config_path = Path(self.tmp.name) / "trusted_deploy_config.json"
+        valid = json.dumps({
+            "railway_project_id": PROJECT,
+            "railway_environment_id": ENVIRONMENT,
+            "railway_service_id_main": MAIN_SERVICE,
+            "railway_service_id_farm": FARM_SERVICE,
+        })
+        cleared = {
+            "RAILWAY_PROJECT_ID": "", "RAILWAY_ENVIRONMENT_ID": "",
+            "RAILWAY_SERVICE_ID_MAIN": "", "RAILWAY_SERVICE_ID_FARM": "",
+        }
+        with mock.patch.dict(os.environ, {**cleared, "RAILWAY_PROJECT_ID": PROJECT}), \
+                mock.patch.object(deploy, "TRUSTED_CONFIG_PATH", str(config_path)), \
+                self.assertRaisesRegex(deploy.DeployError, "incomplete"):
+            deploy._provider_config("main")
+        config_path.write_text(valid, encoding="utf-8")
+        config_path.chmod(0o644)
+        with mock.patch.dict(os.environ, cleared), \
+                mock.patch.object(deploy, "TRUSTED_CONFIG_PATH", str(config_path)), \
+                self.assertRaisesRegex(deploy.DeployError, "private regular"):
+            deploy._provider_config("main")
+        config_path.unlink()
+        config_path.symlink_to(Path(self.tmp.name) / "elsewhere")
+        with mock.patch.dict(os.environ, cleared), \
+                mock.patch.object(deploy, "TRUSTED_CONFIG_PATH", str(config_path)), \
+                self.assertRaisesRegex(deploy.DeployError, "private regular"):
+            deploy._provider_config("main")
+
+    def test_config_document_is_exact_and_uuid_validated(self):
+        valid = {
+            "railway_project_id": PROJECT,
+            "railway_environment_id": ENVIRONMENT,
+            "railway_service_id_main": MAIN_SERVICE,
+            "railway_service_id_farm": FARM_SERVICE,
+        }
+        self.assertEqual(
+            deploy.validate_config_document(json.dumps(valid)), valid)
+        for value in (
+                {**valid, "extra": PROJECT},
+                {key: item for key, item in valid.items()
+                 if key != "railway_project_id"},
+                {**valid, "railway_project_id": "not-a-uuid"},
+                b"{" + b" " * 4096 + b"}",
+                '{"railway_project_id":"%s","railway_project_id":"%s"}'
+                % (PROJECT, PROJECT)):
+            with self.subTest(value=value), self.assertRaises(deploy.DeployError):
+                deploy.validate_config_document(value)
+
     def test_start_replay_never_duplicates_provider_mutation(self):
         with self.provider({"serviceInstanceDeployV2": DEPLOYMENT}) as provider:
             first, first_new = deploy.start("block-1", "main", COMMIT)

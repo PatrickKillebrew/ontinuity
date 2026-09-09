@@ -273,40 +273,35 @@ Progress is measured by release conditions passing, not commits, corpus volume, 
 `DRIFT` result at `7abadca`; the resolved punch list and
 `ONTINUITY_1_0_BOARD.md` now provide the dependency-ordered release view.
 
-The corrected B1 freeze passed its fourth clean review and landed as commit
-`693435a`. It was developed on `codex/b1-corrected` from rollback base
-`3476ed8`. Its live transition is fail-stopped before box restart while the
-recurring Control transport-path defect is corrected.
+The accepted transport and exact-deploy-object implementation is public at
+`b596d3c`. Its exact six-file box unit was installed, the workspace restarted
+once, all six post-restart hashes passed, and compatibility with MAIN at
+`693435a` and rollback FARM at `3476ed8` was proved. The first trusted MAIN
+deployment then failed closed before provider dispatch because the box lacked the
+fixed Railway project, environment, and service identifiers. Persistent burn-in
+source already matches its manifest and has not been restarted.
+
+The smallest correction on `codex/b1-transport-lock` reuses the existing operator-only `write_file`,
+persistent box-project storage, and `restart_workspace` wiring. A dedicated
+mode-600 file supplies exactly the four non-secret provider UUIDs; the Railway
+token remains environment-only. Strict schema, UUID, type, size, regular-file,
+permission, duplicate-key, and symlink checks fail closed. No new route, shell,
+SSH path, settings service, model capability, or alternate HTTP transport is
+introduced. The complete current bounded verifier passes author-side. This
+advances RC-2 by unblocking the trusted deploy and RC-7 by turning the missing
+Hetzner configuration into a documented reproducible step.
+
+The single immediate action is to apply the complete independent-authority gate
+to the exact corrected candidate: obtain a clean independent ACCEPT, resolve and
+commit the unchanged candidate, create a fresh proposal/signoff ref bound to that
+resulting SHA, and obtain Patrick's explicit authorization to publish and deploy
+that exact SHA. The earlier authorization and signed ref for `b596d3c` do not
+transfer. After authorization, publish the exact commit, install its box unit and
+separately generated private UUID document, restart the workspace once, and
+deploy MAIN then FARM at that same reviewed commit according to
+`B1_INSTALL_MANIFEST.json`. B3 remains the next dependency lane after B1 and is
+not part of this correction.
 The superseded `codex/b1-scoped-identity` candidate remains prohibited.
-
-Clean reviews of local overlay `codex/b1-transport-lock` have successively exposed
-and forced correction of process-local replay locking, unbounded relay-response
-intake, contradictory handoff state, deploy authority not bound to the exact
-block/commit/target object, loose persisted-schema typing, and curl's implicit user
-default configuration. The current author-side freeze passes the complete current bounded verifier.
-
-During the review interval, implementation commit `b596d3c` was pushed to public
-main. Its review rejected stale commit-state instructions, so public presence is
-not acceptance and does not establish any live deployment. The local
-manifest-frozen successor corrects only that operational state contract.
-
-The single immediate action is to apply the review/authorization gate to those
-exact manifest-frozen bytes: require an independent ACCEPT, then resolve the
-exact candidate HEAD and obtain Patrick's authorization for that hash. The
-overlay replaces model-assembled HTTP with a local prepare/check
-compiler, the top-level `curl --disable --config -` transition, local
-response/request-identity verification, and a reviewed logical endpoint registry.
-The first curl argument prevents a user `.curlrc` from changing the request; the
-inherited host proxy, DNS, and TLS environment is explicitly the platform boundary
-that supplies admitted sandbox networking.
-Candidate MAIN requires the exact v2 envelope before admission/capability relay and
-uses persistent bounded receipts to prevent duplicate execution of ambiguous
-mailbox transitions across engine processes. The old Python capability helper is local-only; the bounded
-verification entrypoint checks its selected project runtime before launching tests.
-Current boot surfaces are tested against reconstruction while unrelated tools remain available.
-Only after both gate conditions pass may Control resume the one remaining box readback
-and the existing B1 cutover order. B3 remains the next dependency lane after B1;
-do not mix it into this bounded correction.
 
 B5-P evidence preservation is operational; the comparative plan remains
 proposed, unfrozen, and unrun. Local transport tests do not make the overlay live,

@@ -8,6 +8,7 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../.." && pwd)
 PYTHON_BIN=${B1_TEST_PYTHON:-python3}
+export PYTHONDONTWRITEBYTECODE=1
 
 cd "$ROOT"
 
@@ -20,11 +21,19 @@ cd "$ROOT"
 }
 printf 'B1_TEST_RUNTIME=%s\n' "$PYTHON_BIN"
 sh -n live/tools/ontinuity_https.sh
-"$PYTHON_BIN" -m py_compile \
-    app.py capability_auth.py live/control_loop.py live/bootstrap/gate.py \
-    live/box/box_ops.py live/box/file_server.py live/box/seat_mailbox.py \
-    live/box/trusted_deploy.py \
-    live/shepherd_alert.py live/experiment/burnin_resident.py
+"$PYTHON_BIN" - <<'PY'
+from pathlib import Path
+
+for name in (
+    "app.py", "capability_auth.py", "live/control_loop.py",
+    "live/bootstrap/gate.py", "live/box/box_ops.py",
+    "live/box/file_server.py", "live/box/seat_mailbox.py",
+    "live/box/trusted_deploy.py", "live/shepherd_alert.py",
+    "live/experiment/burnin_resident.py",
+):
+    path = Path(name)
+    compile(path.read_bytes(), str(path), "exec")
+PY
 
 for module in \
     tests.test_trusted_deploy \

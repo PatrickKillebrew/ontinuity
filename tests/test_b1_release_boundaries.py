@@ -222,27 +222,28 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
         current_punch = punch.split("## IN-PROGRESS", 1)[1]
         current_punch = current_punch.split("## DONE", 1)[0]
 
-        self.assertIn("concurrent public push recorded without authority", latest_fold)
-        self.assertIn("curl --disable --config - < REQUEST.curl", latest_fold)
-        self.assertIn("accepted local transport base `6f52063`", latest_fold)
+        self.assertIn("first private provider-config review rejected", latest_fold)
+        self.assertIn("canonical common-path containment", latest_fold)
+        self.assertIn("compiles declared Python sources in memory", latest_fold)
         self.assertIn("`b596d3c`", latest_fold)
-        self.assertIn("independent ACCEPT", latest_fold)
-        self.assertIn("resolve the exact candidate HEAD", latest_fold)
-        self.assertIn("Patrick's authorization", latest_fold)
+        self.assertIn("different clean reviewer", latest_fold)
+        self.assertIn("Patrick's exact-SHA authorization", latest_fold)
         self.assertNotIn("obtain a second clean independent review", latest_fold.lower())
 
         roadmap = next(
             line for line in punch.splitlines()
             if "ONTINUITY 1.0 COMPLETION PLAN — controlling roadmap" in line)
         self.assertIn("review/authorization gate", roadmap)
-        self.assertIn("`6f52063`", roadmap)
+        self.assertIn("private provider-configuration correction", roadmap)
         self.assertIn("Patrick's authorization", roadmap)
+        self.assertIn("does not transfer", roadmap)
         self.assertNotIn("second independent exact-byte review", roadmap.lower())
 
         self.assertIn("review/authorization gate", current_board)
-        self.assertIn("resolve the exact candidate HEAD", current_board)
-        self.assertIn("`6f52063`", current_board)
-        self.assertIn("Patrick's authorization", current_board)
+        self.assertIn("resolve and commit the unchanged candidate", current_board)
+        self.assertIn("private four-UUID document", current_board)
+        self.assertRegex(current_board, r"Patrick's\s+authorization")
+        self.assertIn("do not transfer", current_board)
         self.assertNotIn("second independent review", current_board.lower())
 
         for name, current_surface in (
@@ -524,7 +525,7 @@ class B1ReleaseBoundaryTests(unittest.TestCase):
                 "live/ONTINUITY_1_0_BOARD.md",
                 "live/ONTINUITY_1_0_COMPLETION_PLAN.md"):
             source = (ROOT / relative).read_text(encoding="utf-8")
-            self.assertIn("codex/b1-corrected", source, relative)
+            self.assertIn("codex/b1-transport-lock", source, relative)
             self.assertIn("3476ed8", source, relative)
             self.assertRegex(
                 source,

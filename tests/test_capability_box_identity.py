@@ -5,6 +5,8 @@ import tempfile
 import types
 import unittest
 import uuid
+import json
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from unittest import mock
 
@@ -102,6 +104,84 @@ class CapabilityBoxIdentityTests(unittest.TestCase):
                 "/op/deploy", headers=reviewer, json=self.deploy_body())
         self.assertEqual(response.status_code, 200)
         start.assert_called_once_with("block-1", "main", "a" * 40)
+
+    def test_write_file_installs_only_exact_private_trusted_deploy_config(self):
+        config_path = os.path.join(
+            os.path.dirname(self.box_ops.__file__), "trusted_deploy_config.json")
+        valid = json.dumps({
+            "railway_project_id": "11111111-1111-4111-8111-111111111111",
+            "railway_environment_id": "22222222-2222-4222-8222-222222222222",
+            "railway_service_id_main": "33333333-3333-4333-8333-333333333333",
+            "railway_service_id_farm": "44444444-4444-4444-8444-444444444444",
+        })
+        try:
+            response = self.client.post("/op/write_file", headers=self.headers,
+                json={"path": "trusted_deploy_config.json", "content": valid})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(os.stat(config_path).st_mode & 0o777, 0o600)
+            self.assertEqual(
+                json.loads(Path(config_path).read_text(encoding="utf-8")),
+                json.loads(valid))
+            rejected = self.client.post("/op/write_file", headers=self.headers,
+                json={"path": "trusted_deploy_config.json",
+                      "content": '{"railway_project_id":"bad"}'})
+            self.assertEqual(rejected.status_code, 400)
+            self.assertEqual(
+                json.loads(Path(config_path).read_text(encoding="utf-8")),
+                json.loads(valid))
+        finally:
+            try:
+                os.unlink(config_path)
+            except FileNotFoundError:
+                pass
+
+    def test_write_file_canonicalizes_private_config_and_rejects_unsafe_targets(self):
+        box_dir = Path(self.box_ops.__file__).resolve().parent
+        config_path = box_dir / "trusted_deploy_config.json"
+        outside = Path(self.tmp.name) / "outside.txt"
+        valid = json.dumps({
+            "railway_project_id": "11111111-1111-4111-8111-111111111111",
+            "railway_environment_id": "22222222-2222-4222-8222-222222222222",
+            "railway_service_id_main": "33333333-3333-4333-8333-333333333333",
+            "railway_service_id_farm": "44444444-4444-4444-8444-444444444444",
+        })
+        self.assertIsNone(self.box_ops._safe_box_path("../boxevil/file"))
+        try:
+            installed = self.client.post("/op/write_file", headers=self.headers,
+                json={"path": "./trusted_deploy_config.json", "content": valid})
+            self.assertEqual(installed.status_code, 200)
+            self.assertEqual(installed.get_json()["path"], "trusted_deploy_config.json")
+            inode = config_path.stat().st_ino
+            invalid = self.client.post("/op/write_file", headers=self.headers,
+                json={"path": "nested/../trusted_deploy_config.json",
+                      "content": '{"railway_project_id":"bad"}'})
+            self.assertEqual(invalid.status_code, 400)
+            self.assertEqual(config_path.stat().st_ino, inode)
+            self.assertEqual(json.loads(config_path.read_text(encoding="utf-8")),
+                             json.loads(valid))
+
+            config_path.unlink()
+            outside.write_text("do not replace", encoding="utf-8")
+            config_path.symlink_to(outside)
+            symlinked = self.client.post("/op/write_file", headers=self.headers,
+                json={"path": "trusted_deploy_config.json", "content": valid})
+            self.assertEqual(symlinked.status_code, 403)
+            self.assertEqual(outside.read_text(encoding="utf-8"), "do not replace")
+
+            config_path.unlink()
+            os.mkfifo(config_path)
+            fifo = self.client.post("/op/write_file", headers=self.headers,
+                json={"path": "trusted_deploy_config.json", "content": valid})
+            self.assertEqual(fifo.status_code, 403)
+        finally:
+            try:
+                config_path.unlink()
+            except FileNotFoundError:
+                pass
+            try:
+                outside.unlink()
+            except FileNotFoundError:
+                pass
 
     def test_deploy_ref_binds_proposal_and_signoff_to_target_and_commit(self):
         cases = (
