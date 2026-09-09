@@ -1722,3 +1722,44 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
   conversation should orient from `CONTROL_HANDOFF.md`, the board, this fold,
   and `live/notes/POST_B1_ALIGNMENT_RECOVERY.md` rather than reconstructing the
   work from conversation memory.
+
+## FOLD — documentation branch published; fresh-conversation entry gap found — 2026-09-09
+
+**EVIDENCE**
+- Patrick authorized publication of abbreviated commit `0bbe25b` only to the
+  non-deploy branch `codex/post-b1-alignment-inventory`.
+- Git resolved that abbreviation uniquely to
+  `0bbe25b6af150071256d2a8344e1917b19327107`, whose parent is exact accepted B1
+  object `0ef62d7dfce76891cebae7b2484ca592dd663246`.
+- The first push reached GitHub without credentials and failed before ref
+  mutation. Control then followed the corpus-prescribed recovery: the byte-
+  identical local `Llaves.txt` copy supplied only the Railway project token;
+  the exact `backboard.railway.app/graphql/v2` project/environment/service query
+  returned the live vault; the minted GitHub token authenticated as
+  `PatrickKillebrew`; and a non-force Git push created only the authorized branch.
+- Remote readback proved the new branch at exact `0bbe25b6...` and public `main`
+  unchanged at `b596d3c`. Worktree clean; no box, MAIN, FARM, burn-in, provider,
+  or credential configuration changed.
+
+**HANDOFF REVIEW**
+- The published handoff contains the current state, single next action, resolved
+  punch view, queue-tail pointer, and post-B1 recovery pointer. The operating
+  manual contains the complete cold-boot read order.
+- One migration seam was not explicit: the current handoff is deliberately not
+  on `main`, while bounded `read_repo` rejects slash-bearing branch refs. A fresh
+  seat could therefore obey `ref: main` and retrieve the stale pre-acceptance
+  handoff.
+- The local follow-up makes the pre-cutover entry mechanical: the operator names
+  the current exact documentation commit; the seat either verifies the public
+  branch in a Git worktree or uses the exact 40-hex commit as `read_repo` ref;
+  then it follows an explicit ordered read list and reports state before action.
+  This does not weaken the ref validator, change B1 bytes, or make candidate
+  admission live.
+
+**STATE LEFT / NEXT**
+- Public documentation branch currently remains at `0bbe25b6...`; this follow-up
+  is local and has no publication authority yet. Public `main`, box, MAIN, FARM,
+  burn-in, and accepted B1 object remain unchanged.
+- Review and commit this documentation-only follow-up. Publication requires a
+  new exact-SHA authorization. After that checkpoint is durable, migrate Control
+  conversations and resume with the exact B1 proposal/signoff gate.

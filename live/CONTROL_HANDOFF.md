@@ -6,6 +6,44 @@
 # `693435a`; FARM remains rollback `3476ed8`.
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
 
+## FRESH-CONVERSATION ENTRY — PRE-B1-CUTOVER
+
+The operator's boot message must name the current public documentation branch
+and its exact commit. Public `main` intentionally remains at the older deployed
+repository state until the exact B1 object is separately authorized, so a fresh
+seat must not default its orientation reads to `ref: main` for this handoff.
+
+The slash-bearing branch name `codex/post-b1-alignment-inventory` is not accepted
+by the bounded `read_repo` ref grammar. Use one of the two already documented
+read mechanisms—never weaken that validator or invent another transport:
+
+1. fetch the public branch with Git into a verified worktree and verify the
+   operator-supplied exact commit before reading; or
+2. use that exact 40-hex commit, rather than the slash-bearing branch name, as
+   the `read_repo` ref.
+
+Then read in this order:
+
+1. `live/CONTROL_QUICKBOOT.md` for the standing transport and authority contract;
+2. this `live/CONTROL_HANDOFF.md` for the current state and single action;
+3. `live/ONTINUITY_1_0_BOARD.md` and
+   `live/ONTINUITY_1_0_COMPLETION_PLAN.md` for dependency order;
+4. `live/OPERATING_MANUAL.md`, `live/THE_PARADIGM.md`, and
+   `live/OPERATING_RUBRIC.md` for mechanics and authority;
+5. `live/PUNCH_LIST.md` plus the latest fold at the tail of
+   `live/agent_queue.md` for resolved and chronological state;
+6. `live/notes/POST_B1_ALIGNMENT_RECOVERY.md` for deferred B5/B6 recovery only;
+7. `live/B1_INSTALL_MANIFEST.json`,
+   `live/B1_TRANSPORT_LOCK_MANIFEST.json`,
+   `live/specs/trusted_deploy_protocol.md`, and
+   `live/specs/ontinuity_https_protocol.md` immediately before preparing the
+   exact proposal/signoff and cutover.
+
+This is a pre-cutover resumption, not a claim that candidate admission is already
+live. First report back the accepted B1 object, the last verified public/box/MAIN/
+FARM state, the authorization boundary, and the single next action. Do not run a
+live mutation or start B3 while doing orientation.
+
 ## STATE AT FOLD
 - **CURRENT OVERRIDE:** Exact commit
   `0ef62d7dfce76891cebae7b2484ca592dd663246` is the independently accepted B1
