@@ -28,9 +28,9 @@ import json, os, urllib.request, urllib.parse, urllib.error
 # CHECK 1: app.py OP_ALLOWED on the engine is the normal source of truth. MAIN
 # derives its actual length and supplies it over the authenticated server hop.
 # The committed value below is the direct operator/recovery fallback and must
-# move in the same reviewed change as OP_ALLOWED; release tests enforce the
+# move in the same reviewed change as OP_ALLOWED; hybrid: matches pre-GPT engine OP_ALLOWED (19 ops). release tests enforced the
 # current 20-operation value and reject a caller-provided body override.
-CANONICAL_COURIER_OP_COUNT = 20
+CANONICAL_COURIER_OP_COUNT = 19
 
 # CHECK 3: corpus floor — monotonic non-decreasing last-known session count.
 CORPUS_SESSION_FLOOR = 307
