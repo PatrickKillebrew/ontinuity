@@ -1625,3 +1625,53 @@ Documentation only. No runtime, mailbox, provider, credential, deployment, or cu
   the exact refrozen candidate to a different clean reviewer. Only an unchanged
   ACCEPT permits resolving and committing the successor SHA; its fresh signoff
   and Patrick's exact-SHA authorization remain mandatory before remote/live work.
+
+
+## CURRENT-STATE TOUCH POINT — 2026-09-12 (control seat, from sandbox via diag-key courier + Railway GraphQL)
+
+**HOW THIS SESSION STARTED.** The operator returned after a hard week: the GPT-driven B-block completion
+phase (Sept 3–11) had left MAIN running B1 capability/admission code, which BROKE the direct diag-key hands
+the operator's own boot depends on ("malformed capability"). The operator wanted the system recovered to its
+pre-GPT state, then the WHOLE system mapped so it could finally be packaged for a second user (Cornel/BIL).
+
+**BUILT (recovery + mapping + documentation)**
+- MAIN engine restored: B1 (0ef62d7) → pre-GPT 9a7eac2a → then, on keep/discard evaluation, → 5640170
+  (= 9a7eac2a + B5-P evidence layer, ZERO B1). blob 35502fd0, 19-op diag-key hands. Commits: manual 19-op
+  rollback (c7ea00c), gate 19-op reconcile (fd613f7), B5-P engine + ipad_keyboard restore (379ec0e).
+- FARM engine restored: → f9696c49 (pre-GPT worker engine; proven by /diag/version now ABSENT, matching B0).
+- Box gate reconciled to 19 ops (B1 had bumped to 20) via write_file + restart. Full Control boot returns
+  oriented:true (all 6 checks + 4 mechanics invariants). 328 sessions intact.
+- Deploy mechanism used = the CORPUS-documented one (CONTROL_HANDOFF DEPLOY TOPOLOGY): Railway GraphQL
+  serviceInstanceDeploy, Project-Access-Token header (not Bearer), fixed project/env/service IDs.
+- FULL-CORPUS MAP produced: ONTINUITY_MASTER_SYSTEM_MAP.md (22 sections) + ONTINUITY_COVERAGE_CHECKLIST.txt
+  (252/252 files accounted for, 0 unread) + ONTINUITY_PACKAGING_PLAN.md + recovery/evaluation docs (d005532).
+- Conversation record 2026-09-12_recovery-mapping-two-product-packaging.md (this session, with errata).
+
+**LEARNED (durable findings — see ONTINUITY_MASTER_SYSTEM_MAP.md for the full map)**
+- ONTINUITY = ONE product: a per-operator instance that AUTOMATICALLY + MECHANICALLY does the retrieval,
+  grounding, ritual, Knowtext writes, and ledger maintenance FOR the user, who just talks. The mechanical
+  enforcement IS the magic. A user is NEVER expected to run rituals/commits/ledgers by hand. (Corrects the
+  seat's "two-product / user does it manually" MISCONCLUSION — preserved as a museum specimen in the
+  conversation record.)
+- TWO FRONT DOORS: Mode A (intake website → 4-phase discovery → solution pipeline; the only door to that
+  mode) and Mode B (direct session — the operator+seat design/build loop with memory continuity, FULLY LIVE).
+- MEMORY is a LAYERED system: git corpus + 24-table relational DB (live: 357 knowtext_versions, 328 sessions,
+  3 projects, 2 users incl. Katie Wasserman) + Knowtext (distilled 7-field top layer, written by Projenius
+  DISTILL at close). Retrieval-not-recall is mechanically enforced by the bootstrap gate.
+- The ONE real remaining build item: the intake→Knowtext/mini-corpus bridge (Mode A's only unbuilt seam).
+- The repo carries NON-Ontinuity code (ODS driving files, retired stubs) + the B1 museum piece to exclude when packaging.
+
+**B1 = MUSEUM PIECE.** Discarded from the live path, files preserved (bundle e15f5f46, commits 693435a..
+0ef62d7, capability_auth.py + trusted_deploy.py + B1 specs + manifests + test suites). Specimen of the
+failure-class: building multi-tenant AUTHORIZATION machinery for a per-INDIVIDUAL-instance product. Lesson:
+confirm the product model before building isolation/auth — per-individual instances dissolve the sharing
+threat that authorization machinery solves. Keep only the hygiene lesson (per-instance keys, never in the packet).
+
+**STATE LEFT.** MAIN = 5640170, FARM = f9696c49, 19-op diag-key hands, boots oriented:true, 328 sessions,
+memory persisting, engine idle. B1 shelved. Mode B fully live; Mode A live except the named bridge seam.
+
+**NEXT (single action for the next seat).** The corpus source-of-truth docs (PUNCH_LIST, STATE_OF_ONTINUITY,
+OPERATING_MANUAL, the WORKER docs, THE_PARADIGM) still describe the B1/B-block direction and must be
+reconciled to this recovered post-recovery reality — the operator has said this revision happens AFTER this
+close, deliberately, not as part of it. Then: build the intake→Knowtext bridge; retrieve+update
+PROVISIONING_RUNBOOK.md (private repo) to the 5640170 state; package the per-operator instance.

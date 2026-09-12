@@ -114,16 +114,3 @@ Rule: keep *corrections and bug fixes*; discard the *B1 capability/admission/aut
 Earlier assumption "MAIN and FARM ran the same code / FARM is the pre-B1 original" was WRONG.
 The B0 baseline proved three distinct engines at three sizes from three dates. Always restore each
 surface to its OWN B0-recorded target, verified against git — never infer one from another.
-
----
-
-## HYBRID RECOVERY — COMPLETE (all steps done + verified)
-- **Step 1 ✓** Engine restored to pre-GPT, manual+gate reconciled to 19 ops, Control boots oriented:true.
-- **Step 2 ✓** B5-P cherry-picked cleanly: MAIN deployed to `5640170` (= pre-GPT `9a7eac2a` + B5-P, ZERO B1).
-  Evidence capture (model_call_envelopes etc.) live and queryable. Boot still oriented:true.
-- **Step 3 ✓** `release_baseline.py` drift-audit tool retained.
-- **Step 4 ✓** `ipad_keyboard` tool restored from `9a7eac2a` (GPT had deleted it).
-- **Discarded:** all B1 authorization machinery (preserved in bundle `e15f5f46` for reference).
-
-**FINAL STATE:** MAIN engine `5640170` (blob 35502fd0), 19-op diag-key hands, 328 sessions, B5-P live,
-Control oriented:true. git main = deployed engine (in sync). This is the clean single-user foundation.

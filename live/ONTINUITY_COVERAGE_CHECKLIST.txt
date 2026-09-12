@@ -1,0 +1,279 @@
+# ONTINUITY CORPUS — FILE COVERAGE CHECKLIST
+# Status: UNREAD | SUMMARIZED (in map) | READ-not-skeletal
+# Total files: 252
+
+## S1-core  (38 files)
+  [READ-not-skeletal] live/B1_INSTALL_MANIFEST.json
+  [READ-not-skeletal] live/B1_TRANSPORT_LOCK_MANIFEST.json
+  [SUMMARIZED] live/CONTROL_HANDOFF.md
+  [SUMMARIZED] live/CONTROL_QUICKBOOT.md
+  [SUMMARIZED] live/CONTROL_QUICKBOOT_SNIPPET.md
+  [SUMMARIZED] live/ONTINUITY_1_0_BASELINE.md
+  [READ-not-skeletal] live/ONTINUITY_1_0_BOARD.md
+  [READ-not-skeletal] live/ONTINUITY_1_0_COMPLETION_PLAN.md
+  [READ-not-skeletal] live/ONTINUITY_ENDPOINTS.conf
+  [READ-not-skeletal] live/ONTINUITY_GPT_WORK_EVALUATION.md
+  [READ-not-skeletal] live/ONTINUITY_PRE-GPT_RECOVERY_PLAN.md
+  [SUMMARIZED] live/OPERATING_MANUAL.md
+  [SUMMARIZED] live/OPERATING_RUBRIC.md
+  [READ-not-skeletal] live/POST_1_0_COURIER_EVOLUTION.md
+  [SUMMARIZED] live/PROJECT_CORPUS_RUBRIC.md
+  [SUMMARIZED] live/PUNCH_LIST.md
+  [SUMMARIZED] live/RESEARCH_PRESERVATION_CONTRACT.md
+  [SUMMARIZED] live/STATE_OF_ONTINUITY.md
+  [SUMMARIZED] live/THE_PARADIGM.md
+  [SUMMARIZED] live/WORKER_BOOT_PACKET.md
+  [SUMMARIZED] live/WORKER_MANUAL.md
+  [SUMMARIZED] live/WORKER_QUICKBOOT.md
+  [READ-not-skeletal] live/agent_queue.md
+  [READ-not-skeletal] live/battery.json
+  [READ-not-skeletal] live/builder_handoff_june7.md
+  [READ-not-skeletal] live/builder_handoff_latest.md
+  [READ-not-skeletal] live/camera_cte.py
+  [SUMMARIZED] live/control_loop.py
+  [READ-not-skeletal] live/horizons.md
+  [READ-not-skeletal] live/manifest.json
+  [READ-not-skeletal] live/mission_state.py
+  [READ-not-skeletal] live/ods_phase1_v5.py
+  [READ-not-skeletal] live/ontinuity_loop.py
+  [READ-not-skeletal] live/present_horizon.md
+  [READ-not-skeletal] live/production_log_2026-06-08.md
+  [READ-not-skeletal] live/shepherd.py
+  [READ-not-skeletal] live/shepherd_alert.py
+  [SUMMARIZED] live/workspace_db_endpoint.py
+
+## S1-root  (1 files)
+  [SUMMARIZED] README.md
+
+## S2-prompts  (18 files)
+  [SUMMARIZED] prompts/intake_system.txt
+  [SUMMARIZED] prompts/knowtext_extraction_prompt.txt
+  [SUMMARIZED] prompts/model_a_system.txt
+  [READ-not-skeletal] prompts/model_a_system11.txt
+  [READ-not-skeletal] prompts/model_a_system222.txt
+  [SUMMARIZED] prompts/model_b_system.txt
+  [READ-not-skeletal] prompts/model_b_system1.txt
+  [READ-not-skeletal] prompts/model_b_system2.txt
+  [SUMMARIZED] prompts/model_c_system.txt
+  [READ-not-skeletal] prompts/model_c_system2.txt
+  [READ-not-skeletal] prompts/model_c_systemORIGINAL.txt
+  [SUMMARIZED] prompts/parietal_resolve.txt
+  [READ-not-skeletal] prompts/parietal_resolve1.txt
+  [SUMMARIZED] prompts/parietal_system.txt
+  [READ-not-skeletal] prompts/parietal_system1.txt
+  [READ-not-skeletal] prompts/parietal_system2.txt
+  [SUMMARIZED] prompts/projenius_system.txt
+  [READ-not-skeletal] prompts/projenius_system1.txt
+
+## S3-specs  (30 files)
+  [SUMMARIZED] live/specs/agent_handoff.md
+  [READ-not-skeletal] live/specs/autonomous_migration.md
+  [READ-not-skeletal] live/specs/autonomous_migration_provenance_alignment.md
+  [SUMMARIZED] live/specs/close_ritual_gate.md
+  [READ-not-skeletal] live/specs/control_you_there_loop.md
+  [SUMMARIZED] live/specs/conversation_fts.md
+  [READ-not-skeletal] live/specs/coordinator.md
+  [SUMMARIZED] live/specs/coordinator_worker_multiseat.md
+  [SUMMARIZED] live/specs/cyclenum_fix.md
+  [SUMMARIZED] live/specs/deploy_drift_check.md
+  [SUMMARIZED] live/specs/erl_decision.md
+  [SUMMARIZED] live/specs/farmfix_verify.md
+  [SUMMARIZED] live/specs/four_stage_pipeline.md
+  [READ-not-skeletal] live/specs/gated_session_substrate.md
+  [READ-not-skeletal] live/specs/governor_adjudicator_spec.md
+  [READ-not-skeletal] live/specs/governor_punchlist_panel_spec.md
+  [READ-not-skeletal] live/specs/mailbox_threat_audit.md
+  [SUMMARIZED] live/specs/ontinuity_https_protocol.md
+  [SUMMARIZED] live/specs/oracle.md
+  [SUMMARIZED] live/specs/per_identity_keys.md
+  [READ-not-skeletal] live/specs/punch_reconcile.md
+  [SUMMARIZED] live/specs/query_guard_fix.md
+  [SUMMARIZED] live/specs/scoped_operations_spec.md
+  [SUMMARIZED] live/specs/signoff_deploychain.md
+  [READ-not-skeletal] live/specs/signoff_gate_v2_spec.md
+  [READ-not-skeletal] live/specs/signoff_keys.md
+  [READ-not-skeletal] live/specs/signoff_provenance_spec.md
+  [SUMMARIZED] live/specs/trusted_deploy_protocol.md
+  [SUMMARIZED] live/specs/verified_bootstrap_gate.md
+  [READ-not-skeletal] live/specs/you_there_longpoll.md
+
+## S4-code  (12 files)
+  [SUMMARIZED] live/bootstrap/gate.py
+  [SUMMARIZED] live/box/box_ops.py
+  [SUMMARIZED] live/box/file_server.py
+  [READ-not-skeletal] live/box/governor.html
+  [SUMMARIZED] live/box/laptop_seat.py
+  [SUMMARIZED] live/box/seat_mailbox.py
+  [SUMMARIZED] live/box/seat_mailbox_DEPLOY.md
+  [READ-not-skeletal] live/box/trusted_deploy.py
+  [SUMMARIZED] live/db.py
+  [READ-not-skeletal] live/governor/governor.html
+  [READ-not-skeletal] live/governor/governor_relay.py
+  [READ-not-skeletal] live/governor/governor_routes.py
+
+## S5-conversations  (21 files)
+  [SUMMARIZED] live/conversations/2026-06-07_morning_proof_cycles.md
+  [SUMMARIZED] live/conversations/2026-06-08_burnin_audit_fixes.md
+  [SUMMARIZED] live/conversations/2026-06-09_breakfix_and_design_block.md
+  [SUMMARIZED] live/conversations/2026-06-10_migration_courier_first_seat.md
+  [SUMMARIZED] live/conversations/2026-06-11_roster-hygiene-demo-tenancy.md
+  [SUMMARIZED] live/conversations/2026-06-13_isotest-test-sessions.md
+  [SUMMARIZED] live/conversations/2026-06-13_senior-care-pipeline.md
+  [SUMMARIZED] live/conversations/2026-06-14_evening_button-lockdown-researcher-seat.md
+  [SUMMARIZED] live/conversations/2026-06-14_first-solution-proposal-delivered.md
+  [SUMMARIZED] live/conversations/2026-06-14_night_first-certified-researcher-seat-session.md
+  [SUMMARIZED] live/conversations/2026-06-15_afternoon_boot-packet-backup-fabrication-website.md
+  [SUMMARIZED] live/conversations/2026-06-15_morning_seed-tenant-op-first-client-tenant.md
+  [SUMMARIZED] live/conversations/2026-06-19_living-mark-corpus-website-inventory.md
+  [SUMMARIZED] live/conversations/2026-06-20_control-orientation-researcher-seat-parietal-provider-trace.md
+  [SUMMARIZED] live/conversations/2026-06-29_oracle-step1-leash-architecture.md
+  [SUMMARIZED] live/conversations/2026-07-19_songbook-design-build-and-corpus-failure.md
+  [SUMMARIZED] live/conversations/2026-07-20_package-hands-question-and-control-drift.md
+  [SUMMARIZED] live/conversations/2026-09-03_completion-phase-and-career-path.md
+  [SUMMARIZED] live/conversations/2026-09-03_openai-control-succession-platform-agnostic-proof.md
+  [SUMMARIZED] live/conversations/2026-09-05_b5p-research-preservation-and-challenged-proof.md
+  [SUMMARIZED] live/conversations/CONVENTION.md
+
+## S5-sessions  (18 files)
+  [READ-not-skeletal] live/sessions/push_test.txt
+  [READ-not-skeletal] live/sessions/session_20260506_170442.txt
+  [READ-not-skeletal] live/sessions/session_20260506_172911.txt
+  [READ-not-skeletal] live/sessions/session_20260506_175827.txt
+  [READ-not-skeletal] live/sessions/session_20260506_180856.txt
+  [READ-not-skeletal] live/sessions/session_20260506_201645.txt
+  [READ-not-skeletal] live/sessions/session_20260507_185127.txt
+  [READ-not-skeletal] live/sessions/session_20260507_190723.txt
+  [READ-not-skeletal] live/sessions/session_20260507_191336.txt
+  [READ-not-skeletal] live/sessions/session_20260507_192301.txt
+  [READ-not-skeletal] live/sessions/session_20260507_213919.txt
+  [READ-not-skeletal] live/sessions/session_20260507_220949.txt
+  [READ-not-skeletal] live/sessions/session_20260507_223132.txt
+  [READ-not-skeletal] live/sessions/session_20260507_230126.txt
+  [READ-not-skeletal] live/sessions/session_20260507_231006.txt
+  [READ-not-skeletal] live/sessions/session_20260507_233503.txt
+  [READ-not-skeletal] live/sessions/session_20260507_233904.txt
+  [READ-not-skeletal] live/sessions/session_20260507_235001.txt
+
+## S6-corpus-std  (8 files)
+  [SUMMARIZED] project-corpus-standard/GEMINI_QUICKSTART.md
+  [SUMMARIZED] project-corpus-standard/README.md
+  [SUMMARIZED] project-corpus-standard/template/CURRENT_STATE.md
+  [SUMMARIZED] project-corpus-standard/template/PROBLEM_DEFINITION.md
+  [SUMMARIZED] project-corpus-standard/template/PUNCH_LIST.md
+  [SUMMARIZED] project-corpus-standard/template/ROADMAP.md
+  [SUMMARIZED] project-corpus-standard/template/mini_corpus.md
+  [SUMMARIZED] project-corpus-standard/template/sessions/SESSION_TEMPLATE.md
+
+## S6-live-sub  (35 files)
+  [READ-not-skeletal] live/archive/boot_extreme_REFUSE_worker3.md
+  [READ-not-skeletal] live/archive/mailbox_2026-06-21_laptop_results.md
+  [READ-not-skeletal] live/audits/burnin_audit_pass1.md
+  [READ-not-skeletal] live/audits/burnin_audit_task.md
+  [SUMMARIZED] live/baselines/2026-09-04_b0.json
+  [READ-not-skeletal] live/evidence/B1_IPAD_PRIVATE_TRANSFER_2026-09-06.md
+  [READ-not-skeletal] live/experiment/B5P_LIVE_2026-09-05_COMPARATIVE_TEST_PLAN.md
+  [READ-not-skeletal] live/experiment/acc_exclusion_manifest_session1.json
+  [READ-not-skeletal] live/experiment/acc_log_session1.jsonl
+  [READ-not-skeletal] live/experiment/burnin_resident.py
+  [READ-not-skeletal] live/experiment/migrate_modal_touched.py
+  [READ-not-skeletal] live/fixes/BOOTTUNE-1/WORKER_QUICKBOOT_proposed.md
+  [READ-not-skeletal] live/fixes/BOOTTUNE-COMPARE/recommendation.md
+  [READ-not-skeletal] live/fixes/ERL-REBUILD/app_candidate.py
+  [READ-not-skeletal] live/fixes/KEYS-2-FIX/seat_mailbox.py
+  [READ-not-skeletal] live/fixes/POISON-DETECT-1/shepherd_alert.py
+  [READ-not-skeletal] live/fixes/burnin_fix1_proposal.md
+  [READ-not-skeletal] live/fixes/burnin_fix2_proposal.md
+  [READ-not-skeletal] live/fixes/burnin_fix3_proposal.md
+  [READ-not-skeletal] live/fixes/burnin_fix4_proposal.md
+  [READ-not-skeletal] live/fixes/burnin_signoff_gate_proposal.md
+  [SUMMARIZED] live/integrations/senior-care/FOLD.md
+  [READ-not-skeletal] live/misc/migrate_experiment_mode.py
+  [READ-not-skeletal] live/misc/museum_absence.py
+  [READ-not-skeletal] live/misc/museum_experiment.py
+  [READ-not-skeletal] live/misc/push_to_github.py
+  [READ-not-skeletal] live/misc/run_ods.bat
+  [SUMMARIZED] live/notes/BOUNDARY_GATE_PRIMITIVE.md
+  [READ-not-skeletal] live/tests/courier_smoke_test.sh
+  [SUMMARIZED] live/tools/b1_verify.sh
+  [SUMMARIZED] live/tools/ipad_keyboard.py
+  [SUMMARIZED] live/tools/ipad_keyboard_CONTRACT.md
+  [SUMMARIZED] live/tools/ipad_keyboard_CORPUS.md
+  [SUMMARIZED] live/tools/ontinuity_https.sh
+  [SUMMARIZED] live/tools/release_baseline.py
+
+## S6-root-other  (57 files)
+  [READ-not-skeletal] A New Growth Vector v0 1.docx
+  [READ-not-skeletal] Adversarial_Development_Paper_v1 (1).docx
+  [READ-not-skeletal] Artificialware_v0_1.docx
+  [READ-not-skeletal] CNAME
+  [READ-not-skeletal] Cognitive Ecology Cybersecurity v0 1.docx
+  [READ-not-skeletal] Cognitive Ecology Robotics v0 1.docx
+  [READ-not-skeletal] Cognitive Ecology Swarm v0 1.docx
+  [READ-not-skeletal] Dynacology_v0_1 (1).docx
+  [SUMMARIZED] Knowtext v1 1.docx
+  [READ-not-skeletal] Meta Cognitive Ecology v0 1.docx
+  [READ-not-skeletal] Meteorology_of_Information_Propagation_v0_2.docx
+  [READ-not-skeletal] Ontinuity Routing Client v0 1.docx
+  [READ-not-skeletal] Ontinuity v1 final.docx
+  [READ-not-skeletal] Procfile
+  [READ-not-skeletal] Project_Outline_v1_3.docx
+  [READ-not-skeletal] Psychology of AI Data arXiv.pdf
+  [READ-not-skeletal] Psychology_of_AI_Data_v0_3.docx
+  [SUMMARIZED] Tetraform_v1_0.docx
+  [READ-not-skeletal] The Cognitive Ecology v0 1.docx
+  [READ-not-skeletal] The Teaching Leash v0 2.docx
+  [READ-not-skeletal] Triform v1.docx
+  [READ-not-skeletal] Triform v2 final.docx
+  [SUMMARIZED] app.py
+  [READ-not-skeletal] artificialware.html
+  [READ-not-skeletal] box_ops.py
+  [READ-not-skeletal] buckyball.html
+  [READ-not-skeletal] capability_auth.py
+  [READ-not-skeletal] cognitive-ecology.html
+  [READ-not-skeletal] corpus.html
+  [READ-not-skeletal] db.py
+  [READ-not-skeletal] deidentifier.html
+  [READ-not-skeletal] dynacology.html
+  [SUMMARIZED] erl_main_main.txt
+  [READ-not-skeletal] extract_to_db.py
+  [READ-not-skeletal] growth-vector.html
+  [SUMMARIZED] index.html
+  [SUMMARIZED] intake.html
+  [SUMMARIZED] intake11.html
+  [READ-not-skeletal] intake_system_prompt.txt
+  [SUMMARIZED] knowtext.html
+  [SUMMARIZED] knowtext_current.txt
+  [SUMMARIZED] knowtext_isotest_main.txt
+  [SUMMARIZED] knowtext_main_main.txt
+  [READ-not-skeletal] model_client.py
+  [READ-not-skeletal] moip.html
+  [READ-not-skeletal] ontinuity behavioral data.db
+  [READ-not-skeletal] ontinuity_research_summary_v2.docx
+  [READ-not-skeletal] ontinuity_safety_summary_v3.docx
+  [READ-not-skeletal] papers.html
+  [SUMMARIZED] reliability.html
+  [READ-not-skeletal] requirements.txt
+  [READ-not-skeletal] session-record.html
+  [READ-not-skeletal] synthesis.html
+  [READ-not-skeletal] teaching-leash.html
+  [READ-not-skeletal] tetraform.html
+  [READ-not-skeletal] trust.html
+  [READ-not-skeletal] workspace_db_endpoint.py
+
+## S6-templates  (3 files)
+  [READ-not-skeletal] templates/governor.html
+  [READ-not-skeletal] templates/index.html
+  [READ-not-skeletal] templates/kb.html
+
+## S6-tests  (11 files)
+  [READ-not-skeletal] tests/test_b1_bootstrap_gate.py
+  [READ-not-skeletal] tests/test_b1_burnin_restart.py
+  [READ-not-skeletal] tests/test_b1_release_boundaries.py
+  [READ-not-skeletal] tests/test_capability_admission.py
+  [READ-not-skeletal] tests/test_capability_admission_surface.py
+  [READ-not-skeletal] tests/test_capability_box_identity.py
+  [READ-not-skeletal] tests/test_capability_courier.py
+  [READ-not-skeletal] tests/test_ontinuity_https_client.py
+  [READ-not-skeletal] tests/test_release_baseline.py
+  [READ-not-skeletal] tests/test_research_preservation.py
+  [READ-not-skeletal] tests/test_trusted_deploy.py
