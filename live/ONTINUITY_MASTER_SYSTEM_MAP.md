@@ -720,3 +720,181 @@ first durable memory + the mini-corpus that pipeline stages 2-4 hand off through
 that separates "manual pipeline run" from "automated product." Bounded and well-specified.
 
 ═══ MAPPING COMPLETE. The map now enables the packaging plan (next: test that claim by writing it). ═══
+
+════════════════════════════════════════════════════════════════
+## 21. THE CONTINUITY MECHANISM (Mode B) — DEPTH-ARM ANCHOR
+The general map (§2 memory, §3 engine, §14 roles, §17 rituals) treats the AUTOMATIC MECHANICAL CAPTURE
+— the thing that lets a cold model pick up where the last left off — as scattered nodes. It is actually a
+single coupled CIRCUIT (open→run→close→next-open), with the CURRENCY DISCIPLINE as its heartbeat.
+→ FULL ANATOMY + PHYSIOLOGY: see companion depth-map **ONTINUITY_CONTINUITY_MECHANISM.md**.
+This anchor exists so a cold reader hits the survey here and can DRILL into the mechanism without mistaking
+the survey ("Projenius writes Knowtext at close") for the whole truth. The mechanism is the PRODUCT'S CORE:
+it is the part that must be brought into reality so it fires automatically, with the user never doing
+technical work by hand. Anchored Sept-3 (the cross-vendor succession proved the full circuit fired: a cold
+non-Anthropic model booted and picked up the office through the corpus alone).
+
+════════════════════════════════════════════════════════════════
+## 22. PRIVATE REPO ACCESS + THE PRIVATE CORPUS (ontinuity-intake-data)
+[HOW-TO, indexed for retrieval — a fresh seat needing the private repo reads THIS section first]
+
+### HOW TO REACH THE PRIVATE REPO (verbatim, verified this session — do NOT rediscover)
+The intake token is NOT in LLaves by design. MINT it from the Railway vault:
+1. Railway project token is in LLaves. Vault-read via Railway GraphQL (the EXACT query that works — bare
+   forms 403): POST https://backboard.railway.app/graphql/v2, header `Project-Access-Token: <railway token>`,
+   body query `variables(projectId:"a8dea5f4-b34e-466e-b22c-0d5b59fc63b5", environmentId:
+   "6ff341f9-675e-4514-9b0c-5defe9d3d2a9", serviceId:"72b20f74-d24d-4502-ba35-97e2d09f809a")`.
+2. Returns 40 vars incl. `INTAKE_GITHUB_TOKEN` (93 chars). Use it as Bearer on api.github.com contents API
+   for repo `PatrickKillebrew/ontinuity-intake-data` (same pattern as the main repo).
+Three distinct keys: DIAG_KEY = box/engine hands; Railway project token = vault key (in LLaves);
+INTAKE_GITHUB_TOKEN = private-repo key (MINTED via the Railway token, never in LLaves).
+FAILURE-CLASS NOTE: a 404 on the private repo with the MAIN PAT is EXPECTED (main PAT is scoped to public
+repo + trophyclubpainting only). Do NOT report "no access" — mint the intake token first. (This seat hit
+that exact wall and gave up until pushed; recorded so the next seat doesn't.)
+
+### PRIVATE REPO CONTENTS (the layer-1/layer-3 corpus the public repo lacks)
+- **LAPTOP_HANDS_RUNBOOK.md** — how a conversation gets EXECUTION-hands on a physical laptop (see §23).
+- **projects/shs-wasserman/** — the COMPLETE real SHS/Katie project corpus (30+ files): CURRENT_STATE,
+  SHS_PROBLEM_DEFINITION, ROADMAP, PUNCH_LIST, mini_corpus, design/session folds, compliance verdicts,
+  FROZEN_PRODUCT_SHAPE, W5_PACKAGING, sanitizer/ (the layer-3 identity membrane, W1-W5 build notes + generic
+  SANTA_CLEAN). This is the memory discipline IN PRODUCTION — the real specimen of what a packaged project
+  corpus looks like. [DEEP-MAP TARGET — the three-layer topology (§8.4 depth-map) made concrete.]
+- **projects/azz-galvanizing/SEED.md** — Cornel/AZZ (the target user's origin project).
+- **projects/ipad-keyboard*/** — the ipad keyboard helper project corpus (the tool GPT deleted, its home).
+- **backups/** — the DB .sql dumps (backup_db output; e.g. ontinuity_dump.sql).
+- **sessions/** — captured intake JSONs (intake_<tag>_final.json; Katie = intake_Kshs_final.json).
+- **synapse/** — the Synapse (cybersecurity) project material.
+
+════════════════════════════════════════════════════════════════
+## 23. LAPTOP EXECUTION-HANDS (LAPTOP_HANDS_RUNBOOK.md) — the build-hands mechanism
+[Fills the "how does a build get executed" gap. Distinct from box/engine hands.]
+
+### THE METHOD: the laptop runs file_server.py (Flask, C:\donkeycar) with a `/run` endpoint that executes
+whitelisted commands via subprocess.run(shell=True). Endpoints: /status /read /write(auth) /run(auth)
+/settings(auth) /log. config.json holds api_key, duckdns creds, safe_commands (EXACT-STRING whitelist),
+active_project (sets /run cwd). This drove the S22-over-ADB build at the operator's sister's house.
+
+### REACHABILITY (the operator's ONLY manual steps — everything else the conversation drives):
+1. Start server: `cd C:\donkeycar && python file_server.py` (binds 0.0.0.0:5001).
+2. DuckDNS current: if public IP changed, `python duckdns_update.py` (ontinuityws.duckdns.org).
+3. Port-forward TCP 5001 -> laptop:5001 (router) OR Caddy 443->localhost:5001. Operator disables between
+   sessions for safety; re-enabling is deliberate operator-only. NO tunnel tool in the corpus (no
+   cloudflared/ngrok/tailscale); an outbound cloudflared tunnel is the correct build if a persistent
+   no-port-forward channel is ever wanted — NOT yet built.
+
+### THE 30-SECOND-TIMEOUT PATTERN (critical): /run kills anything >30s. For PyInstaller/Inno/pip: launch
+DETACHED (`start "" cmd /c BUILD.bat > build.log 2>&1`) — returns immediately — then POLL via /read?path=
+build.log until DONE/[STOP]. A wrapper BUILD.bat reduces a multi-step build to ONE whitelisted string.
+
+### THE DECISIVE 2026-07-02 CORRECTION (two run-paths, traced to live app.py):
+1. **Engine session path** (what drove the S22): WORKSPACE_URL -> laptop DuckDNS; the Railway SESSION ENGINE,
+   inside the session loop, calls call_workspace_run (app.py ~2559) POSTing to {WORKSPACE_URL}/run. RAILWAY
+   dials the laptop (cloud egress IP), not the sandbox. call_workspace_run is reachable ONLY from the session
+   loop — NOT from any diag/courier/public route.
+2. **Courier path** (/diag/op/<name> -> box /op/<name>): the laptop's file_server has /run /read /write
+   /settings, NOT /op/*, so the courier CANNOT drive the laptop even if WORKSPACE_URL is repointed.
+→ A CHAT-SANDBOX CONVERSATION CANNOT drive the laptop's /run via the courier. To reproduce laptop run-hands:
+unfreeze Railway -> repoint WORKSPACE_URL to laptop (dashboard, no deploy) -> RESTART engine (WORKSPACE_URL
+cached at import, app.py:52) -> open laptop port -> run a session. WITH ENGINE FROZEN a sandbox has read-hands
+(diag) + repo-hands (PATs), NOT laptop-run-hands.
+→ THE MOST PROMISING UNBLOCKED PATH: sandbox -> http://<laptop-public>:5001/run DIRECTLY with X-API-Key,
+bypassing the engine — IF the laptop port is open. Tested 2026-07-02, FAILED (HTTP 000) only because the
+port-forward was OFF; worth re-testing when the port is open (blocked by the port, not the protocol).
+
+### SECURITY REALITY: /run with shell=True on the public internet, protected by one API key = real attack
+surface. Acceptable for a bounded operator-present build session; never left open persistently. Re-open,
+build, close. (The boundary-gate primitive applied: the port IS the gate; default closed.)
+
+### PACKAGING RELEVANCE: this is BUILD-hands (how the product's own artifacts get compiled/packaged, e.g.
+the W5 installer for SHS), distinct from the per-operator INSTANCE hands (box/engine). For packaging Product
+2, the installer build uses this laptop-hands path; the per-operator RUNTIME uses the box/engine courier.
+
+════════════════════════════════════════════════════════════════
+## 24. THE PROVISIONING RUNBOOK — per-operator install (zero to a booted seat)
+[Source: private repo projects/the-package/PROVISIONING_RUNBOOK.md, commit 735c42bd, 2026-07-19.
+This is THE per-operator install procedure. Reach it via §22. Method rule: DUPLICATE the operator's
+install; "same as Ontinuity" = copy the working thing, do not redesign. Audience: a competent IT
+person or the operator — THE END USER DOES NOT RUN THIS (confirms the corrected single-product model:
+the user only does the two rituals in §F; everything else is one-time setup).]
+
+### THE USER OWNS FOUR THINGS (nothing shared with any other install):
+- A1 REPO — a PRIVATE GitHub repo. Holds the corpus. THIS IS THE MEMORY.
+- A2 ENGINE — a Railway service. Hosts the courier so the user's AI reaches the box; holds secrets as env.
+- A3 BOX — a small VPS. Runs the ops; the mailbox + every /op/* execute here; the DB lives here.
+- A4 BOOT PACKET — a text block the user pastes. Seats their AI: gives hands, then grounds it.
+WHY BOTH ENGINE+BOX (not optional): engine = reachable public relay surface; box = where ops run + DB.
+A commit to the repo does NOT install on the box — two separate steps, THE most common install mistake.
+
+### PREREQUISITES (§B): user GitHub acct (private repo); Railway PAID tier (trial expiry kills the engine);
+VPS 2GB Ubuntu (Hetzner CX22-class proven); domain/DDNS or static IP for the box; user's AI platform + API
+key; a password manager for generated keys (never in a repo file).
+
+### STEP-BY-STEP (§C):
+- C1 PRIVATE REPO: create it; make `live/`; seed with MECHANISM docs (§D) + EMPTY TEMPLATES (§E); make a
+  PAT (contents r/w THIS repo only) → goes in the vault at C3, not a file. Check: GET contents/live returns files.
+- C2 BOX: VPS Ubuntu 2GB; Python3+gunicorn; copy file_server.py + box_ops.py from operator install; ops
+  needed for a REMEMBERING seat = read_repo, read_file, write_file, commit_file, read_journal (mailbox ops
+  only if multiple seats); generate DIAG_KEY (40 alnum) → password manager + box env; gunicorn 0.0.0.0:5001
+  as systemd. AUTH = APPLICATION-LAYER KEY, never IP whitelist (retired 2026-06-10, pooled cloud egress IPs
+  lock out legit seats). Check: box-local curl localhost:5001/health responds.
+- C3 ENGINE: Railway project+service, Hobby+ (trial expiry kills it); deploy the courier — MINIMUM two
+  routes: GET /diag/<endpoint> (read-through) + POST /diag/op/<name> (forwards to box /op/<name>). (Operator
+  app.py has 17 routes; only these two carry the seat; the rest is session runtime, not needed for context
+  mgmt.) Env: DIAG_KEY (same as box), WORKSPACE_URL=http://<box-ip>:5001, GITHUB_TOKEN (the PAT), user model
+  key. Note PROJECT/ENV/SERVICE IDs. Make a Railway PROJECT TOKEN (the vault key) → password manager.
+  THE KEY CHECK: POST {engine}/diag/op/__probe__?diag_key=<DIAG_KEY> body {"seat":"control"} → expect a 403
+  whose body ECHOES THE LIVE ALLOWLIST. If the allowlist comes back, THE WHOLE CHAIN WORKS. Don't proceed on
+  a broken probe.
+- C4 PARAMETERIZE THE BOOT PACKET: take operator CONTROL_QUICKBOOT.md, replace EXACTLY SEVEN values (engine
+  URL, repo owner/repo, Railway PROJECT/ENV/SERVICE IDs, Railway token prefix as pointer, client/project
+  name). CHANGE NOTHING ELSE — the discipline sections (fetch-and-verify, assertion rule, hard read gate,
+  park-don't-doubt) make the boot work and are not install-specific.
+- C5 CREDENTIAL FILE: create `LLaves` in the user's AI project space (Gemini attached files / Claude project
+  files) with TWO things: DIAG_KEY + Railway token. NOT the GitHub PAT (a cached credential goes stale on
+  rotation and teaches the seat it has no write path — the PAT lives in the vault, minted at boot; a stale
+  cache is worse than no cache).
+- C6 FIRST BOOT: fresh conversation in the project with LLaves attached; paste the packet; watch THREE things:
+  (1) it reports the REAL allowlist from the probe (not an expected list — that means no connection);
+  (2) a REAL LINE from each required doc (not a summary); (3) the single next action in one line. All three land = live.
+
+### §D MECHANISM docs into live/ (~25k, copy w/ light edits): THE_PARADIGM (trim self-hosting roadmap, keep
+corpus-over-priors), OPERATING_RUBRIC (trim incident note, keep roles+honest-ceiling), OPERATING_MANUAL
+(copy the ~14k that is RITUALS+COMMITTING+CREDENTIALS; leave behind session-start-modes/config-trap/shepherd/
+role-providers/Oracle = Tetraform runtime), CONTROL_QUICKBOOT (parameterized, 7 values).
+### §E SHIPS EMPTY (state, install-specific, SHAPE not content): CONTROL_HANDOFF (headings + "no prior
+session" + blank next-action), PUNCH_LIST (DONE/IN-PROGRESS/OPEN empty + evidence-citation rule), agent_queue
+(head structure only: read-the-manual banner + STANDING RULES + empty ACTIVE). DO NOT copy operator content
+(Ontinuity's punch list=61k, queue=206k of another company's history — would teach the seat wrong facts).
+
+### §F THE TWO RITUALS (what the END USER actually does — the ONLY user-facing part):
+- RESUME (start of a session, after any gap): paste the boot packet into a fresh conversation → AI reads the
+  corpus and reports where things stand. BOOT AND RESUME ARE THE SAME ACT.
+- GROUND (mid-session): when a component reaches fruition OR the AI asserts without showing reads → "Ground
+  yourself against the corpus before continuing."
+- CLOSE (when stopping): "Run the close ritual." AI must: reconcile punch list vs shipped (cite evidence),
+  write the session record (THE REASONING not just outcomes), fold the queue, fix stale, sweep secrets,
+  update handoff with the single next action. THE CLOSE CARRIES THE WHOLE BURDEN (the instance that did the
+  work is the only witness to WHY). Make the AI report PASS/FAIL per item WITH THE ACTUAL VALUE IT READ (not
+  "I updated everything" — a hand-run close had two checks silently failing, caught only by demanding a real
+  date from a real file).
+
+### §G VERIFICATION (done when all 5 pass): __probe__ returns live allowlist; fresh boot reports a real line
+from each doc; seat read_repo's a file through the courier; seat commits a file; a close ritual writes to the
+repo and the commit is visible on GitHub.
+
+### §H KNOWN TRAPS (each cost the operator real time — do not rediscover):
+repo-commit≠box-install (needs write_file+restart, TWO steps) · direct :5001 timeout (by design, use courier)
+· stale CDN reads (use api.github.com raw, never raw.githubusercontent.com) · cached PAT 401 (mint from vault
+— why C5 keeps PAT out of LLaves) · Railway trial expiry (paid day one) · IP whitelist (pooled egress, use
+key-auth) · long-poll timeout (wait param ≤20s; relay read-timeout 25).
+
+### §I OPEN, resolve during FIRST install (honest gaps): (1) can the target chat surface make OUTBOUND calls?
+Claude's sandbox runs curl; other platforms UNTESTED — test FIRST. (2) will a non-Claude model hold the seat?
+The read gate demands several long docs + cross-reasoning; failure is SILENT (reports oriented, reasons from
+priors) — the close gate is the backstop (another reason close matters more than open). (3) cost per install
+(Railway+VPS, unpriced). (4) automation: deliberately manual — prove the sequence by hand before scripting.
+
+### PACKAGING STATUS: this runbook IS the Product-2 install procedure, COMPLETE and actionable, written
+against the operator's proven install. It needs: (a) update to the recovered 5640170 state (no B1 admission;
+19-op diag-key — the runbook predates B1 so it already assumes the diag-key model, GOOD); (b) resolve §I gaps
+on a real first install (Cornel = the outside-operator transfer test). The runbook already assumes the
+CORRECT (per-individual, diag-key, user-does-only-rituals) model — it was right before B1 and remains right.
