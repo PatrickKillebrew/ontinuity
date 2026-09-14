@@ -52,7 +52,7 @@ get_effective_config precedence (app.py ~195): base CONFIG (empty for model_a) �
 - Health: /diag/api/health?diag_key=KEY
 - Farm engine base: https://ontinuity-farm-production.up.railway.app  (same /diag/* routes)
 - Mailbox (answer an orphaned turn): POST /mailbox/respond {mailbox_key, turn_id, response}; check /mailbox/turn?mailbox_key=...
-- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist (live, 19 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, mailbox_purge, write_file, commit_self, read_file, commit_file, you_there, read_repo, bootstrap_gate, deploy, seed_tenant, backup_db. (mailbox_purge: scoped queue cleanup, removes BOTH queued and done by kind — verify scope with a SELECT GROUP BY status before firing. backup_db: snapshot the corpus DB. Both added since the 17-op count; synced 2026-06-29.) (The arm that lets a sandbox seat reach the box through the engine.) seed_tenant: bounded idempotent tenant provisioning (creates a users row + projects row, no arbitrary SQL) — lets a seat onboard a client tenant hands-free; first use seeded SHS-Wasserman 2026-06-15. NOTE (install lesson, 2026-06-15): a new box op is NOT live until written to the BOX DISK via write_file + restart — committing box_ops.py to the repo alone leaves the box running stale on-disk code (a commit landed but the box 404'd until write_file installed it). Repo commit and box install are TWO steps; the manual line 122 rule.
+- Scoped-op courier (sandbox-seat box hands): POST /diag/op/<name> {bounded args} with diag_key -> forwards to box /op/<name>, returns verbatim. Allowlist (live, 20 ops): read_journal, restart_workspace, register_egress, mailbox_send, mailbox_fetch, mailbox_ack, mailbox_peek, mailbox_reclaim, mailbox_purge, write_file, commit_self, read_file, commit_file, you_there, read_repo, bootstrap_gate, deploy, seed_tenant, backup_db. (mailbox_purge: scoped queue cleanup, removes BOTH queued and done by kind — verify scope with a SELECT GROUP BY status before firing. backup_db: snapshot the corpus DB. Both added since the 17-op count; synced 2026-06-29.) (The arm that lets a sandbox seat reach the box through the engine.) new_project: bounded idempotent PER-PROJECT provisioning (creates a projects row + main branch row AND initializes the project's empty Knowtext + ERL corpus files, keyed on the project name-slug to match _scope_slug) — the user-facing 'start a new matter' primitive; the caller then passes the returned project name to /agent/start (project_id field) so the session scopes to that matter. seed_tenant: DEPRECATED — it is in the allowlist but has NO box handler (returns 404 via the courier); it was never built as an op. SHS-Wasserman was seeded 2026-06-15 by running the standalone seed_tenant.py script ON the box, not via the courier (corrected 2026-09-13; the prior claim that it seeded hands-free was wrong). Use new_project going forward. NOTE (install lesson, 2026-06-15): a new box op is NOT live until written to the BOX DISK via write_file + restart — committing box_ops.py to the repo alone leaves the box running stale on-disk code (a commit landed but the box 404'd until write_file installed it). Repo commit and box install are TWO steps; the manual line 122 rule.
 
 ## FIREWALL (VPS workspace, port 5001) — June 9
 - Workspace 5001 is firewalled to whitelisted sources ONLY (default-drop). Whitelisted: operator laptop 47.37.119.177, operator parents' net 66.132.172.101, Railway relay 162.220.232.0/24, Railway FARM egress 52.52.202.228.
@@ -127,6 +127,30 @@ OPERATING INVARIANTS (the mechanics a seat must state correctly — these are wh
 ## WORKSPACE SERVING + ACCESS (current — IP-whitelist RETIRED, June 10)
 The workspace no longer uses IP-whitelisting. It runs under GUNICORN on 0.0.0.0:5001 (systemd ExecStart: gunicorn --bind 0.0.0.0:5001 --workers 2 --timeout 120 file_server:app), port 5001 OPEN to all (ufw allow 5001/tcp), with security by KEY-AUTH at the app layer (diag-key for /diag,/op/*,/register_egress; X-API-Key for /governor data + workspace write routes; page routes are read-only HTML). This is the fix for the egress-IP-rotation breakage: relay + writes now work from ANY IP and survive every redeploy. Do NOT re-introduce per-IP ufw rules — that was the retired model. Revert (if ever needed): /etc/systemd/system/ontinuity-workspace.service.bak_pregunicorn + /tmp/ufw_5001_pregunicorn.txt. NOTE: any earlier "firewall + whitelisted egress IPs" guidance above is OBSOLETE. With 5001 public, the security invariant is that every mutating route is key-gated — preserve that on any new route.
 
+
+## PER-PROJECT WORK — starting and resuming a "matter" (the accumulating knowledge-base feature)
+Ontinuity's core value for a user is a SEPARATE, accumulating corpus per "matter" (a training program, an
+incident-report knowledge base, a plant's operations, any ongoing topic) that never goes stale and never
+needs re-explaining. Each matter = its own project with its own Knowtext (session memory) + ERL (accumulated
+established results). The scoping is structural: a session scoped to a project writes ONLY to that project's
+corpus + DB rows; facts never bleed between matters.
+
+THE CONVERSATIONAL TRIGGER (how a non-technical user starts a matter — the seat drives the mechanism):
+- When the user expresses intent to start something NEW ("I want to start a training program for Plant 34's
+  dip-tank process", "let's begin building a knowledge base of our incident reports"), the CONTROL SEAT
+  recognizes this as a new-matter intent. It does NOT make the user run anything.
+- The seat proposes a project name in plain language ("I'll start a project called 'Plant-34-Dip-Tank-
+  Training' — sound right?") and, on confirmation, calls the new_project courier op with {name, description
+  in the user's words}, then scopes the working session to it (passes the returned name to /agent/start as
+  project_id). The user just keeps talking; the matter now has its own memory.
+- RESUMING a matter (the magic): when the user returns after any gap ("let's pick up the Plant 34 training"),
+  the seat starts a session scoped to that project. Projenius ORIENT + the injected ERL + Knowtext bring back
+  everything the matter established, so the model continues where it left off with no re-establishing of
+  context. This is the "resume without re-explaining" that is the product.
+- CROSS-PROJECT LEVERAGE (start further along than cold): a completed matter's proven patterns can inform a
+  new one. FACTS stay isolated per project; reusable METHODOLOGY/templates can cross when the operator
+  directs it ("start this training like the Plant-34 one") — operator-directed retrieval first; tag/topic-
+  based auto-retrieval is a later layer. The first training establishes a template the next one begins from.
 
 ## COLD-BOOT ONBOARDING (a fresh control seat with no prior context — run this FIRST)
 You are a control/operator seat booting cold. You are NOT empty of capability — your capabilities are documented; do not conclude one is absent until you have CHECKED for it (concluding "I can't" without checking is the wall-declaring failure the recoherence fold warns about). Run these steps in order:
