@@ -939,13 +939,20 @@ def op_railway_set_var():
                                 "the recorded cause must be resolved first (token permission, "
                                 "rate limit, or wrong project/service ID)."}), 409
 
-    pid = (b.get("project_id") or os.environ.get("RAILWAY_PROJECT_ID", "")).strip()
-    env = (b.get("environment_id") or os.environ.get("RAILWAY_ENVIRONMENT_ID", "")).strip()
-    svc = (b.get("service_id") or os.environ.get("RAILWAY_SERVICE_ID_MAIN", "")).strip()
-    token = os.environ.get("RAILWAY_TOKEN", "").strip()
+    # Credentials from the box's config.json (load_config, same pattern as diag_key at
+    # file_server L1467), with env as fallback. The seat never sees or handles these.
+    try:
+        import file_server
+        cfg = file_server.load_config()
+    except Exception:
+        cfg = {}
+    pid = (b.get("project_id") or cfg.get("railway_project_id") or os.environ.get("RAILWAY_PROJECT_ID", "")).strip()
+    env = (b.get("environment_id") or cfg.get("railway_environment_id") or os.environ.get("RAILWAY_ENVIRONMENT_ID", "")).strip()
+    svc = (b.get("service_id") or cfg.get("railway_service_id_main") or os.environ.get("RAILWAY_SERVICE_ID_MAIN", "")).strip()
+    token = (cfg.get("railway_token") or os.environ.get("RAILWAY_TOKEN", "")).strip()
     if not (pid and env and svc and token):
-        return jsonify({"error": "railway env not configured (RAILWAY_TOKEN / "
-                        "RAILWAY_PROJECT_ID / RAILWAY_ENVIRONMENT_ID / RAILWAY_SERVICE_ID_MAIN)"}), 503
+        return jsonify({"error": "railway creds not configured on the box (config.json railway_token / "
+                        "railway_project_id / railway_environment_id / railway_service_id_main, or env)"}), 503
 
     op_id = _ledger_begin("railway_set_var", {"name": name})  # value NOT logged (may be a secret)
     try:
