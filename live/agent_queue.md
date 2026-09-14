@@ -1709,3 +1709,18 @@ PROVISIONING_RUNBOOK.md (private repo) to the 5640170 state; package the per-ope
 
 **NEXT**
 - Execute PROVISIONING_RUNBOOK.md (private repo the-package/) Phase 2: stand up ONE fresh, operator-controlled second install (its own GitHub repo + Railway project + Hetzner box + diag key — landlord model, not shared) to demo with and hand to the BIL, and boot a Claude seat against it until __probe__ returns ITS allowlist, the read gate passes on ITS corpus, and a close ritual files to ITS repo. Account-creation steps (new repo/Railway project/VPS) are the operator's console actions; the seat prepares the parameterized boot packet + trimmed mechanism docs + empty-shape corpus and verifies the boot gate.
+
+
+## CURRENT-STATE TOUCH POINT — 2026-09-13 (control seat, claude.ai-chat:claude-fable-5.1; per-project memory ACTIVATED)
+
+**HOW THIS SESSION CONTINUED.** After the full-corpus read + app.py audit, Fable activated the dormant per-project memory scoping (Projenius/ERL), the feature underpinning Ontinuity's per-"matter" accumulating knowledge base — the core product value for the BIL (Cornel, AZZ 64-plant safety lead).
+
+**BUILT (this fold's commits: 34de6a6 engine+box, e88a2c5/61b0968 docs, ea94975 record).**
+- Per-project scoping was ~80% built + DORMANT (Easter-egg wiring); a SEAM AUDIT found the file layer wrote per-project but the READ side was disconnected. Fixed: (A) DB rows now scope to the session's project (was the global WORKSPACE_PROJECT — keystone); (B) the ERL is loaded at session start + injected into the Researcher and fed to Projenius ORIENT (was write-only/starved); (C/D) new new_project courier op creates the DB rows + per-project Knowtext/ERL files (keyed on name-slug), tested box-side before the allowlist, now live in the 20-op allowlist; seed_tenant DEPRECATED (reconstructed as never-built — no handler repo-wide, 404, Katie was seeded by the standalone script; the manual's hands-free claim was wrong, corrected).
+- Docs: OPERATING_MANUAL PER-PROJECT WORK section (the conversational trigger for non-tech users) + CONTROL_QUICKBOOT packet (contract-currency 4b).
+- END-TO-END TEST passed: new_project creates DB rows + both corpus files, keyed consistently, idempotent; all fixes confirmed in deployed code.
+
+**LEARNED.** The scoping's failures hid at the READ seams — building the op alone would have made projects that write files right but DB rows wrong and never read their own ERL back ("usually works," the exact failure that undermines the reconstruction differentiator). Verify every seam (read + write) before building on a partially-wired feature. The 281 historical "isolated" sessions were sealed-by-design test runs, not broken distillation — the operator's read of history was right.
+
+**NEXT**
+- Exercise the per-project memory LIVE as the acceptance test: start a real matter, resume it after a gap, confirm the ERL + Knowtext bring back context so the model continues without re-explaining (must match-or-beat a hand fold). Then resume PROVISIONING_RUNBOOK (private the-package/) Phase 2 — stand up the BIL's own instance to demo, now with working per-project memory. Then the two-tier methodology/template layer for cross-project "start further along" leverage.
