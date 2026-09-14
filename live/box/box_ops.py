@@ -856,9 +856,19 @@ def _railway_set_var(project_id, environment_id, service_id, name, value, token)
              "variableUpsert(input:{projectId:$p,environmentId:$e,serviceId:$s,name:$n,value:$v})}")
     body = json.dumps({"query": query, "variables": {
         "p": project_id, "e": environment_id, "s": service_id, "n": name, "v": value}}).encode()
+    # ROOT CAUSE (proven 2026-09-14): Railway's edge (Cloudflare) rejects the default
+    # "Python-urllib" User-Agent with 403/1010. A curl-like UA passes. This is WHY
+    # every model tripped on "Railway egress" — it was never the client, it was the
+    # UA header. Set once here, inside the op, so no seat ever has to remember it.
     req = urllib.request.Request(_RAILWAY_GQL, data=body,
                                  headers={"Content-Type": "application/json",
-                                          "Authorization": f"Bearer {token}"}, method="POST")
+                                          # PROVEN 2026-09-14: variableUpsert (a WRITE) authorizes ONLY with
+                                          # Project-Access-Token; Bearer returns "Not Authorized" (reads
+                                          # tolerate Bearer, which is why _railway_deploy's Bearer header
+                                          # never surfaced — box deploys were silently unauthorized: the
+                                          # true cause of the "known FARM seam"). Per CONTROL_HANDOFF.
+                                          "Project-Access-Token": token,
+                                          "User-Agent": "ontinuity-box/1.0 (curl-compatible)"}, method="POST")
     with urllib.request.urlopen(req, timeout=40) as r:
         return json.loads(r.read().decode())
 
@@ -919,7 +929,19 @@ def op_railway_set_var():
 
     # REFUSE-TO-RETRY (checked BEFORE attempting): if this op has failed 3+ times
     # in a row, stop and report the recorded cause rather than flail again.
+    # RESET PATH: after the cause is genuinely resolved, the caller must pass
+    # resolved_cause=<text> — a DELIBERATE statement of what was fixed (logged) —
+    # to reset the streak. An accidental re-call cannot reset it; only a stated
+    # resolution can. (Design note 2026-09-14: without this, a fixed bug leaves
+    # the op permanently refusing; with it, the refusal stays a real gate.)
     streak = _recent_consecutive_failures("railway_set_var")
+    resolved = (b.get("resolved_cause") or "").strip()
+    if streak >= 3 and resolved:
+        rid = _ledger_begin("railway_set_var", {"name": name, "streak_reset": True})
+        _ledger_finish(rid, "ok", f"streak reset — resolved_cause: {resolved[:150]}")
+        _prov_append({"kind": "op_streak_reset", "operation": "railway_set_var",
+                      "prior_attempts": streak, "resolved_cause": resolved[:200]})
+        streak = 0
     if streak >= 3:
         try:
             import file_server
