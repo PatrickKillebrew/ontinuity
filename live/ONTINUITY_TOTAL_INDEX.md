@@ -280,3 +280,78 @@ when in doubt include-and-mark-PROVISIONAL ("a missing result cannot be recovere
 session"). → This is the full memory anatomy: Parietal=session memory (NAVIGATE reads, DISTILL writes),
 Projenius=project memory (ORIENT primes, SYNTHESIZE maintains the ERL, LEDGER_QUERY serves). The 7-field
 Knowtext is the SESSION artifact; the ERL is the PROJECT artifact.
+## APP.PY FULL AUDIT + EASTER-EGG INVENTORY (Fable, 2026-09-13)
+app.py = 4958 lines, 170 functions. Audited whole for the first time. The "dormant wiring" is NOT orphaned
+functions (only 3 truly-orphaned: session_claims_execution + claims_execution_without_log = the superseded
+F.2 fabrication check, replaced by F.3; _release_session_start_capture = a cleanup helper). The real Easter
+eggs are LIVE functions whose feature is gated off, or wired-but-not-triggered. Findings:
+
+### EASTER EGG 1 [THE BIG ONE] — PER-PROJECT CORPUS SCOPING IS ALREADY FULLY WIRED
+The entire per-project memory isolation Patrick asked to "build" for Cornel's per-matter knowledge bases is
+ALREADY LAID IN and live. It's not missing — it's waiting for project_id to be set on sessions.
+- `_scope_slug(project_id, branch)` (L59) resolves a corpus slug: session scope wins, falls back to
+  deployment globals; returns None for the default "Ontinuity Platform"/main (legacy unchanged).
+- `get_knowtext_filename` / `get_github_knowtext_path` / `session_knowtext_path` (L71-86) → per-project
+  files `knowtext_<project>_<branch>.txt`. `get_erl_filename` / `session_erl_path` (L1061-71) → per-project
+  ERL `erl_<project>_<branch>.txt`. STRUCTURAL ISOLATION baked in: "no parameter lets a session name another
+  project's file" (verbatim). This is the two-axis fact-isolation rule AS CODE.
+- THE CLOSE (L3640): `has_own_project = bool(active_session.get("project_id"))`; `lineage_sealed = start_fresh
+  AND not has_own_project`. A session WITH a project writes to ITS OWN corpus + ERL; main untouched. A
+  start_fresh session with NO project is SEALED (writes skipped by design — "a session that did not read the
+  lineage does not write to it," Deploy 26 lineage isolation). → THIS explains the 281 "isolated" sessions:
+  they are start_fresh/no-project VERIFICATION runs, sealed on purpose, NOT a broken distillation. Patrick's
+  read of history is correct: distillation isn't broken, it's gated, and 86% of past sessions were
+  deliberately-sealed test runs.
+- THE ENTRY POINT ALREADY ACCEPTS IT (L3839): /agent/start reads `body.get("project_id")` and
+  `body.get("branch")` and sets them on active_session. So a session CAN be project-scoped TODAY by passing
+  project_id to /agent/start.
+→ WHAT'S ACTUALLY MISSING (small, not a from-scratch build): (a) a way to CREATE a project (the `projects`
+  row + initial empty Knowtext/ERL) from inside a session — the `new_project` op I proposed; today project_id
+  can be passed but nothing user-facing creates one mid-conversation. (b) dashboard mode (handle_start_session,
+  L4634) reads objective/api_keys/start_fresh but NOT project_id — only /agent/start is project-aware; the
+  dashboard path needs the same 2 lines. (c) the DB tables (established_results, knowtext_versions rows,
+  branches, session_series) are the RELATIONAL target but the engine writes FLAT FILES; the /api/session
+  ingest (L948, POST to box /api/session) is what populates knowtext_versions=357 — a SEPARATE path from the
+  file-Knowtext the loop reads. Two storage designs, only files wired end-to-end.
+
+### EASTER EGG 2 — run_work_product_extraction + run_final_synthesis (deliverable generators)
+Both are WIRED into the close (work_product runs in the end-sequence tuple L3733; final_synthesis defined but
+called 0× = DORMANT). work_product: extracts a clean deliverable doc from the transcript, with
+build_verified_results_block() (the execution-log ground truth) reproduced VERBATIM as the authoritative first
+section, then F.3-audited (the last unaudited artifact). final_synthesis: a whole-PROJECT synthesis doc (all
+established results + open questions + correction history across the full project) — "the final deliverable for
+the project. Project closed." → final_synthesis is a DORMANT project-completion feature: a "close out this
+whole matter into one document" capability, built and waiting for a trigger. Directly useful for Cornel:
+"finalize this training project into a deliverable."
+
+### EASTER EGG 3 — EXPERIMENT_MODE (randomized-signal control, the research instrument)
+Gated behind `os.environ.get("EXPERIMENT_MODE")=="1"` (L2952). When on, experiment_draw() injects a
+Bernoulli(0.5) randomized friction signal per cycle (Deploy 32, certified protocol receipt #13) — the
+randomized control that distinguishes genuine adversarial response from its appearance (the 319-session record's
+scientific backbone). OFF by default = identical path. This is the research-grade instrument, dormant unless
+running a formal study.
+
+### EASTER EGG 4 — the full Parietal/Projenius memory suite is CONFIGURED and wired
+PROJENIUS_URL/_MODEL/_API_KEY and PARIETAL_* are all SET on the live vault (confirmed). All four Projenius
+functions (ORIENT L4681 at session start, DISTILL/SYNTHESIZE at close L3651/L3678, run_projenius_search live
+in the loop) are wired. run_projenius_orient IS called (L4711 via run_pre_session). SYNTHESIZE→write_erl_ledger
+(L1110) writes the ERL FILE + github_push_erl. So the memory automation is PRESENT and RUNS — it just only
+fires on non-sealed (project-scoped or main-continuation) closes, which historically were rare.
+
+### CONFIRMED-DEAD (not Easter eggs, just superseded): session_claims_execution + claims_execution_without_log
+(F.2 tripwire, replaced by the F.3 deterministic execution-log detector); _release_session_start_capture (a
+capture-cleanup helper with no caller). Safe to leave; harmless.
+
+### THE REVISED BUILD PICTURE (this changes everything)
+Per-project scoping is ~80% built and dormant, not missing. To activate Cornel's per-matter knowledge bases:
+1. Add a `new_project` courier op (create projects row + branch row + empty Knowtext/ERL, set session scope).
+   [SMALL — the DB insert_project/insert_branch helpers exist in db.py per the schema; wire an op to call them.]
+2. Add project_id to the dashboard start path (2 lines, matching /agent/start).
+3. Decide the storage reconciliation: keep the flat-file corpus (wired, works) as primary and treat the
+   relational tables as the queryable index, OR unify. RECOMMEND: file-primary now (it's the working baseline
+   the folds prove), relational as the LEDGER_QUERY substrate later.
+4. Wire LEDGER_QUERY (prompt exists, no caller) as a courier op for cross-project retrieval (relevance:
+   operator-directed first, tag-based later — per the agreed a-then-b ordering).
+5. Optionally trigger final_synthesis (dormant, built) as a "finalize this project" capability.
+The fold baseline bar is MET by design: the wired path produces per-project Knowtext (the fold's continuity)
++ ERL (the fold's BUILT/LEARNED/REVERSED, structured). Activating it = same-or-better than folds, automatically.
