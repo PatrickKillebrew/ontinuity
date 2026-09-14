@@ -494,8 +494,11 @@ def op_bootstrap_gate():
     the contract.
 
     Body: {seat (req), role ('worker'|'control', default 'worker'),
-           lineage (str), seat_invariants ({key->text} for CHECK 6 MECHANICS),
-           canonical_op_count (int, optional override for CHECK 1)}.
+           lineage (str), seat_invariants ({key->text} for CHECK 6 MECHANICS)}.
+    CHECK 1's canonical count is owned by the gate module itself (its
+    CANONICAL_COURIER_OP_COUNT, updated in the same commit as any OP_ALLOWED
+    change). A caller-supplied canonical_op_count is REFUSED: an overridden pass
+    cannot honestly prove mechanical orientation (2026-09-05 review; 2026-09-13 fix).
     """
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
@@ -512,9 +515,11 @@ def op_bootstrap_gate():
     op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role})
     try:
         gate = _load_gate()
-        # Set CHECK-1 canonical to the current courier-allowlist length. Override
-        # from the body wins; else the post-this-op default (15).
-        gate.CANONICAL_COURIER_OP_COUNT = int(canonical) if canonical is not None else _GATE_CANONICAL_OP_COUNT
+        # CHECK-1 canonical count is governed by the gate module's own constant.
+        # No override from this wrapper and none from the caller.
+        if canonical is not None:
+            _ledger_finish(op_id, "fail", "canonical_op_count override refused")
+            return jsonify({"error": "canonical_op_count override is not accepted; the gate module owns the canonical count"}), 400
         # The box holds the box diag-key in config; pass it so the gate's corpus/
         # hands/engine checks authenticate through the relay exactly as a seat would.
         try:
