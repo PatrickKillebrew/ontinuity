@@ -147,15 +147,17 @@ This is Tetraform. Predictable output feeds the 4-stage solution machine.
 - [ ] Governor (observability) — what the operator sees
 
 ════════════════════════════════════════════════════════════════
-## 10. CURRENT SYSTEM STATE (folded from recovery work — was a stray doc)
-**Recovered to pre-GPT + B5-P hybrid, verified boots oriented:true.**
-- MAIN engine = commit `5640170` (pre-GPT `9a7eac2a` + B5-P evidence layer, ZERO B1). blob 35502fd0.
-- FARM engine = commit `f9696c49` (pre-GPT worker engine).
-- 19-op diag-key hands work; 328 sessions intact; Control boots oriented:true (all 6 checks pass).
-- Box files match repo (`0ef62d7:live/box/`); box gate reconciled to 19 ops (installed via write_file+restart).
-- Manual rolled back to 19-op pre-GPT version.
-- B1 authorization machinery DISCARDED but preserved in bundle `e15f5f46` + git commits for reference.
-- ipad_keyboard tool restored (GPT had deleted it).
+## 10. CURRENT SYSTEM STATE (updated 2026-09-13 after the rollback reconciliation)
+**Recovered to pre-GPT + B5-P, RECONCILED end to end (repo docs, code, and box), gate oriented:true reading the current next action.**
+- MAIN engine = commit `5640170` (pre-GPT `9a7eac2a` + B5-P; blob 35502fd0). FARM = `f9696c49`. 19-op diag-key hands. 328 sessions.
+- REPO (main ≥ `8e2a7fc`): pre-GPT text restored for THE_PARADIGM, OPERATING_RUBRIC, CONTROL_QUICKBOOT(+SNIPPET), CONTROL_HANDOFF,
+  PUNCH_LIST, gate spec, control_loop.py, index.html, laptop_seat.py, box_ops.py, seat_mailbox.py; WORKER docs keep the
+  Sept-5 currency fixes (19 ops, X-Diag-Key) minus B-block refs; GPT security hardening KEPT (no secret literals, header
+  key, no-redirect); B1 + B-block plan docs in `museum/` (README explains); B5-P + B0 baseline kept.
+- BOX: box_ops.py (pre-GPT, wrapper no longer overrides the gate count), seat_mailbox.py (pre-GPT), gate.py (parses the
+  manual's touch-point fold), file_server/shepherd_alert (hardened), db/workspace_db_endpoint (B5-P). trusted_deploy.py inert on disk.
+- GATE: CHECK 2 reads the latest `## CURRENT-STATE TOUCH POINT` fold's `**NEXT`; canonical count gate-owned (19); caller override refused.
+- Record: `live/conversations/2026-09-13_rollback-reconciliation-fable-boot.md`.
 
 **Recovery mechanism (reusable):** Railway GraphQL `serviceInstanceDeploy` mutation, endpoint
 `https://backboard.railway.com/graphql/v2`, header `Project-Access-Token:` (NOT Bearer), project
@@ -197,9 +199,7 @@ STAGE PLAN:
 ### [PACKAGING-CRITICAL] Worker docs are STALE (B1-era)
 `WORKER_MANUAL.md` (12 B1 markers), `WORKER_BOOT_PACKET.md` (10), `WORKER_QUICKBOOT.md` (2) all describe
 the DISCARDED B1 admission flow (ADMISSION panel, signed capability, HTTP 428, bearer grant). The recovered
-pre-GPT engine uses the DIRECT DIAG-KEY path, not capability admission. → These docs describe a system a
-new user WON'T have. For packaging: roll worker docs back to pre-GPT (`9a7eac2a` versions exist) OR mark
-B1-era. SAME issue class as the manual/gate we already fixed. [ACTION ITEM for packaging, not now]
+pre-GPT engine uses the DIRECT DIAG-KEY path, not capability admission. → RESOLVED 2026-09-13: worker docs restored to the Sept-5 currency-fixed text with B-block references removed (commit 8ef1b91).
 
 ### [PACKAGING-CRITICAL] PROJECT_CORPUS_RUBRIC.md — the per-project corpus standard
 THE answer to "how does a new user's project get structured." Generalizes Ontinuity's own conventions to
