@@ -757,3 +757,91 @@ def op_deploy():
         _ledger_finish(op_id, "fail", f"deploy error: {str(e)[:140]}")
         return jsonify({"error": f"deploy error: {str(e)[:200]}"}), 500
 
+@box_ops_bp.route("/op/new_project", methods=["POST"])
+def op_new_project():
+    """Create a new project corpus on demand — the user-facing 'start a new matter'
+    primitive. Bounded and idempotent: get-or-create a projects row + its main
+    branch row, and initialize the project's empty corpus files (Knowtext + ERL)
+    so the dormant per-project scoping in app.py (session_knowtext_path /
+    session_erl_path resolve from project_id/branch) has files to read/write.
+    No arbitrary SQL. SAFE-tier: creates rows + empty files, touches nothing else.
+
+    Body: {name (req, the project/matter name in the operator's words),
+           description (opt, what the matter is for),
+           branch (opt, default 'main'),
+           user_id (opt; default = first user / the workspace user)}.
+    Returns: {ok, project_id, branch_id, name, branch, knowtext_path, erl_path,
+              created (bool — false if the project already existed)}.
+    The caller then passes project_id (and branch) to /agent/start so the session
+    is scoped to this matter and its close writes to this corpus only.
+    """
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    name = (b.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    if name in ("Ontinuity Platform",):
+        return jsonify({"error": "reserved project name"}), 400
+    branch_name = (b.get("branch") or "main").strip() or "main"
+    description = (b.get("description") or "").strip() or None
+    db_path = os.environ.get("ONTINUITY_DB_PATH",
+                             os.path.join(_BASE_DIR, "ontinuity.db"))
+    if not os.path.exists(db_path):
+        return jsonify({"error": "db not found", "path": db_path}), 404
+    op_id = _ledger_begin("new_project", {"name": name, "branch": branch_name})
+    try:
+        # DB rows (get-or-create, mirrors workspace_db_endpoint._get_or_create_project)
+        from db import OntinuityDB
+        db = OntinuityDB(db_path)
+        conn = db.connect()
+        user_id = (b.get("user_id") or "").strip()
+        if not user_id:
+            row = conn.execute("SELECT user_id FROM users LIMIT 1").fetchone()
+            user_id = row["user_id"] if row else db.insert_user("Workspace User", plan="personal")
+        created = False
+        row = conn.execute(
+            "SELECT project_id FROM projects WHERE user_id = ? AND name = ?",
+            (user_id, name)).fetchone()
+        if row:
+            project_id = row["project_id"]
+        else:
+            project_id = db.insert_project(user_id, name, description)
+            created = True
+        row = conn.execute(
+            "SELECT branch_id FROM branches WHERE project_id = ? AND name = ?",
+            (project_id, branch_name)).fetchone()
+        branch_id = row["branch_id"] if row else db.insert_branch(project_id, user_id, branch_name)
+        db.close()
+
+        # Per-project corpus files (the slug matches app.py _scope_slug: proj_branch,
+        # non-alnum -> '_'). Initialize EMPTY so the scoped session paths resolve to a
+        # real file; never overwrite an existing corpus.
+        import re as _re
+        proj_safe = _re.sub(r'[^a-zA-Z0-9_-]', '_', name)
+        br_safe = _re.sub(r'[^a-zA-Z0-9_-]', '_', branch_name)
+        slug = "_".join([p for p in [proj_safe, br_safe] if p])
+        kt_name = f"knowtext_{slug}.txt"
+        erl_name = f"erl_{slug}.txt"
+        kt_full = _safe_box_path(kt_name)
+        erl_full = _safe_box_path(erl_name)
+        if not kt_full or not erl_full:
+            _ledger_finish(op_id, "fail", "path traversal rejected on corpus init")
+            return jsonify({"error": "corpus path rejected"}), 403
+        for full, header in ((kt_full, "KNOWTEXT_SCHEMA_V1\n\nIdentity:\nActive Frameworks:\nOpen Questions:\nValence Mapping:\nDelta Log:\nCorrection History:\nClimate Notes:\n"),
+                             (erl_full, "(empty ledger - no prior results)\n")):
+            if not os.path.exists(full):
+                os.makedirs(os.path.dirname(full) or ".", exist_ok=True)
+                with open(full, "w", encoding="utf-8") as f:
+                    f.write(header)
+
+        _ledger_finish(op_id, "ok",
+                       f"project {name} ({'created' if created else 'existing'}) "
+                       f"project_id={project_id} branch_id={branch_id}")
+        return jsonify({"ok": True, "project_id": project_id, "branch_id": branch_id,
+                        "name": name, "branch": branch_name,
+                        "knowtext_path": kt_name, "erl_path": erl_name,
+                        "created": created})
+    except Exception as e:
+        _ledger_finish(op_id, "fail", str(e)[:200])
+        return jsonify({"error": str(e)[:200]}), 500

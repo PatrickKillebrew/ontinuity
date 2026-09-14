@@ -836,8 +836,11 @@ def build_session_payload():
         "end_time": s.get("end_time"),
         "total_cycles": s.get("cycle", 0),
         "status": _final_status,
-        "project_name": WORKSPACE_PROJECT,
-        "branch_name": WORKSPACE_BRANCH,
+        # Per-project scoping: send the SESSION's own project so DB rows scope to it,
+        # matching the file layer (session_knowtext_path/session_erl_path). Falls back
+        # to the deployment global when the session is unscoped (legacy/main).
+        "project_name": s.get("project_id") or WORKSPACE_PROJECT,
+        "branch_name": s.get("branch") or WORKSPACE_BRANCH,
         "models": {
             "model_a": model_str("model_a"),
             "model_b": model_str("model_b"),
@@ -1175,6 +1178,28 @@ def get_model_b_context(knowtext):
         result.append(f"{current_section}:\n" + "\n".join(current_content).strip())
     return "\n\n".join(result)
 
+def get_open_questions_context(knowtext):
+    """Extract the Open Questions section from Knowtext (for Projenius ORIENT)."""
+    working = get_working_context(knowtext)
+    if not working:
+        return ""
+    lines = working.split("\n")
+    out = []
+    capturing = False
+    stops = ["Valence Mapping", "Delta Log", "Correction History", "Identity", "Climate Notes", "Active Frameworks"]
+    for line in lines:
+        if line.strip().startswith("Open Questions:"):
+            capturing = True
+            rest = line.split(":", 1)[-1].strip()
+            if rest:
+                out.append(rest)
+            continue
+        if capturing:
+            if any(line.strip().startswith(s2 + ":") for s2 in stops):
+                break
+            out.append(line)
+    return "\n".join(out).strip()
+
 def get_session_ledger_summary():
     """Return compressed summary of established results from current session."""
     if not active_session["session_ledger"]:
@@ -1481,11 +1506,19 @@ def call_projenius(function_tag, **kwargs):
     return response
 
 def run_projenius_orient(objective, knowtext):
-    """Run ORIENT — returns project-level context string or None."""
+    """Run ORIENT — returns project-level context string or None. Feeds Projenius
+    the Established Results Ledger + open questions (per the ORIENT prompt), not
+    just the Knowtext — so it can synthesize relevant PRIOR results for the
+    incoming objective (the cross-session 'start further along' layer). 2026-09-13:
+    previously starved (Knowtext only)."""
     working = get_working_context(knowtext) if knowtext else ""
+    ledger = load_file(session_erl_path()) or "(empty ledger - no prior results)"
+    open_q = get_open_questions_context(knowtext) if knowtext else ""
     response = call_projenius("ORIENT",
                               session_objective=objective,
-                              knowtext_active_frameworks=working)
+                              established_results_ledger=ledger,
+                              knowtext_active_frameworks=working,
+                              knowtext_open_questions=open_q)
     return response
 
 def run_projenius_synthesize(delta_log, knowtext):
@@ -2895,10 +2928,17 @@ def run_session_loop(objective, start_fresh=False, contract=None,
 
     # Model A system: base prompt + full Working Context section
     model_a_base = load_file(CONFIG["model_a"]["system_prompt_path"]) or "You are the Researcher in a Triform session."
+    # Load the project's Established Results Ledger (the accumulated cross-session
+    # memory) and make it available to the Researcher — the "start further along
+    # than cold" layer. Write-only until now (2026-09-13 fix): the ERL was written
+    # at close but never read back at open.
+    project_erl = "" if start_fresh else (load_file(session_erl_path()) or "")
     working_context = get_working_context(knowtext)
     model_a_system = model_a_base
     if working_context:
         model_a_system = f"{model_a_base}\n\n--- WORKING CONTEXT ---\n{working_context}"
+    if project_erl and project_erl.strip() and "no prior results" not in project_erl.lower():
+        model_a_system += f"\n\n--- ESTABLISHED RESULTS (this project, prior sessions — authoritative, verbatim) ---\n{project_erl}"
 
     # Model B base context: Active Frameworks + Correction History only
     knowtext_for_b = get_model_b_context(knowtext)
@@ -4130,7 +4170,7 @@ def diag_relay(endpoint):
 # /op/* allowlist (corpus: scoped-op folds, June 10). Adding a box op = add
 # its name here too. This is a name-gate, NOT a contract relaxation: the box
 # remains the authority on args/tier/ledger.
-OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "backup_db"}
+OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "new_project", "backup_db"}  # seed_tenant: DEPRECATED/unimplemented (no box handler; superseded by new_project 2026-09-13)
 
 @app.route('/diag/op/<name>', methods=['POST'])
 def diag_op_courier(name):
