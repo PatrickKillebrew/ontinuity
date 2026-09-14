@@ -1,10 +1,20 @@
 # ONTINUITY — THE INTAKE-MODE PRODUCT (SHS / SantaClean) — DEPTH-ARM
-## The worked example of Mode A, and the concrete packaging template
-*Depth-arm off ONTINUITY_MASTER_SYSTEM_MAP.md (Mode A / the intake front door) and the packaging plan.
-Built from a full read of the SHS project corpus in the PRIVATE repo `projects/shs-wasserman/` (66 files):
-the PM/memory layer, the shipped sanitizer (SantaClean), and the deterministic matcher. This is the ONLY
-end-to-end proof Ontinuity ships a real product to a real customer — read it before any packaging work.
-Reach the private repo via master map §22 (mint INTAKE_GITHUB_TOKEN from the Railway vault).*
+## A worked example of Mode A — one project carried through the four-stage pipeline to a shipped result
+*Depth-arm off ONTINUITY_MASTER_SYSTEM_MAP.md (Mode A / the intake front door). Built from the SHS project
+corpus in the PRIVATE repo `projects/shs-wasserman/` (66 files): the PM/memory layer, the shipped sanitizer
+(SantaClean), and the deterministic matcher.*
+
+**SCOPE — read this first.** Ontinuity has TWO paths through its front door (both in the master map):
+- MODE A (INTAKE): a person with a problem fills out the intake questionnaire; the four-stage pipeline
+  (intake → problem-definition → decomposition → build) carries it to a delivered result. SHS is the one
+  fully worked, SHIPPED example of this path.
+- MODE B (DESIGN/BUILD): an operator works directly with a Control seat (what produced these maps).
+SHS is therefore a **demonstration of Mode A**, NOT "the packaging template." Two things must not be
+conflated: (a) how ONTINUITY packages ITSELF for a new operator = the PROVISIONING_RUNBOOK (master map §24);
+(b) how a PROJECT'S OWN deliverable gets packaged = e.g. SantaClean's PyInstaller/Inno build below, which is
+specific to that one project's Windows tool. This arm is (b) as an example, and evidence that the pipeline
+reaches fruition — it is not (a). Nobody rebuilds SantaClean as part of Ontinuity; it is a product the
+pipeline produced, recorded so the pipeline's fruition is provable. Reach the private repo via master map §22.
 
 ═══════════════════════════════════════════════════════════════════
 ## 0. WHAT SHS IS (the one-line proof)
@@ -131,13 +141,15 @@ gating closes — "the sanitizer design means we hold no identity meanwhile." Ka
 project "SHS Emergency Shift-Coverage Tool"). This is why the live DB shows her as user #2.
 
 ═══════════════════════════════════════════════════════════════════
-## 8. WHAT SHS TEACHES PACKAGING (the synthesis)
+## 8. WHAT SHS DEMONSTRATES (the synthesis)
 - The intake-mode product and the design-mode product are DIFFERENT deliverables but reach the SAME shape:
   local, offline, per-individual, the user does no mechanical work by hand. SHS is the empirical confirmation
   of the per-individual-instance packaging decision.
-- The desktop-tool packaging TEMPLATE is worked and shipped: PyInstaller onedir + local shell + Inno Setup,
-  built on a Windows laptop via the /run hands, delivered by Drive-link, licensed by signed offline expiry-key,
-  with the non-technical-user safety design as a checklist. Any Ontinuity desktop deliverable reuses this.
+- When a Mode-A project's deliverable IS a desktop tool, there is now a worked, shipped build path
+  (PyInstaller onedir + local shell + Inno Setup, built on a Windows laptop via the /run hands, delivered
+  by Drive-link, licensed by signed offline expiry-key, with the non-technical-user safety design as a
+  checklist). This is a PROJECT-deliverable build recipe, reusable by a future desktop-tool project — it is
+  NOT how Ontinuity itself is installed for a new operator (that is the PROVISIONING_RUNBOOK, master map §24).
 - The membrane pattern (SantaClean) is reusable: it became the generic de-identifier (`sanitizer/generic/`,
   "SANTA CLEAN") with its own gazetteer + medical lexicon — a productizable component beyond SHS.
 - OPEN/HONEST (not hidden): the W3 k-anon small-pool finding (safe-vs-useful tension) is a real recorded risk

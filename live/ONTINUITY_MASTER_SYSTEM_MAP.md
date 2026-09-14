@@ -901,12 +901,13 @@ CORRECT (per-individual, diag-key, user-does-only-rituals) model — it was righ
 
 
 ════════════════════════════════════════════════════════════════
-## 25. THE INTAKE-MODE PRODUCT (SHS / SantaClean) — DEPTH-ARM ANCHOR
-Mode A (the intake front door) has exactly ONE fully worked, SHIPPED example: the SHS/Katie project. The
-maps had it at survey depth (2 of 66 files read). Its full anatomy — problem definition from intake, the
-four application-layer invariants, the two local tools (SantaClean de-identifier + deterministic matcher),
-the shipped Windows packaging template (PyInstaller onedir + pywebview + Inno Setup, built via the laptop
-/run hands), and the resolved commercial/licensing model (signed offline expiry-key) — is the companion
-depth-map **ONTINUITY_INTAKE_MODE_SHS.md**. It is the concrete packaging TEMPLATE and the empirical proof
-the per-individual-instance decision is right (SHS independently reached local/offline/per-owner). Read it
-before any packaging work. Private repo access: §22.
+## 25. MODE A WORKED EXAMPLE (SHS / SantaClean) — DEPTH-ARM ANCHOR
+Ontinuity has two paths through the front door: MODE A (intake → four-stage pipeline → delivered result)
+and MODE B (operator + Control seat, design/build). SHS/Katie is the one fully worked, SHIPPED example of
+MODE A. Its full anatomy — problem definition from the intake, the four application-layer invariants, the
+two local tools (SantaClean de-identifier + deterministic matcher), the project-deliverable build recipe,
+and the resolved licensing model — is the companion depth-map **ONTINUITY_INTAKE_MODE_SHS.md**.
+IT IS NOT THE PACKAGING TEMPLATE. Two distinct things: how ONTINUITY installs for a new operator = the
+PROVISIONING_RUNBOOK (§24); how a PROJECT'S deliverable ships = SantaClean's build recipe (an example in the
+arm). SHS's value here is (1) proof the pipeline reaches fruition and (2) corroboration of the
+per-individual-instance decision — SHS independently landed on local/offline/per-owner. Private repo: §22.
