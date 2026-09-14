@@ -355,3 +355,42 @@ Per-project scoping is ~80% built and dormant, not missing. To activate Cornel's
 5. Optionally trigger final_synthesis (dormant, built) as a "finalize this project" capability.
 The fold baseline bar is MET by design: the wired path produces per-project Knowtext (the fold's continuity)
 + ERL (the fold's BUILT/LEARNED/REVERSED, structured). Activating it = same-or-better than folds, automatically.
+
+## PER-PROJECT SCOPING — COMPLETE SEAM AUDIT (Fable 2026-09-13, before building new_project)
+Verified every read/write path. The scoping is wired to WRITE (files) but barely wired to READ. Precise state:
+WIRED CORRECTLY (per-project, both directions): session_knowtext_path, session_erl_path, github_push_knowtext,
+github_push_erl, github_pull_knowtext (L1003 uses active_session project_id/branch — its docstring "pull
+knowtext_current.txt" is STALE, code is right). File layer = fully per-project aware.
+GAPS (the real missing wiring):
+  1. [KEYSTONE] DB layer never scopes per-project. build_session_payload (L839) sends
+     "project_name": WORKSPACE_PROJECT (deployment global), NOT active_session["project_id"]. So every
+     session's DB rows land under the ONE global project regardless of file scope. → knowtext_versions=357
+     are effectively all one project. FIX: send the session's own project. ~2 lines. Needed regardless of the op.
+  2. [READ GAP] The ERL is WRITE-ONLY. Nothing loads session_erl_path() at session start for injection. The
+     ERL is written at close (SYNTHESIZE→write_erl_ledger) but never read back at open. A project's accumulated
+     established results never return to the next session. This is the "start further along than cold" layer,
+     and it is not connected. FIX: load the ERL at session start and inject it (like Knowtext is injected).
+  3. [ORIENT STARVED] run_projenius_orient (L1483) passes only session_objective + knowtext_active_frameworks.
+     The ORIENT prompt is designed to receive the Established Results Ledger + branch registry + open questions
+     and synthesize relevant prior results. It gets none of the ledger. FIX: pass the ERL (and optionally
+     project_state via /api/project_state) into the ORIENT call.
+NAMING NOTE: active_session["project_id"] is actually used as a NAME (files slugify it; DB _get_or_create_project
+keys on name). Keep ONE string driving both layers (the project NAME). The DB's internal UUID stays internal.
+seed_tenant RESOLVED: it is in OP_ALLOWED but has NO handler anywhere (repo-wide scan: zero route defs; live
+404). The manual's claim it seeded Katie hands-free is WRONG — Katie was seeded by running the standalone
+seed_tenant.py script ON the box (its own docstring: "deferred 2026-06-15... run this ON the box"). Git history:
+zero commits ever touched seed_tenant in box files. DECISION: new_project SUPERSEDES seed_tenant (build it right;
+deprecate seed_tenant in the allowlist; fix the manual). AUDITABILITY NOTE: this reconstruction — catching that
+the manual was wrong by cross-referencing script docstring + git history + live 404 — is itself the "walkable
+corpus" differentiator working.
+
+REVISED BUILD ORDER (all rollback-able; documented single-seat deploy authorized by operator 2026-09-13):
+  A. DB-seam fix: build_session_payload project_name = active_session project_id or WORKSPACE_PROJECT. [keystone]
+  B. ERL-read wire: load session_erl_path() at session start, inject into the Researcher context (+ into ORIENT).
+  C. new_project box op (keyed on name-slug, creates DB rows + empty Knowtext/ERL files), install box-side, TEST
+     against the box directly BEFORE adding to OP_ALLOWED.
+  D. OP_ALLOWED += new_project; deprecate seed_tenant; commit + single-seat deploy; fix the manual's false claims.
+  E. Conversational wrapper: teach the Control seat to detect "start a new matter" → propose name → confirm →
+     new_project → scope the session. (The op is the mechanism; this is the non-tech-user feature.)
+  F. END-TO-END TEST: create a throwaway project, scope a session, confirm BOTH the file AND the DB row land
+     under that project (not the global), AND that a second session resumes with the project's ERL. Then delete.
