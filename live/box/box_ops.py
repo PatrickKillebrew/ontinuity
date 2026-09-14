@@ -20,58 +20,14 @@ WHY:
     consistent with the no-credentials-on-box posture.
 """
 
-import os, json, base64, subprocess, secrets, re, stat, tempfile, urllib.parse, urllib.request, urllib.error
+import os, json, base64, subprocess, secrets, urllib.request, urllib.error
 from flask import Blueprint, request, jsonify
 
-try:
-    from live.box import trusted_deploy
-except ImportError:  # installed box layout keeps the modules side by side
-    import trusted_deploy
-
 box_ops_bp = Blueprint("box_ops", __name__)
-
-
-class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, req, fp, code, msg, headers, newurl):
-        return None
-
-
-_NO_REDIRECT_OPENER = urllib.request.build_opener(_NoRedirect)
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 GITHUB_REPO_DEFAULT = "PatrickKillebrew/ontinuity"
 GITHUB_BRANCH_DEFAULT = "main"
-_MAX_REPO_READ_BYTES = 2_000_000
-_MAX_REPO_API_RESPONSE_BYTES = 3_000_000
-
-
-def _validated_repo_path(value):
-    value = (value or "").strip()
-    if not value:
-        raise ValueError("path required")
-    if (len(value) > 500 or value.startswith("/") or "\\" in value
-            or any(ord(character) < 32 or ord(character) == 127
-                   for character in value)
-            or any(segment in ("", ".", "..") for segment in value.split("/"))):
-        raise ValueError("path must be a safe repository-relative path")
-    return value
-
-
-def _validated_repo_slug(value):
-    value = (value or "").strip()
-    if not re.fullmatch(
-            r"[A-Za-z0-9][A-Za-z0-9_.-]{0,99}/"
-            r"[A-Za-z0-9][A-Za-z0-9_.-]{0,99}", value):
-        raise ValueError("repo must be an owner/name slug")
-    return value
-
-
-def _validated_repo_ref(value):
-    value = (value or "").strip()
-    if (not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,199}", value)
-            or ".." in value or value.endswith(".") or value.endswith(".lock")):
-        raise ValueError("ref must be a safe branch, tag, or commit name")
-    return value
 
 # Files the box is allowed to commit of its OWN source (allowlist, not arbitrary).
 # These are the live box server files that belong under version control.
@@ -90,31 +46,22 @@ def _diag_ok():
 
 
 def _authed_identity():
-    """Resolve authenticated identity from the scoped relay or key registry.
-
-    A capability call arrives with identity claims derived and signed by MAIN;
-    a legacy/operator shared-root recovery call remains unattributed unless the
-    file-server registry recognizes a distinct identity key.
-    """
+    """KEYS-2: resolve the AUTHENTICATED identity from WHICH key called, via the
+    file_server key registry. Returns {seat, lineage, authenticated, mode} or None.
+    authenticated=True only for a per-identity key; the shared DIAG_KEY resolves to
+    {seat:'unattributed', authenticated:False} (back-compat)."""
     try:
-        relay_seat = (request.headers.get("X-Ontinuity-Seat") or "").strip()
-        relay_lineage = (request.headers.get("X-Ontinuity-Lineage") or "").strip()
-        relay_capability = (request.headers.get("X-Ontinuity-Capability") or "").strip()
-        if relay_seat and relay_lineage and relay_capability and _diag_ok():
-            return {"seat": relay_seat, "lineage": relay_lineage,
-                    "authenticated": True, "mode": "scoped_capability",
-                    "capability_id": relay_capability}
         import file_server
-        presented = request.headers.get("X-Diag-Key", "")
+        presented = request.headers.get("X-Diag-Key", "") or request.args.get("diag_key", "")
         return file_server.authenticate_identity(presented)
     except Exception:
         return None
 
 
 def _identity_seat(body_seat=None):
-    """The seat to TRUST for this request. Prefer server-authenticated identity;
-    otherwise (legacy/operator shared-root mode) fall back to the body-supplied
-    seat (honest-but-asserted, CALLER-1 semantics).
+    """The seat to TRUST for this request. KEYS-2: prefer the key-derived seat when
+    the caller authenticated with a per-identity key; otherwise (shared-key mode)
+    fall back to the body-supplied seat (honest-but-asserted, CALLER-1 semantics).
     This is the single chokepoint every identity-reading route routes through, so
     the migration is one helper, not N edits."""
     ident = _authed_identity()
@@ -125,9 +72,9 @@ def _identity_seat(body_seat=None):
 
 
 def _caller_seat(default="diag-key"):
-    """Seat name for operations_ledger.caller. Prefers server-authenticated
-    identity; falls back to the self-asserted body seat only in legacy/operator
-    shared-root mode. Falls back to 'diag-key' when
+    """CALLER-1 + KEYS-2: seat name for operations_ledger.caller. Prefers the
+    AUTHENTICATED key-derived seat; falls back to the self-asserted body seat only
+    in shared-key mode (trusted-not-authenticated). Falls back to 'diag-key' when
     the op carries no seat (write_file/read_file have none)."""
     try:
         b = request.get_json(silent=True) or {}
@@ -158,69 +105,8 @@ def _ledger_finish(op_id, status, result=""):
 
 def _safe_box_path(name):
     """Resolve name against the box dir; refuse traversal."""
-    if not isinstance(name, str) or not name or os.path.isabs(name):
-        return None
-    base = os.path.realpath(_BASE_DIR)
-    full = os.path.abspath(os.path.join(base, name))
-    try:
-        if os.path.commonpath((base, full)) != base or full == base:
-            return None
-        parent = os.path.realpath(os.path.dirname(full))
-        if os.path.commonpath((base, parent)) != base:
-            return None
-        if os.path.lexists(full) and not stat.S_ISREG(os.lstat(full).st_mode):
-            return None
-    except ValueError:
-        return None
-    return full
-
-
-def _read_private_regular(path):
-    """Read the prior private config without following or blocking on special files."""
-    if not os.path.lexists(path):
-        return None
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
-    fd = os.open(path, flags)
-    try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            raise ValueError("trusted deploy config target must be a regular file")
-        data = os.read(fd, trusted_deploy._MAX_CONFIG_BYTES + 1)
-        if len(data) > trusted_deploy._MAX_CONFIG_BYTES:
-            raise ValueError("existing trusted deploy config is oversized")
-        return data.decode("utf-8")
-    finally:
-        os.close(fd)
-
-
-def _write_private_atomic(path, content):
-    """Install validated config privately and atomically in its trusted directory."""
-    parent = os.path.dirname(path)
-    os.makedirs(parent, mode=0o700, exist_ok=True)
-    old = _read_private_regular(path)
-    fd, temporary = tempfile.mkstemp(prefix=".trusted-deploy-config-", dir=parent)
-    try:
-        os.fchmod(fd, 0o600)
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            fd = -1
-            handle.write(content)
-            handle.flush()
-            os.fsync(handle.fileno())
-        os.replace(temporary, path)
-        temporary = None
-        directory_fd = os.open(parent, os.O_RDONLY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
-        return old
-    finally:
-        if fd >= 0:
-            os.close(fd)
-        if temporary is not None:
-            try:
-                os.unlink(temporary)
-            except FileNotFoundError:
-                pass
+    full = os.path.normpath(os.path.join(_BASE_DIR, name))
+    return full if full.startswith(os.path.normpath(_BASE_DIR)) else None
 
 
 @box_ops_bp.route("/op/write_file", methods=["POST"])
@@ -238,36 +124,23 @@ def op_write_file():
     full = _safe_box_path(name)
     if not full:
         return jsonify({"error": "path traversal rejected"}), 403
-    canonical_name = os.path.relpath(full, os.path.realpath(_BASE_DIR)).replace(os.sep, "/")
-    private_trusted_config = (
-        os.path.normcase(full)
-        == os.path.normcase(os.path.abspath(trusted_deploy.TRUSTED_CONFIG_PATH))
-    )
-    if private_trusted_config:
-        try:
-            trusted_deploy.validate_config_document(content)
-        except trusted_deploy.DeployError as exc:
-            return jsonify({"error": str(exc)}), 400
-    op_id = _ledger_begin("write_file", {"path": canonical_name, "bytes": len(str(content))})
+    op_id = _ledger_begin("write_file", {"path": name, "bytes": len(str(content))})
     try:
-        if private_trusted_config:
-            old = _write_private_atomic(full, content)
-        else:
-            old = None
-            if os.path.exists(full):
-                with open(full, "r", encoding="utf-8", errors="replace") as f:
-                    old = f.read()
-            os.makedirs(os.path.dirname(full) or ".", exist_ok=True)
-            with open(full, "w", encoding="utf-8") as f:
-                f.write(content)
+        old = None
+        if os.path.exists(full):
+            with open(full, "r", encoding="utf-8", errors="replace") as f:
+                old = f.read()
+        os.makedirs(os.path.dirname(full) or ".", exist_ok=True)
+        with open(full, "w", encoding="utf-8") as f:
+            f.write(content)
         # record in the box's change history if file_server exposes it
         try:
             import file_server
-            file_server.record_change(canonical_name, old, content, b.get("description", "via /op/write_file"))
+            file_server.record_change(name, old, content, b.get("description", "via /op/write_file"))
         except Exception:
             pass
-        _ledger_finish(op_id, "ok", f"wrote {len(content)} bytes to {canonical_name}")
-        return jsonify({"ok": True, "path": canonical_name, "bytes": len(content)})
+        _ledger_finish(op_id, "ok", f"wrote {len(content)} bytes to {name}")
+        return jsonify({"ok": True, "path": name, "bytes": len(content)})
     except Exception as e:
         _ledger_finish(op_id, "fail", str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500
@@ -308,7 +181,7 @@ def op_commit_self():
             try:
                 gr = urllib.request.Request(url + f"?ref={branch}", headers={
                     "Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
-                with _NO_REDIRECT_OPENER.open(gr, timeout=20) as r:
+                with urllib.request.urlopen(gr, timeout=20) as r:
                     sha = json.loads(r.read()).get("sha")
             except Exception:
                 pass
@@ -320,7 +193,7 @@ def op_commit_self():
             pr = urllib.request.Request(url, data=json.dumps(body).encode(), method="PUT",
                 headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
                          "Content-Type": "application/json"})
-            with _NO_REDIRECT_OPENER.open(pr, timeout=30) as r:
+            with urllib.request.urlopen(pr, timeout=30) as r:
                 res = json.loads(r.read())
                 committed.append({"file": name, "sha": res.get("content", {}).get("sha", "")[:12]})
         _ledger_finish(op_id, "ok", f"committed {len(committed)}, skipped {len(skipped)}")
@@ -399,7 +272,7 @@ def op_commit_file():
         try:
             gr = urllib.request.Request(url + f"?ref={branch}", headers={
                 "Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json"})
-            with _NO_REDIRECT_OPENER.open(gr, timeout=20) as r:
+            with urllib.request.urlopen(gr, timeout=20) as r:
                 sha = json.loads(r.read()).get("sha")
         except Exception:
             pass
@@ -411,7 +284,7 @@ def op_commit_file():
         pr = urllib.request.Request(url, data=json.dumps(body).encode(), method="PUT",
             headers={"Authorization": f"Bearer {token}", "Accept": "application/vnd.github+json",
                      "Content-Type": "application/json"})
-        with _NO_REDIRECT_OPENER.open(pr, timeout=30) as r:
+        with urllib.request.urlopen(pr, timeout=30) as r:
             res = json.loads(r.read())
             commit_sha = res.get("commit", {}).get("sha", "")
         _ledger_finish(op_id, "ok", f"committed {path_in_repo} {commit_sha[:12]}")
@@ -505,68 +378,38 @@ def op_read_repo():
     box; app.py has no ledger writer). An engine-local op would have to skip the
     ledger or call back to the box to log. Keeping read_repo box-side preserves the
     uniform contract. Trade-off: without a caller token the box reads via raw-CDN
-    (staleness-mitigated by cache-bust) rather than the authenticated API. An
-    operator-root recovery call may pass github_token when it needs the
-    guaranteed-fresh API read. Capability callers are fixed to the public
-    Ontinuity repository, cannot supply repository credentials, and receive at
-    most 2 MB.
+    (staleness-mitigated by cache-bust) rather than the authenticated API. Pass
+    github_token when you need the guaranteed-fresh authoritative read.
     """
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
     b = request.get_json(silent=True) or {}
-    if not isinstance(b, dict):
-        return jsonify({"error": "request must be a JSON object"}), 400
-    if not all(isinstance(b.get(field, ""), str)
-               for field in ("path", "repo", "ref", "branch", "github_token")):
-        return jsonify({"error": "repository read fields must be strings"}), 400
-    try:
-        path_in_repo = _validated_repo_path(b.get("path"))
-        repo = _validated_repo_slug(b.get("repo") or GITHUB_REPO_DEFAULT)
-        branch = _validated_repo_ref(
-            b.get("ref") or b.get("branch") or GITHUB_BRANCH_DEFAULT)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
+    path_in_repo = (b.get("path") or "").strip().lstrip("/")
+    if not path_in_repo:
+        return jsonify({"error": "path required"}), 400
+    repo = (b.get("repo") or GITHUB_REPO_DEFAULT).strip()
+    branch = (b.get("ref") or b.get("branch") or GITHUB_BRANCH_DEFAULT).strip()
     token = (b.get("github_token") or "").strip()
-    identity = _authed_identity()
-    if identity and identity.get("authenticated"):
-        if repo != GITHUB_REPO_DEFAULT:
-            return jsonify({"error": "capability repository scope is fixed"}), 403
-        if token:
-            return jsonify({"error": "capability callers may not supply repository credentials"}), 403
     op_id = _ledger_begin("read_repo", {"path": path_in_repo, "repo": repo, "ref": branch,
                                         "auth": bool(token)})
 
-    quoted_repo = urllib.parse.quote(repo, safe="/")
-    quoted_path = urllib.parse.quote(path_in_repo, safe="/")
-    quoted_ref = urllib.parse.quote(branch, safe="")
-
     def _via_api(tok):
-        query = urllib.parse.urlencode({"ref": branch})
-        url = f"https://api.github.com/repos/{quoted_repo}/contents/{quoted_path}?{query}"
+        url = f"https://api.github.com/repos/{repo}/contents/{path_in_repo}?ref={branch}"
         hdrs = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
         if tok:
             hdrs["Authorization"] = f"Bearer {tok}"
         req = urllib.request.Request(url, headers=hdrs)
-        with _NO_REDIRECT_OPENER.open(req, timeout=30) as r:
-            raw_response = r.read(_MAX_REPO_API_RESPONSE_BYTES + 1)
-        if len(raw_response) > _MAX_REPO_API_RESPONSE_BYTES:
-            raise ValueError("repository API response exceeds read limit")
-        data = json.loads(raw_response.decode())
-        decoded = base64.b64decode(data["content"])
-        if len(decoded) > _MAX_REPO_READ_BYTES:
-            raise ValueError("repository file exceeds read limit")
-        return decoded.decode("utf-8", "replace")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read().decode())
+        return base64.b64decode(data["content"]).decode("utf-8", "replace")
 
     def _via_raw():
         import time as _t
-        url = (f"https://raw.githubusercontent.com/{quoted_repo}/{quoted_ref}/{quoted_path}"
+        url = (f"https://raw.githubusercontent.com/{repo}/{branch}/{path_in_repo}"
                f"?cb={int(_t.time())}")
         req = urllib.request.Request(url)
-        with _NO_REDIRECT_OPENER.open(req, timeout=30) as r:
-            raw = r.read(_MAX_REPO_READ_BYTES + 1)
-        if len(raw) > _MAX_REPO_READ_BYTES:
-            raise ValueError("repository file exceeds read limit")
-        return raw.decode("utf-8", "replace")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            return r.read().decode("utf-8", "replace")
 
     attempts = []
     # 1) authoritative API if a token was supplied
@@ -586,7 +429,7 @@ def op_read_repo():
         return jsonify({"ok": True, "path": path_in_repo, "ref": branch,
                         "source": "raw_cdn_cachebust", "bytes": len(content),
                         "content": content,
-                        "note": "cache-busted public read; authenticated repository reads are operator-recovery-only"})
+                        "note": "raw CDN; pass github_token for the guaranteed-fresh authoritative read"})
     except Exception as e:
         attempts.append(f"raw: {str(e)[:80]}")
     # 3) unauthenticated API last resort
@@ -613,6 +456,13 @@ def op_read_repo():
 # ---------------------------------------------------------------------------
 import importlib.util as _ilu
 
+# Canonical CHECK-1 courier-allowlist count. SOURCE OF TRUTH is app.py OP_ALLOWED.
+# 14 entries now; becomes 15 when THIS op (bootstrap_gate) is added to OP_ALLOWED.
+# The op accepts an override in the body so control can bump it in the same commit
+# that lands the OP_ALLOWED entry (gate CHECK-1 currency); default tracks the
+# post-this-op value so a fresh seat checks against the right number once deployed.
+_GATE_CANONICAL_OP_COUNT = 15
+
 _gate_mod = None
 def _load_gate():
     """Import the committed gate runnable from the box's repo checkout.
@@ -635,49 +485,36 @@ def _load_gate():
 @box_ops_bp.route("/op/bootstrap_gate", methods=["POST"])
 def op_bootstrap_gate():
     """Run the verified bootstrap gate server-side for {seat, role} and return the
-    structured {oriented, checks, ...} result. SAFE tier (read-only checks). Logs a
+    structured {oriented, checks, ...} result. SAFE tier (read-only checks + a
+    mailbox_peek hand-probe; same mutation class as mailbox_peek — none). Logs a
     bootstrap_gate row to operations_ledger (dual-end) as the audit evidence that
-    a seat proved orientation. Capability issuance happens only at MAIN admission;
-    this gate never returns or claims to issue a root or replacement credential.
+    a seat proved orientation. On oriented:true, issues a per-identity key —
+    STUBBED to the shared DIAG_KEY for now (real per-seat keys arrive with the key
+    build); the issuance block is structured so real keys hook in without changing
+    the contract.
 
-    Body: {seat (req in shared-key compatibility mode),
-           role ('worker'|'control', default 'worker'), lineage (str),
-           seat_invariants ({key->text} for CHECK 6 MECHANICS)}.
+    Body: {seat (req), role ('worker'|'control', default 'worker'),
+           lineage (str), seat_invariants ({key->text} for CHECK 6 MECHANICS),
+           canonical_op_count (int, optional override for CHECK 1)}.
     """
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
     b = request.get_json(silent=True) or {}
-    asserted_seat = (b.get("seat") or "").strip()
-    asserted_lineage = (b.get("lineage") or "").strip()
-    identity = _authed_identity()
-    if identity and identity.get("authenticated"):
-        seat = (identity.get("seat") or "").strip()
-        lineage = (identity.get("lineage") or "").strip()
-        if asserted_seat and asserted_seat != seat:
-            return jsonify({"error": "seat identity mismatch"}), 409
-        if asserted_lineage and asserted_lineage != lineage:
-            return jsonify({"error": "lineage identity mismatch"}), 409
-    else:
-        seat = asserted_seat
-        lineage = asserted_lineage
+    seat = (b.get("seat") or "").strip()
     if not seat:
         return jsonify({"error": "seat required"}), 400
     role = (b.get("role") or "worker").strip()
     if role not in ("worker", "control"):
         return jsonify({"error": "role must be 'worker' or 'control'"}), 400
+    lineage = (b.get("lineage") or "").strip()
     seat_invariants = b.get("seat_invariants") or {}
-    canonical = request.headers.get("X-Ontinuity-Courier-Count", "")
+    canonical = b.get("canonical_op_count")
     op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role})
     try:
         gate = _load_gate()
-        # MAIN derives the normal value from its actual OP_ALLOWED set. Direct
-        # operator recovery uses the committed server fallback; body data never
-        # selects the certification standard.
-        if canonical:
-            derived_count = int(canonical)
-            if derived_count < 1:
-                raise ValueError("invalid courier operation count")
-            gate.CANONICAL_COURIER_OP_COUNT = derived_count
+        # Set CHECK-1 canonical to the current courier-allowlist length. Override
+        # from the body wins; else the post-this-op default (15).
+        gate.CANONICAL_COURIER_OP_COUNT = int(canonical) if canonical is not None else _GATE_CANONICAL_OP_COUNT
         # The box holds the box diag-key in config; pass it so the gate's corpus/
         # hands/engine checks authenticate through the relay exactly as a seat would.
         try:
@@ -685,16 +522,24 @@ def op_bootstrap_gate():
             diag_key = file_server.load_config().get("diag_key", "") or os.environ.get("DIAG_KEY", "")
         except Exception:
             diag_key = os.environ.get("DIAG_KEY", "")
-        result = gate.run_gate(
-            seat, lineage, role=role, diag_key=diag_key,
-            seat_invariants=seat_invariants,
-            relay_identity=(identity if identity and identity.get("authenticated") else None),
-        )
+        result = gate.run_gate(seat, lineage, role=role, diag_key=diag_key,
+                               seat_invariants=seat_invariants)
 
-        result["admission"] = {
-            "capability_validated": bool(identity and identity.get("authenticated")),
-            "bound_to": {"seat": seat, "lineage": lineage},
-        }
+        # KEY ISSUANCE-ON-PASS (stubbed). Structured so real per-identity keys
+        # (CALLER-1 + the key build) drop in here without changing the response
+        # shape: oriented seats get an `issued_key` bound to {seat, lineage};
+        # today that key IS the shared DIAG_KEY (so nothing changes operationally),
+        # but the field + binding exist so callers can start reading it now.
+        if result.get("oriented"):
+            result["key_issuance"] = {
+                "issued": True,
+                "bound_to": {"seat": seat, "lineage": lineage},
+                "key_kind": "shared_diag_key_stub",   # -> 'per_identity' when the key build lands
+                "note": "stubbed to shared DIAG_KEY until per-identity key issuance ships",
+            }
+        else:
+            result["key_issuance"] = {"issued": False,
+                                      "reason": "gate not passed — no key issued"}
 
         status = "ok" if result.get("oriented") else "fail"
         # summarize the failing check (if any) for the ledger
@@ -721,49 +566,21 @@ def op_bootstrap_gate():
 # record. This reuses NOSELF-1's author_seat/author_lineage — the same authorship
 # spine, now gating deploy instead of just review-claim.
 #
-# LEGACY/OPERATOR SHARED-ROOT CAVEAT:
+# SHARED-KEY CAVEAT (must stay loud until per-identity keys land — KEYS-1):
 # the seat identities this rule compares (proposal author, signoff sender) are
 # SELF-ASSERTED body fields under one shared DIAG_KEY. So today any diag-key
 # holder could forge a distinct from_seat on a signoff and satisfy the two-party
 # check. This op enforces the STRUCTURE (signer != author) correctly; the
-# STRENGTH of that enforcement is bounded by authentication. Scoped capability
-# calls already carry MAIN-derived identity and do not trust these body fields;
-# direct legacy/operator recovery calls retain the honest-name assumption. Every
-# call is logged.
+# STRENGTH of that enforcement is bounded by key authentication. Per KEYS-1: once
+# the gate derives seat/lineage FROM the key and routes stop trusting body fields,
+# this same check becomes unforgeable. Until then: structural gate, honest-name
+# assumption, every call logged. NOT a substitute for per-identity keys.
 #
-# Hosting credentials and provider protocol remain inside trusted_deploy. The
-# caller-facing operation is provider-neutral and accepts only action, target,
-# signoff_block_id, and commit_sha.
+# TOKEN: RAILWAY_TOKEN is read from the box ENV (os.environ) — operator sets it as
+# a systemd env var. NEVER hardcoded, never written to a file, never echoed.
+
+_RAILWAY_GQL = "https://backboard.railway.com/graphql/v2"
 _PROVENANCE_LEDGER = os.path.join(_BASE_DIR, "live", "provenance_ledger.jsonl")
-_DEPLOY_REQUEST_MAX_BYTES = 4096
-
-
-def _strict_deploy_body():
-    """Read the deploy tuple under the exact raw HTTP contract."""
-    if request.args or request.mimetype != "application/json":
-        raise trusted_deploy.DeployError(
-            "deploy requires application/json without query parameters")
-    if (request.content_length is not None
-            and request.content_length > _DEPLOY_REQUEST_MAX_BYTES):
-        raise trusted_deploy.DeployError("deploy request body is too large", 413)
-    raw = request.stream.read(_DEPLOY_REQUEST_MAX_BYTES + 1)
-    if len(raw) > _DEPLOY_REQUEST_MAX_BYTES:
-        raise trusted_deploy.DeployError("deploy request body is too large", 413)
-    try:
-        def reject_duplicates(pairs):
-            value = {}
-            for key, item in pairs:
-                if key in value:
-                    raise ValueError("duplicate JSON key")
-                value[key] = item
-            return value
-        return json.loads(
-            raw.decode("utf-8", "strict"),
-            object_pairs_hook=reject_duplicates,
-        )
-    except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
-        raise trusted_deploy.DeployError(
-            "deploy request body is not valid JSON") from exc
 
 
 def _prov_append(record):
@@ -784,19 +601,10 @@ def _now_iso():
     return datetime.now(timezone.utc).isoformat()
 
 
-def _deploy_authorization_refs(target, commit_sha):
-    """Canonical mailbox refs that authorize this logical target and commit."""
-    return {
-        f"deploy:v1:{target}:{commit_sha}",
-        f"deploy:v1:both:{commit_sha}",
-    }
-
-
-def _twoparty_check(block_id, target, commit_sha):
+def _twoparty_check(block_id):
     """Inspect the mailbox for block_id. Returns (ok, detail, author, signer).
-    ok=True iff proposal and signoff carry the same canonical deploy ref for the
-    requested target+commit and the signer differs from the proposal author.
-    Uses seat_mailbox._mb_conn."""
+    ok=True iff a 'proposal' exists AND a 'signoff' exists whose sender differs
+    from the proposal's author (NOSELF-1 author fields). Uses seat_mailbox._mb_conn."""
     try:
         import seat_mailbox
         c = seat_mailbox._mb_conn()
@@ -806,14 +614,12 @@ def _twoparty_check(block_id, target, commit_sha):
         # the authored work: prefer the proposal row's author_seat (NOSELF-1),
         # falling back to its from_seat.
         prop = c.execute(
-            "SELECT COALESCE(author_seat, from_seat), "
-            "COALESCE(author_lineage, from_lineage), ref "
+            "SELECT COALESCE(author_seat, from_seat), COALESCE(author_lineage, from_lineage) "
             "FROM seat_mailbox WHERE block_id=? AND kind='proposal' "
             "ORDER BY created_at ASC LIMIT 1", (block_id,)).fetchone()
         # the sign-off: a 'signoff' kind row for this block.
         sign = c.execute(
-            "SELECT from_seat, from_lineage, ref FROM seat_mailbox "
-            "WHERE block_id=? AND kind='signoff' "
+            "SELECT from_seat, from_lineage FROM seat_mailbox WHERE block_id=? AND kind='signoff' "
             "ORDER BY created_at DESC LIMIT 1", (block_id,)).fetchone()
         c.close()
     except Exception as e:
@@ -824,128 +630,125 @@ def _twoparty_check(block_id, target, commit_sha):
         return False, f"no proposal found for block {block_id}", None, None
     if not sign:
         return False, f"no signoff found for block {block_id} (unsigned deploy refused)", \
-               {"seat": prop[0], "lineage": prop[1], "ref": prop[2]}, None
-    author = {"seat": prop[0], "lineage": prop[1], "ref": prop[2]}
-    signer = {"seat": sign[0], "lineage": sign[1], "ref": sign[2]}
-    allowed_refs = _deploy_authorization_refs(target, commit_sha)
-    if not author["ref"] or author["ref"] != signer["ref"]:
-        return False, (
-            "proposal and signoff do not carry the same deploy authorization ref"
-        ), author, signer
-    if author["ref"] not in allowed_refs:
-        return False, (
-            "signed deploy authorization ref does not match requested target and commit"
-        ), author, signer
+               {"seat": prop[0], "lineage": prop[1]}, None
+    author = {"seat": prop[0], "lineage": prop[1]}
+    signer = {"seat": sign[0], "lineage": sign[1]}
     # TWO-PARTY: the signer must be a DIFFERENT SEAT than the author. Two distinct
     # seats are two parties even when they share a model lineage (worker1 and worker2
     # are both claude:opus-4.8 — that is the normal two-worker case and MUST be
     # allowed). We refuse on SAME SEAT only. (An earlier draft also refused on
     # same-lineage, which would wrongly block the legitimate two-worker case.)
-    # Scoped capability calls use MAIN-derived seats. In direct legacy/operator
-    # shared-root recovery, the seat field remains self-asserted, so a keyholder
-    # could present a different from_seat to fake distinctness.
+    # NOTE the shared-key reality (KEYS-1): the seat field is self-asserted, so a
+    # forger could present a different from_seat to fake distinctness. The seat-
+    # distinct STRUCTURE is right; per-identity keys are what make it unforgeable.
     if (author["seat"] or "") == (signer["seat"] or "") and author["seat"]:
         return False, (f"self-sign-off: author seat={author['seat']} == signer seat "
                        f"{signer['seat']} — two-party rule violated"), author, signer
-    return True, (
-        "two-party satisfied for exact signed target and commit"
-    ), author, signer
+    return True, "two-party satisfied (distinct seats)", author, signer
+
+
+def _railway_deploy(service_id, environment_id, token):
+    """Trigger serviceInstanceDeployV2 via the Railway GraphQL API. Token from env."""
+    query = ("mutation($s:String!,$e:String!){serviceInstanceDeployV2(serviceId:$s,environmentId:$e)}")
+    body = json.dumps({"query": query, "variables": {"s": service_id, "e": environment_id}}).encode()
+    req = urllib.request.Request(_RAILWAY_GQL, data=body,
+                                 headers={"Content-Type": "application/json",
+                                          "Authorization": f"Bearer {token}"}, method="POST")
+    with urllib.request.urlopen(req, timeout=40) as r:
+        return json.loads(r.read().decode())
 
 
 @box_ops_bp.route("/op/deploy", methods=["POST"])
 def op_deploy():
-    """Two-phase exact-commit deploy through the trusted box-side adapter.
-
-    ``start`` performs at most one provider mutation for the deterministic
-    block+target+commit tuple. ``status`` recovers that tuple without accepting a
-    caller-supplied provider deployment identifier. Both phases retain the
-    existing two-party signer gate.
-    """
+    """Authorize + trigger a deploy, gated by the two-party rule. Body:
+      {target: 'main'|'farm'|'box', signoff_block_id (req), commit_sha?, dry_run?}.
+    Two-party: the block must have a proposal (author) AND a signoff by a DIFFERENT
+    seat, else REFUSE + gate_violation record. ENGINE deploy reads RAILWAY_TOKEN +
+    the target's RAILWAY_SERVICE_ID_<TARGET> / RAILWAY_ENVIRONMENT_ID from env. BOX
+    target = restart (no Railway call). dry_run=true runs every check + logs but
+    makes NO Railway call (for tests). See the shared-key caveat in the module note."""
     if not _diag_ok():
         return jsonify({"error": "unauthorized"}), 401
-    try:
-        body = _strict_deploy_body()
-        action, target, block_id, commit_sha = trusted_deploy.validate_request(body)
-    except trusted_deploy.DeployError as exc:
-        return jsonify({"error": str(exc)}), exc.status
-
+    b = request.get_json(silent=True) or {}
+    target = (b.get("target") or "").strip().lower()
+    block_id = (b.get("signoff_block_id") or "").strip()
+    commit_sha = (b.get("commit_sha") or "").strip()
+    dry_run = bool(b.get("dry_run"))
+    if target not in ("main", "farm", "box"):
+        return jsonify({"error": "target must be main|farm|box"}), 400
+    if not block_id:
+        return jsonify({"error": "signoff_block_id required"}), 400
     caller = _caller_seat()
-    op_id = _ledger_begin("deploy", {
-        "action": action, "target": target, "block": block_id,
-        "commit_sha": commit_sha,
-    })
-    if op_id is None:
-        return jsonify({"error": "deploy ledger is unavailable"}), 503
+    op_id = _ledger_begin("deploy", {"target": target, "block": block_id, "dry_run": dry_run})
 
-    ledger_status = "fail"
-    ledger_result = "deploy failed"
+    # 1) TWO-PARTY GATE (structural)
+    ok, detail, author, signer = _twoparty_check(block_id)
+    if not ok:
+        _prov_append({"kind": "gate_violation", "block_id": block_id, "target": target,
+                      "caller": caller, "reason": detail, "author": author, "signer": signer,
+                      "commit_sha": commit_sha or None})
+        _ledger_finish(op_id, "fail", f"two-party refused: {detail[:140]}")
+        return jsonify({"error": "deploy refused — two-party rule", "detail": detail,
+                        "author": author, "signer": signer}), 403
+
+    # 1b) KEYS-2: when the caller authenticated with a per-identity key, bind the
+    # DEPLOY caller to the SIGNER — a third party can't trigger a deploy citing
+    # someone else's signoff. In shared-key mode this bind is skipped (the seat is
+    # unauthenticated 'unattributed'), so the structural two-party check above is the
+    # only guard until keys are issued — flagged.
+    _ident = _authed_identity()
+    if _ident and _ident.get("authenticated"):
+        if signer and (_ident.get("seat") or "") != (signer.get("seat") or ""):
+            _prov_append({"kind": "gate_violation", "block_id": block_id, "target": target,
+                          "caller": "auth:" + str(_ident.get("seat")), "reason":
+                          f"deploy caller {_ident.get('seat')} != signer {signer.get('seat')}",
+                          "author": author, "signer": signer})
+            _ledger_finish(op_id, "fail", "caller != signer")
+            return jsonify({"error": "deploy refused — caller is not the signer",
+                            "caller": _ident.get("seat"), "signer": signer}), 403
+
+    # 2) lifecycle record: authorized (captures the chain so findings don't evaporate)
+    _prov_append({"kind": "deploy_authorized", "block_id": block_id, "target": target,
+                  "caller": caller, "author": author, "signer": signer,
+                  "commit_sha": commit_sha or None, "dry_run": dry_run})
+
+    # 3) DRY RUN: every check passed; make no real call (test path)
+    if dry_run:
+        _ledger_finish(op_id, "ok", f"dry_run authorized target={target} block={block_id}")
+        return jsonify({"ok": True, "dry_run": True, "authorized": True,
+                        "two_party": {"author": author, "signer": signer},
+                        "would_deploy": target})
+
+    # 4) EXECUTE
     try:
-        ok, detail, author, signer = _twoparty_check(
-            block_id, target, commit_sha)
-        if not ok:
-            _prov_append({
-                "kind": "gate_violation", "block_id": block_id,
-                "target": target, "caller": caller, "reason": detail,
-                "author": author, "signer": signer, "commit_sha": commit_sha,
-            })
-            ledger_result = "two-party refused"
-            return jsonify({
-                "error": "deploy refused — two-party rule", "detail": detail,
-                "author": author, "signer": signer,
-            }), 403
+        if target == "box":
+            # box redeploy = restart the workspace (the existing hands-free path)
+            result = {"box": "restart requested"}
+            try:
+                import file_server
+                if hasattr(file_server, "restart_workspace"):
+                    file_server.restart_workspace()
+            except Exception as e:
+                result["restart_note"] = str(e)[:120]
+        else:
+            token = os.environ.get("RAILWAY_TOKEN", "").strip()
+            svc = os.environ.get(f"RAILWAY_SERVICE_ID_{target.upper()}", "").strip()
+            env = os.environ.get("RAILWAY_ENVIRONMENT_ID", "").strip()
+            if not (token and svc and env):
+                _ledger_finish(op_id, "fail", "railway env not configured")
+                _prov_append({"kind": "deploy_result", "block_id": block_id, "target": target,
+                              "outcome": "fail", "reason": "RAILWAY_TOKEN/SERVICE_ID/ENVIRONMENT_ID env missing"})
+                return jsonify({"error": "railway env not configured (RAILWAY_TOKEN / "
+                                "RAILWAY_SERVICE_ID_%s / RAILWAY_ENVIRONMENT_ID)" % target.upper()}), 503
+            result = _railway_deploy(svc, env, token)
+        _prov_append({"kind": "deploy_result", "block_id": block_id, "target": target,
+                      "outcome": "ok", "commit_sha": commit_sha or None})
+        _ledger_finish(op_id, "ok", f"deployed target={target} block={block_id}")
+        return jsonify({"ok": True, "deployed": target, "block_id": block_id,
+                        "two_party": {"author": author, "signer": signer}, "result": result})
+    except Exception as e:
+        _prov_append({"kind": "deploy_result", "block_id": block_id, "target": target,
+                      "outcome": "fail", "reason": str(e)[:140]})
+        _ledger_finish(op_id, "fail", f"deploy error: {str(e)[:140]}")
+        return jsonify({"error": f"deploy error: {str(e)[:200]}"}), 500
 
-        identity = _authed_identity()
-        if (identity and identity.get("authenticated") and signer
-                and (identity.get("seat") or "") != (signer.get("seat") or "")):
-            _prov_append({
-                "kind": "gate_violation", "block_id": block_id,
-                "target": target, "caller": "auth:" + str(identity.get("seat")),
-                "reason": "authenticated deploy caller differs from signer",
-                "author": author, "signer": signer, "commit_sha": commit_sha,
-            })
-            ledger_result = "caller differs from signer"
-            return jsonify({
-                "error": "deploy refused — caller is not the signer",
-                "caller": identity.get("seat"), "signer": signer,
-            }), 403
-
-        if action == "start":
-            result, provider_mutated = trusted_deploy.start(
-                block_id, target, commit_sha
-            )
-            _prov_append({
-                "kind": "deploy_accepted" if provider_mutated else "deploy_replayed",
-                "block_id": block_id, "target": target, "caller": caller,
-                "author": author, "signer": signer, "commit_sha": commit_sha,
-                "tracking_id": result["tracking_id"],
-            })
-            ledger_status = "ok" if result["ok"] else "fail"
-            ledger_result = ("deploy accepted" if provider_mutated else
-                             "deploy replayed " + result["action_state"])
-            status_code = 200 if result["ok"] else 502
-            return jsonify({**result, "two_party": {
-                "author": author, "signer": signer}}), status_code
-
-        result, newly_terminal = trusted_deploy.status(
-            block_id, target, commit_sha
-        )
-        if newly_terminal:
-            _prov_append({
-                "kind": "deploy_result", "block_id": block_id,
-                "target": target, "caller": caller, "author": author,
-                "signer": signer, "commit_sha": commit_sha,
-                "tracking_id": result["tracking_id"],
-                "outcome": result["action_state"],
-            })
-        ledger_status = "ok" if result["ok"] else "fail"
-        ledger_result = "deploy status " + result["action_state"]
-        status_code = 200 if result["ok"] else 502
-        return jsonify({**result, "two_party": {"author": author, "signer": signer}}), status_code
-    except trusted_deploy.DeployError as exc:
-        ledger_result = "deploy adapter refused request"
-        return jsonify({"error": str(exc)}), exc.status
-    except Exception:
-        ledger_result = "deploy internal failure"
-        return jsonify({"error": "deploy internal failure"}), 500
-    finally:
-        _ledger_finish(op_id, ledger_status, ledger_result)

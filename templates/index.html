@@ -771,7 +771,6 @@ body.observer-mode .message-role {
       <button class="mode-btn" id="btnObserver" onclick="setMode('observer')">OBSERVER</button>
     </div>
     <button class="stop-btn" id="stopBtn" onclick="stopSession()">STOP</button>
-    <button onclick="showAdmission()" style="background:transparent;border:1px solid var(--border2);border-radius:6px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.05em;color:var(--text-dim);cursor:pointer;" id="admissionBtn">ADMISSION</button>
     <button onclick="showSettings()" style="background:transparent;border:1px solid var(--border2);border-radius:6px;padding:4px 12px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:0.05em;color:var(--text-dim);cursor:pointer;" id="settingsBtn">KEYS</button>
   </div>
 </header>
@@ -1043,30 +1042,6 @@ body.observer-mode .message-role {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;">
       <button onclick="closeSettings()" style="background:transparent;border:1px solid var(--border2);border-radius:6px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text-dim);cursor:pointer;">Cancel</button>
       <button onclick="saveSettings()" style="background:var(--amber);color:#000;border:none;border-radius:6px;padding:8px 20px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;">Save Configuration</button>
-    </div>
-  </div>
-</div>
-
-<!-- Operator capability approval panel. The root is held only in this open
-     panel, never saved to localStorage and never placed in a model command. -->
-<div class="modal-overlay" id="admission-panel">
-  <div class="modal" onclick="event.stopPropagation()" style="max-width:760px;width:92%;max-height:90vh;overflow-y:auto;">
-    <div class="modal-type">OPERATOR AUTHORITY</div>
-    <div class="modal-title">Capability Admission</div>
-    <div style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;line-height:1.6;margin-bottom:12px;">Inspect pending identity requests, issue a short-lived grant, or revoke an issued grant. The operator key is kept only in this panel until it closes.</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;">
-      <input type="password" id="admission-operator-key" placeholder="Operator diagnostic key" autocomplete="off" style="flex:1;background:var(--surface2);border:1px solid var(--border2);border-radius:6px;padding:9px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);outline:none;">
-      <button onclick="refreshAdmission()" style="background:var(--amber);color:#000;border:none;border-radius:6px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;">Refresh</button>
-    </div>
-    <div id="admission-status" style="font-size:11px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-bottom:10px;"></div>
-    <div id="admission-pending" style="display:flex;flex-direction:column;gap:8px;"></div>
-    <div id="admission-issued" style="display:none;border:1px solid var(--amber-dim);border-radius:6px;padding:10px;margin-top:12px;">
-      <div style="font-size:10px;color:var(--amber);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">NEW CAPABILITY — SHOWN ONCE</div>
-      <textarea id="admission-token" readonly style="width:100%;min-height:74px;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;padding:8px;"></textarea>
-      <button onclick="copyAdmissionToken()" style="margin-top:6px;background:transparent;border:1px solid var(--border2);border-radius:6px;padding:6px 12px;color:var(--text-dim);cursor:pointer;">Copy grant</button>
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-      <button onclick="closeAdmission()" style="background:transparent;border:1px solid var(--border2);border-radius:6px;padding:8px 16px;color:var(--text-dim);cursor:pointer;">Close</button>
     </div>
   </div>
 </div>
@@ -1387,117 +1362,6 @@ function showSettings() {
 
 function closeSettings() {
   document.getElementById('settingsModal').classList.remove('visible');
-}
-
-function showAdmission() {
-  document.getElementById('admission-panel').classList.add('visible');
-  document.getElementById('admission-operator-key').focus();
-}
-
-function closeAdmission() {
-  document.getElementById('admission-panel').classList.remove('visible');
-  document.getElementById('admission-operator-key').value = '';
-  document.getElementById('admission-token').value = '';
-  document.getElementById('admission-issued').style.display = 'none';
-}
-
-function admissionHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'X-Diag-Key': document.getElementById('admission-operator-key').value.trim()
-  };
-}
-
-function admissionButton(label, className, handler) {
-  const button = document.createElement('button');
-  button.textContent = label;
-  button.className = className;
-  button.style.cssText = 'background:transparent;border:1px solid var(--border2);border-radius:5px;padding:5px 10px;color:var(--text-dim);cursor:pointer;';
-  button.onclick = handler;
-  return button;
-}
-
-async function refreshAdmission() {
-  const status = document.getElementById('admission-status');
-  const list = document.getElementById('admission-pending');
-  status.textContent = 'Loading…';
-  list.replaceChildren();
-  try {
-    const response = await fetch('/diag/admission/requests', {
-      headers: admissionHeaders(), redirect: 'error', cache: 'no-store'
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
-    const rows = data.requests || [];
-    status.textContent = rows.length ? `${rows.length} recent request(s)` : 'No admission requests.';
-    rows.forEach(row => {
-      const card = document.createElement('div');
-      card.style.cssText = 'border:1px solid var(--border2);border-radius:6px;padding:10px;background:var(--surface2);';
-      const detail = document.createElement('div');
-      detail.style.cssText = 'font-family:JetBrains Mono,monospace;font-size:10px;color:var(--text-dim);line-height:1.6;word-break:break-word;';
-      const risk = row.elevated ? ' · ELEVATED / HIGH-IMPACT' : '';
-      const scope = row.deploy_scope
-        ? ` · block=${row.deploy_scope.signoff_block_id} · target=${row.deploy_scope.target_scope} · commit=${row.deploy_scope.commit_sha}`
-        : '';
-      detail.textContent = `${row.status.toUpperCase()}${risk} · ${row.seat} · ${row.lineage} · ${row.ops.join(', ')} · ${row.ttl}s${scope}`;
-      card.appendChild(detail);
-      const actions = document.createElement('div');
-      actions.style.cssText = 'display:flex;gap:8px;margin-top:7px;';
-      if (row.status === 'pending') {
-        const label = row.elevated ? 'Approve elevated deploy' : 'Approve';
-        actions.appendChild(admissionButton(label, 'approve-admission', () => approveAdmission(row)));
-      }
-      if (row.status === 'approved' && row.jti) {
-        actions.appendChild(admissionButton('Revoke', 'revoke-capability', () => revokeCapability(row.jti)));
-      }
-      card.appendChild(actions);
-      list.appendChild(card);
-    });
-  } catch (error) {
-    status.textContent = `Admission unavailable: ${error.message}`;
-  }
-}
-
-async function approveAdmission(row) {
-  const elevatedConfirmed = row.elevated === true;
-  const scope = row.deploy_scope || {};
-  if (elevatedConfirmed && !window.confirm(
-      `High-impact action: authorize this signer only for block ${scope.signoff_block_id}, target ${scope.target_scope}, commit ${scope.commit_sha}?`)) {
-    return;
-  }
-  const response = await fetch('/diag/admission/approve', {
-    method: 'POST', headers: admissionHeaders(), redirect: 'error', cache: 'no-store',
-    body: JSON.stringify({
-      request_id: row.request_id,
-      elevated_confirmed: elevatedConfirmed
-    })
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    document.getElementById('admission-status').textContent = data.error || `HTTP ${response.status}`;
-    return;
-  }
-  document.getElementById('admission-token').value = data.capability;
-  document.getElementById('admission-issued').style.display = 'block';
-  await refreshAdmission();
-}
-
-async function revokeCapability(jti) {
-  const response = await fetch('/diag/admission/revoke', {
-    method: 'POST', headers: admissionHeaders(), redirect: 'error', cache: 'no-store',
-    body: JSON.stringify({jti})
-  });
-  const data = await response.json();
-  if (!response.ok) {
-    document.getElementById('admission-status').textContent = data.error || `HTTP ${response.status}`;
-    return;
-  }
-  await refreshAdmission();
-}
-
-function copyAdmissionToken() {
-  const token = document.getElementById('admission-token').value;
-  if (token) navigator.clipboard.writeText(token);
 }
 
 function saveSettings() {

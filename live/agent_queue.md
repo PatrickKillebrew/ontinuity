@@ -1675,3 +1675,22 @@ OPERATING_MANUAL, the WORKER docs, THE_PARADIGM) still describe the B1/B-block d
 reconciled to this recovered post-recovery reality — the operator has said this revision happens AFTER this
 close, deliberately, not as part of it. Then: build the intake→Knowtext bridge; retrieve+update
 PROVISIONING_RUNBOOK.md (private repo) to the 5640170 state; package the per-operator instance.
+
+*Annotation 2026-09-13 (appended, not edited): the LEARNED bullet above attributes the Knowtext write to "Projenius DISTILL"; per live/ONTINUITY_CONTINUITY_MECHANISM.md §9.1 the session-level DISTILL is the PARIETAL's function and PROJENIUS holds project-level memory (the ERL). Recorded here so the fold stays append-only.*
+
+## CURRENT-STATE TOUCH POINT — 2026-09-13 (control seat, claude.ai-chat:claude-fable-5.1; rollback reconciliation + boot verification)
+
+**HOW THIS SESSION STARTED.** Fable took the Control seat via the proper boot (probe → five read groups → gate). The boot itself was the verification: the packet, handoff, paradigm, rubric, punch list, and worker docs on main were still the B1/B-block text, and the bootstrap gate's CHECK 2 was silently reading a 2026-09-09 B1 fold's NEXT (it parsed only `## FOLD` headers) while reporting oriented:true. The 2026-09-12 recovery had restored the engine, manual, and gate count but not the rest — the rollback was incomplete.
+
+**BUILT (rollback reconciliation — this fold's commit).**
+- Restored pre-GPT text from `9a7eac2a`: THE_PARADIGM, OPERATING_RUBRIC, CONTROL_QUICKBOOT_SNIPPET, CONTROL_HANDOFF (state block rewritten to current truth), PUNCH_LIST (base; DONE entries added for the KEPT B5-P/B0/hardening + this recovery), verified_bootstrap_gate spec (CHECK 2 wording + count), live/control_loop.py, templates/index.html (B1 ADMISSION panel removed), live/box/laptop_seat.py (real seat restored from the B1 tombstone), live/box/box_ops.py, live/box/seat_mailbox.py.
+- Kept the Sept-5 currency fixes in CONTROL_QUICKBOOT + WORKER_MANUAL/BOOT_PACKET/QUICKBOOT (19 ops, X-Diag-Key header) with B-block references removed.
+- KEPT GPT hardening verified free of B1 dependency: push_to_github.py + shepherd.py (hardcoded secret literals removed — reverting would have re-committed secrets), shepherd_alert/governor/burnin_resident/model_client (header key, no-redirect), live/box/file_server.py, the reconciled 19-op gate.
+- MUSEUM: B1 code/specs/manifests/tests/tools/evidence → museum/b1/; BOARD + COMPLETION_PLAN → museum/b-blocks/; README explains why.
+- GATE: CHECK 2 now parses `## CURRENT-STATE TOUCH POINT` folds (the manual's convention, and the pre-GPT spec's stated intent) with an inline or bulleted `**NEXT`; OPERATING_MANUAL close-ritual item 3 documents the required fold shape.
+- BOX: box_ops.py + seat_mailbox.py reinstalled at pre-GPT bytes; gate.py reinstalled; restart; hands/gate re-verified (see conversation record for the before/after).
+
+**LEARNED.** A rollback of code without a rollback of the DOCS and the BOX leaves a system that boots green onto a stale plan — the silent-lapse class in a new costume. Restore text from GitHub rather than banner it; keep only fixes proven independent of the discarded direction; preserve the discarded direction as a specimen.
+
+**NEXT**
+- Finish the read-only mapping audit (verify live/ONTINUITY_COVERAGE_CHECKLIST.txt against the corpus; known gaps: app.py session loop, seat_mailbox protocol, full Parietal/Projenius prompts, the rest of SHS) and report the gap list to the operator; then execute the private-repo PROVISIONING_RUNBOOK Phase 2 (one operator-controlled second install, Claude seat).

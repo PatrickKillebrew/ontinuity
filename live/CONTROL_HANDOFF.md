@@ -1,130 +1,16 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-08 — exact commit `b596d3c` was independently accepted,
-# operator-authorized, published to public main, and installed as the exact
-# six-file box unit. The workspace restarted once and all six hashes plus MAIN/FARM
-# rollback compatibility passed. Engine deployment then failed closed before any
-# provider request because the box lacked provider UUID configuration.
-# Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest fold at the queue tail.
+# Updated 2026-09-13 by Control (claude.ai-chat:claude-fable-5.1) — post-GPT rollback reconciliation complete; B1 direction discarded to museum/.
+# Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest CURRENT-STATE TOUCH POINT fold at the queue tail.
 
 ## STATE AT FOLD
-- **CURRENT OVERRIDE:** Public main is exact accepted commit `b596d3c`. The exact
-  six-file box unit (`file_server.py`, `box_ops.py`, `trusted_deploy.py`,
-  `seat_mailbox.py`, `live/bootstrap/gate.py`, and `shepherd_alert.py`) is
-  installed, the workspace restarted once, and every installed hash passed. MAIN
-  still runs `693435a`; FARM remains rollback `3476ed8` because
-  trusted deployment refused before provider dispatch. Persistent burn-in source
-  already matches its manifest and was not restarted.
-- **PUBLIC REPOSITORY STATE:** `origin/main` is exact accepted and
-  operator-authorized commit `b596d3c`. Its public presence is corroborating
-  repository evidence; the separately verified box installation and live engine
-  revisions remain distinct facts.
-- **TRANSPORT LOCK ACCEPTED:** commit `6f52063` preserves the successful top-level
-  `curl --disable --config -` engine path, exact request envelope, interprocess replay lock,
-  bounded response intake, fixed ledgered `restart_burnin`, and the reviewed
-  logical endpoint registry. It does not govern hosting-provider administration.
-- **TRUSTED DEPLOY GAP CORRECTED LOCALLY:** the existing box-side `/op/deploy`
-  accepts only a two-phase provider-neutral tuple: action, logical target,
-  signoff block, and exact commit. The box alone holds provider configuration and
-  credentials, records a pre-mutation state, captures the exact provider deployment
-  identifier, and verifies that stored identifier's service and commit. A caller
-  cannot select transport details or satisfy status with a stale success. The
-  private UUID file is identified from its canonical resolved path, rejects
-  traversal/symlink/nonregular targets, and is installed by mode-600 atomic
-  replacement; the verifier performs syntax compilation without repository
-  bytecode artifacts.
-- **SINGLE NEXT ACTION:** independently review the narrow private provider-ID file
-  wiring built from existing `write_file`, persistent box-project storage, and
-  `restart_workspace`. If accepted unchanged, resolve and commit the exact
-  candidate, create a fresh two-party deploy ref bound to that resulting SHA, and
-  obtain Patrick's exact-SHA publication/deployment authorization. Only then may
-  it be published, installed with a separately generated mode-600 four-UUID
-  document, restarted, and deployed MAIN then FARM at that same reviewed SHA.
-- B0 is complete at commit `7abadca`; its authenticated read-only report
-  honestly returned `DRIFT`. The original observation remains the baseline even
-  where later work repaired part of the observed box divergence.
-- B5-P is LIVE at reviewed commit `3326753`. Railway and the separately
-  installed box bytes were verified, the 33/33 code suite passed, and challenged
-  session `2026-09-05_09-37-00` / receipt `351` satisfied the eleventh acceptance
-  item. The database holds six exact transcript companions, fourteen model-call
-  envelopes, one structured Challenge/`UPHOLD`, one `EXPUNGED` retraction, one
-  reproducibility manifest, three behavioral observations, and two artifacts.
-  All 50 stored digests independently reproduced; available credentials were
-  absent from the returned evidence payloads.
-- B5-P preserves evidence; it does not prove that Ontinuity reduces fabrication
-  by any percentage. The deliberately asserted 50-percent inference was caught,
-  upheld, retracted, and replaced with a falsifiable paired-control plan at
-  `live/experiment/B5P_LIVE_2026-09-05_COMPARATIVE_TEST_PLAN.md`. That plan has
-  not been run.
-- **HISTORICAL PREDECESSOR:** The previous seven-file B1 candidate was rejected by integration review and
-  rolled back. Its capability/identity core was salvaged into corrected local
-  branch `codex/b1-corrected` on rollback commit `3476ed8`. The corrected
-  candidate is uncommitted, has no clean review, and is not live. Its exact file boundary
-  is enumerated in `live/B1_INSTALL_MANIFEST.json`. The earlier pre-second-pass
-  bytes passed 92 bounded tests; those results are not attributed to the revised
-  bytes. The prior freeze passed all 111 then-current tests in bounded
-  invocations using the existing project test environment, plus
-  Python/JavaScript syntax and diff hygiene.
-  Other preserved non-live candidates: B3 branch
-  `codex/b3-fail-closed-completion` at `12dea5e`; Governor branch
-  `codex/governor-observability` at `5e3310d`.
-- PLATFORM SUCCESSION PROVED: a fresh ChatGPT Work conversation inherited Control through the existing corpus/boot and 19-op HTTPS courier, then occupied the external Researcher seat in the real engine. No OpenAI-specific engine rebuild or bridge was required.
-- Evidence pair: `2026-09-03_14-13-03` failed closed as `incomplete_model_dead` (3 cycles) when the retired Cerebras Challenger returned 404; after a staffing-only change to `cerebras:gemma-4-31b`, `2026-09-03_14-35-29` completed in 2 cycles through contract, independent challenge, close review, and extraction.
-- MAIN engine healthy and idle after the lap. Challenger remains `cerebras:gemma-4-31b`; Parietal remains `cerebras:gpt-oss-120b` (distinct models; verify lineage constraints before future changes).
-- Full live cockpit still exists at the Railway engine root (transcript, Researcher input, Keys modal). `ontinuity.org` is the static public site. Observe freely; do not casually Save the Keys modal—runtime config is process-global, outranks the vault, last-save-wins.
-- PROVENANCE DEFECT OPEN: session `model_a_string` still names the historical Claude occupant when ChatGPT answers the external mailbox. Use the September 3 conversation record + session ids as the honest join until identity is carried by the protocol.
-- Operator ruling: do not resume punch-list builds merely to keep motion going; this fold documents the milestone. The July 19 portable-tenant roadmap remains durable but is not the present instruction.
-- Engine healthy. Box hands LIVE. Courier allowlist candidate now 20 ops; the B1 correction adds fixed `restart_burnin` while preserving the seven-operation initial model grant.
-- MAILBOX RESULT-CHANNEL FIXED end to end this shift (was the night's big blocker — see below).
-  Queue healthy (was 419 stale results jammed; purged). Correlated fetch + ack confirmed working.
-- Laptop seat (laptop_seat.py on the HP, C:\donkeycar\) ALIVE and processing tasks (done-marking).
-- Credentials: LLaves keys live and in use; pre-public risk accepted by operator. Rotation = launch
-  hygiene, not a current blocker.
-- ChatGPT Work access rule: first admit command networking in Settings -> Data
-  controls -> Work network access. Use the documented curl and one narrowly
-  scoped credential-bearing remote request per tool call. A DNS/host/policy
-  denial before HTTP is `WORK_EGRESS_DENIED`, not evidence about Railway or the
-  credential. Browser reachability is observation only, not authenticated hands.
-- The corrected local B1 candidate now derives the bootstrap operation count
-  from the server allowlist, removes the caller override, reads the latest
-  bounded queue fold, requires capability proof, refuses authenticated
-  redirects, and validates all engine booleans. These corrections are local
-  evidence only until independent review and an authorized exact-byte cutover.
-- A second local boundary pass caught and corrected three omissions before
-  review: the standalone gate fallback/spec still described 12 operations; the
-  running box Governor path is embedded in `live/box/file_server.py`, not loaded
-  from the separate source fragment; and mailbox ACK-generated results lacked
-  derived author columns. The manifest now includes the real box server and
-  explicit resident/tombstone actions. This is still author-side local work.
-- The first independent review reproduced the manifest and 107-test evidence but
-  rejected five release defects: stale board/plan candidate targets, unsafe
-  `read_repo` path/ref interpolation, a capability response that asked for a
-  forbidden GitHub token, stale global self-asserted-identity wording, and no
-  mechanically ordered cutover. Those findings are corrected locally. The same
-  correction also aligns mailbox review eligibility with the canonical distinct-
-  seat rule and clarifies that Control has five read groups covering six files.
-  Because these are author-side corrections, a new clean review is required.
-- The second independent review confirmed all five first-review blockers were
-  corrected and independently reproduced 111 tests, but rejected three new
-  release defects: MAIN timed out a `you_there` relay before the box's long-poll
-  cap; `live/control_loop.py` referenced the removed `DIAG` variable at direct
-  startup; and the bootstrap specification overclaimed corpus, hands, and engine
-  facts and still described a now-closed manual gap. It also identified a
-  malformed `../name` repository-slug edge case. The local correction gives the
-  long poll a bounded transport margin, makes the helper provider-neutral and
-  capability-fail-clean, makes the specification match the runnable exactly,
-  tightens slug validation, and updates stale legacy-auth comments. A third
-  clean review is required; the second REJECT remains part of the evidence.
-  The refrozen correction passes all 114 current tests plus Python compilation,
-  extracted MAIN JavaScript syntax, manifest integrity/coverage, JSON parsing,
-  and diff hygiene. Those are still author-side results, not acceptance.
-- The third independent review reproduced the exact freeze, all 114 tests, and
-  every prior correction, but rejected one remaining spec/runtime mismatch:
-  CHECK 6 computed per-invariant coverage and manual-ratification findings yet
-  returned only a summary on success. The runnable now returns a stable finding
-  object for every processed invariant on both success and failure, with an
-  end-to-end assertion of all four successful findings. The stale gate comment
-  and board rejection count are also corrected. These new author-side bytes
-  require a fourth clean review.
+- LIVE ENGINE: MAIN = commit `5640170` (app.py blob `35502fd0` = pre-GPT `9a7eac2a` + the kept B5-P raw-evidence layer; ZERO B1). FARM = `f9696c49`. Courier allowlist 19 ops, diag-key (`X-Diag-Key` header or `diag_key` query). Full Control boot returns oriented:true. 328 sessions intact.
+- THE B-BLOCK / B1 DIRECTION (GPT-driven, 2026-09-03..11) IS DISCARDED. Its code, specs, manifests, tests, and plan docs are preserved under `museum/b1/` and `museum/b-blocks/` (git history + bundle `e15f5f46`) — history, not the live path. KEPT from that period: B5-P raw-evidence preservation (live, `live/RESEARCH_PRESERVATION_CONTRACT.md`), the B0 baseline (evidence, `live/baselines/`), and GPT's security hardening (no hardcoded secrets in `push_to_github.py`/`shepherd.py`; `X-Diag-Key` header + no-redirect openers in shepherd_alert/governor/burnin_resident/model_client; `live/box/file_server.py`; the 19-op reconciled `live/bootstrap/gate.py`).
+- BOX: `box_ops.py` + `seat_mailbox.py` installed at the pre-GPT bytes (write_file + restart); `file_server.py`, `gate.py`, `shepherd_alert.py`, `db.py`, `workspace_db_endpoint.py` at the kept versions; `trusted_deploy.py` remains on disk but is unreferenced (inert; no delete op exists).
+- DOCS: THE_PARADIGM, OPERATING_RUBRIC, OPERATING_MANUAL, CONTROL_QUICKBOOT (+SNIPPET), CONTROL_HANDOFF, PUNCH_LIST restored to pre-GPT/pre-B1 text; WORKER_MANUAL/BOOT_PACKET/QUICKBOOT keep the Sept-5 currency fixes (19 ops, header key) with B-block references removed.
+- Recovery + mapping record: `live/conversations/2026-09-12_recovery-mapping-two-product-packaging.md`; maps: `live/ONTINUITY_MASTER_SYSTEM_MAP.md`, `live/ONTINUITY_CONTINUITY_MECHANISM.md`, `live/ONTINUITY_PACKAGING_PLAN.md`; the packaging project itself lives in the PRIVATE repo `projects/the-package/` (runbook, roadmap, punch list, ritual mechanics).
+
+## SINGLE NEXT ACTION
+Finish the read-only MAPPING AUDIT (verify `live/ONTINUITY_COVERAGE_CHECKLIST.txt` claims against the corpus; known gaps: app.py session loop, seat_mailbox protocol, full Parietal/Projenius prompts, the rest of SHS) and report the gap list to the operator. Then execute PROVISIONING_RUNBOOK.md (private repo `projects/the-package/`) Phase 2: stand up ONE operator-controlled second install and boot a Claude seat into it (ROADMAP Phase 2 gate). Phase 3 (a non-Claude model in the seat) only after Phase 2 passes.
 
 ## WHAT SHIPPED THIS SHIFT — THE MAILBOX FIX (root-cause, deployed, proven)
 THE BUG (fully diagnosed): the seat_mailbox is a TASK-DISTRIBUTION queue (atomic claim + lease so
@@ -162,37 +48,15 @@ There are TWO surfaces and they update DIFFERENTLY:
 
 ## TWO-PARTY DEPLOY GATE — RAN IT THIS SHIFT, IT WORKS
 The gate (signoff_deploychain.md) needs a 'proposal' row (author) + a 'signoff' row from a DISTINCT
-seat, same block_id, carrying the identical canonical ref
-`deploy:v1:<main|farm|both>:<40-hex-commit>`. The deploy-only capability must bind
-that same block, commit, and target scope. The corrected `/op/deploy` accepts exactly four required
-strings: `action` (`start|status`), `target` (`main|farm`), `signoff_block_id`,
-and an exact lowercase 40-hex `commit_sha`. It has no box target and no dry-run
-field. Historical dry-run evidence below describes the superseded live contract. We ran MAILBOXFIX-1
+seat, same block_id. /op/deploy: target main|farm|box, requires block_id + signoff_block_id.
+dry_run:true runs the full gate with ZERO Railway side-effect — use it first. We ran MAILBOXFIX-1
 (author=control, signer=operator): dry-run authorized:true, real deploy authorized but stopped at
 "railway env not configured" on the ENGINE (engine lacks RAILWAY_TOKEN/service IDs — known FARM
 seam). The actual deploy was done control-side via Railway GraphQL (serviceInstanceDeploy) for the
 engine + write_file/restart for the box, under direct operator instruction (system-building, not
 autonomous worker work).
 
-## HISTORICAL 2026-09-07 ACTION — SUPERSEDED BY THE CURRENT OVERRIDE
-**The action at that fold was to independently review the exact
-manifest-defined corrected B1 candidate on `codex/b1-corrected`.** It is based
-on rollback commit `3476ed8`, is uncommitted, has been rejected three times and
-corrected locally, and is not live. The next disposition must come from a fourth
-clean reviewer. The
-review must cover the capability/admission boundary, operator approval and
-revocation surface, bootstrap mechanics, active credential-bearing callers,
-boot packets, public removals and private-transfer receipt, and every hash in
-`live/B1_INSTALL_MANIFEST.json`. Only after a clean review and explicit operator
-authorization may the exact reviewed bytes be committed, transitioned,
-deployed, or installed and the Control/Worker capability boots proved. Credential
-rotation is deferred launch/cutover hygiene by operator ruling and is not a
-current B1 review gate. Do not resume B3 until this B1 review disposition is
-durably recorded. B0's original `DRIFT` record stays immutable. That review was
-subsequently accepted and landed as `693435a`; this paragraph is retained only as
-history and is not an instruction.
-
-**HISTORICAL 2026-06-30 NEXT ACTION (superseded first by July 19, then paused September 3):**
+## THE SINGLE NEXT ACTION
 GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1).
   - GOAL: one page (served by the existing governor relay, OUTSIDE the Claude UI) that shows every
     worker seat's status at a glance. Largest visible win toward "see and interact with >2 workers."

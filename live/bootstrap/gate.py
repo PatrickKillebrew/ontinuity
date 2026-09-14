@@ -184,7 +184,7 @@ def check_queue():
     import re
     lines = body.splitlines()
     fold_indexes = [i for i, line in enumerate(lines)
-                    if re.fullmatch(r"## FOLD(?:[ \t]+.*)?", line)]
+                    if re.fullmatch(r"## (?:FOLD|CURRENT-STATE TOUCH POINT)(?:[ \t]+.*)?", line)]
     if not fold_indexes:
         return _fail(name, "no canonical FOLD section",
                      "NOT ORIENTED [CHECK 2 QUEUE]: no queue-tail FOLD section.")
@@ -192,7 +192,16 @@ def check_queue():
     end = next((i for i in range(start, len(lines))
                 if re.match(r"^##(?:[ \t]+|$)", lines[i])), len(lines))
     latest = lines[start:end]
-    markers = [i for i, line in enumerate(latest) if line.strip() == "**NEXT**"]
+    markers = [i for i, line in enumerate(latest) if re.match(r"\*\*NEXT\b", line.strip())]
+    if len(markers) == 1:
+        inline = re.sub(r"^\s*\*\*NEXT[^*]*\*\*\s*", "", latest[markers[0]]).strip()
+        if inline:
+            action_lines = [inline]
+            for line in latest[markers[0] + 1:]:
+                if not line.strip() or re.match(r"\s*\*\*", line) or line.startswith("##"):
+                    break
+                action_lines.append(line.strip())
+            return _ok(name, "next action: " + " ".join(action_lines)[:400])
     if len(markers) != 1:
         return _fail(name, f"latest FOLD has {len(markers)} NEXT markers",
                      "NOT ORIENTED [CHECK 2 QUEUE]: latest FOLD needs exactly one NEXT.")
