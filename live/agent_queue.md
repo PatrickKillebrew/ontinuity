@@ -1694,3 +1694,18 @@ PROVISIONING_RUNBOOK.md (private repo) to the 5640170 state; package the per-ope
 
 **NEXT**
 - Finish the read-only mapping audit (verify live/ONTINUITY_COVERAGE_CHECKLIST.txt against the corpus; known gaps: app.py session loop, seat_mailbox protocol, full Parietal/Projenius prompts, the rest of SHS) and report the gap list to the operator; then execute the private-repo PROVISIONING_RUNBOOK Phase 2 (one operator-controlled second install, Claude seat).
+
+
+## CURRENT-STATE TOUCH POINT — 2026-09-13 (control seat, claude.ai-chat:claude-fable-5.1; mapping audit closed, deployment rollback verified)
+
+**HOW THIS SESSION CONTINUED.** After the rollback reconciliation, Fable (1) verified the Railway + Hetzner deployment rollback is complete (MAIN latest-SUCCESS deploy = the reconciliation commit on the 5640170 engine; FARM = f9696c49; live cockpit serves 0 ADMISSION panel; box files congruent with repo; one inert B1 config neutralized on the box), and (2) completed the read-only MAPPING AUDIT of Opus's snippet-level maps.
+
+**BUILT (this fold's work).**
+- Mapping audit closed. Five gaps addressed, all folded into the maps: the seating mechanism (external_mailbox + /mailbox/turn,/respond — how any model sits as the Researcher) and the in-engine close gate (four refusal gates) into ONTINUITY_CONTINUITY_MECHANISM.md §10; the distillation dispatch VERIFIED as Parietal-DISTILL-primary / Projenius-fallback (correcting the original "Projenius writes Knowtext"); a NEW depth-arm ONTINUITY_INTAKE_MODE_SHS.md for the shipped SHS/SantaClean product, anchored master map §25.
+- Framing corrected by the operator: SHS is a WORKED EXAMPLE of Mode A (intake front door → four-stage pipeline → shipped result), NOT "the packaging template." The template for installing Ontinuity itself is the PROVISIONING_RUNBOOK (private repo, the-package/). SHS ML/tool-code internals marked out of scope (nobody rebuilds SantaClean inside Ontinuity).
+- Multi-tenancy path re-evaluated at the operator's request and DECLINED again on the merits — it re-walks documented reversal #3 (the "landlord not tenant" ruling). B1 stays a museum piece; only its hygiene lessons are kept.
+
+**LEARNED.** The maps were a correct INDEX at survey depth; the audit added the mechanism depth (how a model is seated; how the close gate enforces; the shipped-product anatomy) without changing direction. Both front-door paths are now coherent in the maps: MODE B (design/build, operator+Control seat) is FULLY LIVE and verified; MODE A (intake→pipeline) is coherent as a manually-run pipeline (SHS proves it) but has ONE unbuilt automation seam (the intake→Knowtext/mini-corpus bridge) — out of scope for a BIL tryout, which exercises Mode B.
+
+**NEXT**
+- Execute PROVISIONING_RUNBOOK.md (private repo the-package/) Phase 2: stand up ONE fresh, operator-controlled second install (its own GitHub repo + Railway project + Hetzner box + diag key — landlord model, not shared) to demo with and hand to the BIL, and boot a Claude seat against it until __probe__ returns ITS allowlist, the read gate passes on ITS corpus, and a close ritual files to ITS repo. Account-creation steps (new repo/Railway project/VPS) are the operator's console actions; the seat prepares the parameterized boot packet + trimmed mechanism docs + empty-shape corpus and verifies the boot gate.
