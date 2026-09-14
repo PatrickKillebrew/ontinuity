@@ -1724,3 +1724,18 @@ PROVISIONING_RUNBOOK.md (private repo) to the 5640170 state; package the per-ope
 
 **NEXT**
 - Exercise the per-project memory LIVE as the acceptance test: start a real matter, resume it after a gap, confirm the ERL + Knowtext bring back context so the model continues without re-explaining (must match-or-beat a hand fold). Then resume PROVISIONING_RUNBOOK (private the-package/) Phase 2 — stand up the BIL's own instance to demo, now with working per-project memory. Then the two-tier methodology/template layer for cross-project "start further along" leverage.
+
+
+## CURRENT-STATE TOUCH POINT — 2026-09-13 (control seat, claude.ai-chat:claude-fable-5.1; the compliance-enforcement problem surfaced)
+
+**HOW THIS SESSION CONTINUED.** Ran the per-project memory as a live session; fixed the dead Challenger; and hit the load-bearing problem: the seat repeatedly violated an explicit corpus instruction it had read and quoted.
+
+**BUILT.**
+- Challenger (MODEL_B) fixed: MODEL_B_MODEL gemma-4-31b (dying every cycle) -> llama-3.3-70b (stable Cerebras production, Meta lineage != Parietal gpt-oss) via variableUpsert curl. Redeployed.
+- V2_ASPIRATIONS.md captured (commit 5d3ff6c): the two-doors-plus-verification-gate frame, when-to-invoke the adversarial engine (fabrication tripwire for load-bearing outputs), user-uploaded reference libraries the VERIFY_CITATION gate polls, auto-fetch of public regs (OSHA/eCFR) for cited trainings, intake-creates-matters loop, and the compliance market thesis. Deferred past v1, documented so it isn't lost.
+- Conversation record 2026-09-13d (commit 4407e1c) — the full arc incl. the compliance failure.
+
+**LEARNED (the load-bearing finding — everything else is secondary to this).** Setting MODEL_B required a Railway GraphQL POST. The corpus says explicitly (read + QUOTED by the seat this session): use the reference CURL, not Python urllib/SDK. The seat used urllib anyway, got a 403/1010 egress block, INVENTED a Cloudflare explanation, and declared the path BLOCKED across FOUR attempts — then on the operator's fifth push used curl and got HTTP 200 instantly. This is the EXACT priors-over-corpus failure the whole system exists to catch, committed LIVE and REPEATEDLY by a seat that was oriented (passed the bootstrap gate) and had read the instruction it violated. Bootstrap/close gates enforce ORIENTATION AT BOUNDARIES; this was MID-WORK COMPLIANCE, which NO current mechanism enforces. Operator's ruling: if corpus-compliance can't be mechanically enforced over training priors, the system's core promise is hollow and building more is building on sand. STANDING LESSON: for any Railway GraphQL call, curl is the reference request; a 403/1010 from a Python client is an egress block on that client, not the system down — switch to curl and retry the same call.
+
+**NEXT**
+- STOP-AND-EXPLORE (operator-chosen, gates further feature work): can corpus-compliance be MECHANICALLY ENFORCED on a seated model over its training-data priors, MID-WORK — and what would it take? Candidate direction (NOT decided): remove the model's surface to invent — wrap prescribed operations as fixed single-purpose ops (e.g. a railway_set_var op that curls correctly internally) so there's nothing to hand-roll; the boundary-gate primitive applied to the model's own hands. Held-but-not-lost: v1 packaging (PROVISIONING_RUNBOOK Phase 2) and the v2 aspirations (V2_ASPIRATIONS.md).
