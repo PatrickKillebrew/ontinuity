@@ -658,7 +658,11 @@ def _railway_deploy(service_id, environment_id, token):
     body = json.dumps({"query": query, "variables": {"s": service_id, "e": environment_id}}).encode()
     req = urllib.request.Request(_RAILWAY_GQL, data=body,
                                  headers={"Content-Type": "application/json",
-                                          "Authorization": f"Bearer {token}"}, method="POST")
+                                          # 2026-09-14: Project-Access-Token, NOT Bearer — writes are
+                                          # 'Not Authorized' under Bearer (the true cause of the old
+                                          # "known FARM seam"); curl-compatible UA passes the edge.
+                                          "Project-Access-Token": token,
+                                          "User-Agent": "ontinuity-box/1.0 (curl-compatible)"}, method="POST")
     with urllib.request.urlopen(req, timeout=40) as r:
         return json.loads(r.read().decode())
 
