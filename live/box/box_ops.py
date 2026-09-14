@@ -845,3 +845,118 @@ def op_new_project():
     except Exception as e:
         _ledger_finish(op_id, "fail", str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500
+
+def _railway_set_var(project_id, environment_id, service_id, name, value, token):
+    """Set a Railway service variable via variableUpsert. Same transport as
+    _railway_deploy (urllib + Bearer, run FROM THE BOX — the box's egress reaches
+    Railway; a sandbox seat's urllib does NOT, which is the whole reason this is a
+    wrapped box op: the seat never constructs this call, so it cannot hand-roll it
+    with the wrong client)."""
+    query = ("mutation($p:String!,$e:String!,$s:String!,$n:String!,$v:String!){"
+             "variableUpsert(input:{projectId:$p,environmentId:$e,serviceId:$s,name:$n,value:$v})}")
+    body = json.dumps({"query": query, "variables": {
+        "p": project_id, "e": environment_id, "s": service_id, "n": name, "v": value}}).encode()
+    req = urllib.request.Request(_RAILWAY_GQL, data=body,
+                                 headers={"Content-Type": "application/json",
+                                          "Authorization": f"Bearer {token}"}, method="POST")
+    with urllib.request.urlopen(req, timeout=40) as r:
+        return json.loads(r.read().decode())
+
+
+def _recent_consecutive_failures(operation, window=6):
+    """Count consecutive recent FAIL rows for this operation in the operations
+    ledger (most-recent-first, stopping at the first non-fail). THE SELF-COUNTER:
+    every attempt of a wrapped op is ledger-logged and passes through here, so the
+    op knows its own recent failure streak with NO external monitor of the seat.
+    This is what makes the chokepoint able to observe 'N failures' — the count
+    lives where every attempt provably flows: through the op itself."""
+    try:
+        import file_server
+        conn = file_server._ops_sqlite.connect(file_server._OPS_DB)
+        rows = conn.execute(
+            "SELECT status FROM operations_ledger WHERE operation=? "
+            "ORDER BY op_id DESC LIMIT ?", (operation, window)).fetchall()
+        conn.close()
+        streak = 0
+        for r in rows:
+            if (r[0] or "") == "fail":
+                streak += 1
+            else:
+                break
+        return streak
+    except Exception:
+        return 0
+
+
+@box_ops_bp.route("/op/railway_set_var", methods=["POST"])
+def op_railway_set_var():
+    """Set a Railway env var (role-provider config, etc.) — WRAPPED so a seat
+    supplies {name, value} and NEVER constructs the HTTP call. This closes the
+    failure class where a seat hand-rolls a Railway call with the wrong client
+    (urllib from a sandbox, which Railway's edge blocks) instead of the prescribed
+    path. The call runs HERE, on the box, from the box's own token, where it works.
+
+    REFUSE-TO-RETRY (the mechanical teeth): every attempt is ledger-logged; on the
+    3rd+ consecutive failure of this operation the op REFUSES to retry and returns
+    the recorded cause instead — stopping the flailing where a seat retries the same
+    broken call over and over. No seat-monitor is needed: the op counts itself
+    (_recent_consecutive_failures) because every attempt flows through it.
+    (A plain-language explanation of the failure for a non-technical user is a
+    separate v2 UX layer; the reliability mechanism is the refuse-to-retry itself.)
+
+    Body: {name (req), value (req), project_id?, environment_id?, service_id?}
+      (IDs default to the box's RAILWAY_PROJECT_ID / RAILWAY_ENVIRONMENT_ID /
+       RAILWAY_SERVICE_ID_MAIN env). Returns {ok, name, redeploy_note}; on the
+       failure threshold returns 409 {retry_refused, attempts, last_cause}.
+    """
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    name = (b.get("name") or "").strip()
+    value = b.get("value")
+    if not name or value is None:
+        return jsonify({"error": "name and value required"}), 400
+
+    # REFUSE-TO-RETRY (checked BEFORE attempting): if this op has failed 3+ times
+    # in a row, stop and report the recorded cause rather than flail again.
+    streak = _recent_consecutive_failures("railway_set_var")
+    if streak >= 3:
+        try:
+            import file_server
+            conn = file_server._ops_sqlite.connect(file_server._OPS_DB)
+            last = conn.execute(
+                "SELECT result FROM operations_ledger WHERE operation='railway_set_var' "
+                "AND status='fail' ORDER BY op_id DESC LIMIT 1").fetchone()
+            conn.close()
+            last_cause = (last[0] if last else "") or "(no recorded cause)"
+        except Exception:
+            last_cause = "(cause unavailable)"
+        _prov_append({"kind": "op_retry_refused", "operation": "railway_set_var",
+                      "attempts": streak, "var": name})
+        return jsonify({"retry_refused": True, "attempts": streak,
+                        "last_cause": last_cause,
+                        "note": "This operation has failed repeatedly. Retrying will not help; "
+                                "the recorded cause must be resolved first (token permission, "
+                                "rate limit, or wrong project/service ID)."}), 409
+
+    pid = (b.get("project_id") or os.environ.get("RAILWAY_PROJECT_ID", "")).strip()
+    env = (b.get("environment_id") or os.environ.get("RAILWAY_ENVIRONMENT_ID", "")).strip()
+    svc = (b.get("service_id") or os.environ.get("RAILWAY_SERVICE_ID_MAIN", "")).strip()
+    token = os.environ.get("RAILWAY_TOKEN", "").strip()
+    if not (pid and env and svc and token):
+        return jsonify({"error": "railway env not configured (RAILWAY_TOKEN / "
+                        "RAILWAY_PROJECT_ID / RAILWAY_ENVIRONMENT_ID / RAILWAY_SERVICE_ID_MAIN)"}), 503
+
+    op_id = _ledger_begin("railway_set_var", {"name": name})  # value NOT logged (may be a secret)
+    try:
+        resp = _railway_set_var(pid, env, svc, name, str(value), token)
+        if resp.get("errors") or (resp.get("data", {}) or {}).get("variableUpsert") is not True:
+            _ledger_finish(op_id, "fail", str(resp.get("errors") or resp)[:200])
+            return jsonify({"error": "variableUpsert failed",
+                            "detail": str(resp.get("errors") or resp)[:200]}), 502
+        _ledger_finish(op_id, "ok", f"set {name}")
+        return jsonify({"ok": True, "name": name,
+                        "redeploy_note": "a variable change triggers a ~30s Railway redeploy"})
+    except Exception as e:
+        _ledger_finish(op_id, "fail", str(e)[:200])
+        return jsonify({"error": str(e)[:200]}), 500
