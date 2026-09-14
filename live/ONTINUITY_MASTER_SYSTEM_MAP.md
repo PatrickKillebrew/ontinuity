@@ -898,3 +898,15 @@ against the operator's proven install. It needs: (a) update to the recovered 564
 19-op diag-key — the runbook predates B1 so it already assumes the diag-key model, GOOD); (b) resolve §I gaps
 on a real first install (Cornel = the outside-operator transfer test). The runbook already assumes the
 CORRECT (per-individual, diag-key, user-does-only-rituals) model — it was right before B1 and remains right.
+
+
+════════════════════════════════════════════════════════════════
+## 25. THE INTAKE-MODE PRODUCT (SHS / SantaClean) — DEPTH-ARM ANCHOR
+Mode A (the intake front door) has exactly ONE fully worked, SHIPPED example: the SHS/Katie project. The
+maps had it at survey depth (2 of 66 files read). Its full anatomy — problem definition from intake, the
+four application-layer invariants, the two local tools (SantaClean de-identifier + deterministic matcher),
+the shipped Windows packaging template (PyInstaller onedir + pywebview + Inno Setup, built via the laptop
+/run hands), and the resolved commercial/licensing model (signed offline expiry-key) — is the companion
+depth-map **ONTINUITY_INTAKE_MODE_SHS.md**. It is the concrete packaging TEMPLATE and the empirical proof
+the per-individual-instance decision is right (SHS independently reached local/offline/per-owner). Read it
+before any packaging work. Private repo access: §22.

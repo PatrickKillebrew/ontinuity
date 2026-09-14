@@ -277,3 +277,19 @@
   [READ-not-skeletal] tests/test_release_baseline.py
   [READ-not-skeletal] tests/test_research_preservation.py
   [READ-not-skeletal] tests/test_trusted_deploy.py
+
+# ========================================================================
+# AUDIT PASS (Fable, 2026-09-13) — re-verification of Opus's snippet-level mapping
+# Re-read to BUILD DEPTH (not survey) and folded into the maps:
+#   - app.py run_session_loop (full session-execution loop) -> continuity depth-map §10.2
+#   - app.py external_mailbox + /mailbox/turn,/respond (the seating protocol) -> §10.1
+#   - prompts/parietal_system.txt DISTILL contract -> §10.3 (verified Gap 3 correction)
+#   - PRIVATE projects/shs-wasserman/ (read ~28 of 66 files: all PM/memory-layer docs,
+#     roadmaps, problem-def, ship record, packaging, licensing, matcher, seed_tenant;
+#     NOTED-not-deep-read: the ML code modules deid_core.py/santa_shell.py/risk_engine.py
+#     and the data blobs us_places.json/english_medical.txt) -> NEW depth-arm
+#     ONTINUITY_INTAKE_MODE_SHS.md, anchored master map §25.
+# Gaps found were depth/precision, not direction: Opus's maps were a correct index.
+# The one substantive CORRECTION: memory-write is Parietal-DISTILL-primary (Projenius fallback),
+# not "Projenius writes Knowtext" — already fixed in the depth-map, now verified in running code.
+# ========================================================================

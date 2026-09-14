@@ -415,3 +415,58 @@ THE PRODUCT = deliver this seat orientation to any user's AI automatically (§8.
 correct memory anatomy: it is the PARIETAL's DISTILL/NAVIGATE + PROJENIUS that must run automatically on the
 live engine, gated by the open+close gates, with the operator-layer FTS ingest — the discipline→mechanism
 conversion the operator named verbatim: "enforcing the constitution mechanically is what makes the magic reliable."
+
+
+═══════════════════════════════════════════════════════════════════
+## 10. AUDIT ADDENDUM (Fable, 2026-09-13) — the engine mechanism the survey maps lacked
+Read from app.py (blob 35502fd0) run_session_loop end-to-end + the mailbox routes + the Parietal prompt.
+
+### 10.1 [GAP 1 — the SEATING mechanism] There are TWO mailboxes; only one seats a model.
+The maps conflated "the mailbox" with the box `seat_mailbox.py` claim/lease queue (worker coordination).
+The mechanism that SEATS AN EXTERNAL MODEL AS THE RESEARCHER is a SEPARATE in-process structure in app.py:
+`external_mailbox` (turn_id, waiting, system, conversation, event). Flow:
+  1. Engine composes the Researcher turn and posts it: `mailbox_researcher_turn(system, conversation)` sets
+     external_mailbox and blocks on a threading.Event (MAILBOX_TIMEOUT_S = 900).
+  2. The external seat polls `GET /mailbox/turn` (auth: MAILBOX_KEY, NOT diag key) → gets {waiting, kind,
+     turn_id, system, conversation}.
+  3. It composes and `POST /mailbox/respond {turn_id, response}` → `mailbox_deliver` rejects a stale turn_id,
+     else sets the response and fires the event; the blocked engine call returns.
+  4. THE EXTERNAL AGENT'S WORDS RE-ENTER THE IDENTICAL DOWNSTREAM GLASS — tag extraction, F.3 fabrication
+     check, contract gate — "because call_model's caller cannot tell the difference." A missed poll (900s)
+     ends the session through the normal write path.
+The switch that routes the Researcher to the mailbox is `MODEL_A_URL=external` in the effective config (the
+2026-06-14 "researcher seat mechanism"). → THIS IS THE ANSWER to "how does any user's model sit in the seat":
+the ENGINE runs the loop and the gates; the model just answers turns over HTTP. It is model/vendor-agnostic
+by construction (promptgramming, §9.2) — the Sept-3 cross-vendor succession used exactly this path.
+
+### 10.2 [GAP 2 — the in-engine CLOSE GATE] distinct from the close RITUAL.
+run_session_loop encodes the reliability claim as specific code the maps stated only abstractly:
+- Rejected claims are RE-INJECTED into the Researcher system prompt EVERY cycle (survives conversation
+  trimming — the Researcher always sees what was ruled out).
+- Deterministic F.3 execution-log audit: every execution claim is checked against a recorded execution_log;
+  FABRICATED (no log entry) / MISREPORTED (entry exists, misreported) block progress and the close.
+- The Challenger gets the contract + the real clock IN ITS OWN CONTEXT (an honest judge refused to assess an
+  objective/date it couldn't see — June 5). Judges see the same ground truth as the claimant.
+- FOUR distinct close-refusal gates at SESSION_END: (1) F.3 audit of the deliverable, (2) absence-discipline
+  (an absence claim must quote the literal query and may not claim wider scope than it searched), (3) contract
+  unmet-criteria, (4) Challenger-judges-incomplete. EACH has a 3-consecutive-refusal operator deadlock escape
+  (reply STOP → end sequence runs). No single model closes the session.
+This is the "close carries the burden" principle AS RUNNING CODE — separate from, and beneath, the corpus
+close ritual (§3 Phase 3). The corpus ritual is what a CONTROL seat does after a session; this close gate is
+what the ENGINE enforces inside a session. Both exist; the maps only had the ritual.
+
+### 10.3 [GAP 3 confirmed] Distillation dispatch verified against the running code.
+End sequence (app.py ~3613): `run_parietal_distill` (Parietal DISTILL → the 7 fields, with timeout) runs
+FIRST; `run_distillation` (Projenius + knowtext_extraction_prompt.txt, validated against KNOWTEXT_REQUIRED_
+FIELDS) is the FALLBACK; `distillation_method` records which fired (parietal/projenius/isolated/failed);
+then github_push_knowtext() + write_session_to_workspace(). The Parietal DISTILL prompt (parietal_system.txt)
+confirms §6.2 verbatim: called at SESSION_END, receives ledger + NAVIGATE outputs + ADJUDICATE rulings +
+friction sequence + current Knowtext, writes the 7 fields as DELTA ("write only what changed, NO CHANGE
+otherwise"), "a new AI instance reading this output should be able to continue without having read the
+session", Climate Notes written LAST (most perishable). This corrects the original map's "Projenius writes
+Knowtext" — it is Parietal-primary, Projenius-fallback — and is now VERIFIED, not inferred.
+
+### 10.4 [GAP 5] The cleanest "what makes it Ontinuity" statement lives in the SHS PROJECT_OUTLINE:
+the FOUR INVARIANTS (identity never crosses / deterministic where stakes are real / models leashed by output
+contract / judgment always oriented and recorded) — see ONTINUITY_INTAKE_MODE_SHS.md §2. It is the
+boundary-gate primitive at the application layer, and a sharper articulation than the survey sections carry.
