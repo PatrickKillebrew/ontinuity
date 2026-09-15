@@ -400,6 +400,8 @@ OP_SCHEMAS = {
                          "desc": "Release expired/orphaned claims."},
     "you_there":        {"required": ["seat"], "optional": ["kinds", "roles", "block_id", "wait_seconds", "lineage"], "tier": "REVIEW",
                          "desc": "Nudge: a worker self-drains its whole turn on one call. Keep wait_seconds <= 20 (relay read-timeout 25)."},
+    "orient":           {"required": ["topic"], "optional": ["seat", "repo", "ref", "github_token", "max_hits"], "tier": "SAFE",
+                         "desc": "The OPEN ritual as a ledger fact: searches the queue folds (agent_queue.md) and every live/conversations/*.md for the topic; returns hits {file,line,fold,excerpt} or count 0; logs {topic,count}. Run before reasoning about a task. Pass github_token: the conversations directory listing needs the contents API (raw CDN cannot list), and unauthenticated API calls rate-limit."},
     "describe":         {"required": [], "optional": ["op", "allowlist"], "tier": "SAFE",
                          "desc": "This op. Returns every /op route on the box with its schema; routes without a schema are 'undocumented'; pass the courier allowlist to get the allowed-but-absent / present-but-not-allowed diff."},
 }
@@ -440,6 +442,110 @@ def op_describe():
         return jsonify(out), 404
     _ledger_finish(op_id, "ok", f"routes={len(present)} undocumented={len(out.get('undocumented', []))}")
     return jsonify(out)
+
+
+# ── orient (RITUAL LOCKDOWN step 2, 2026-09-15) ────────────────────────────────
+# The per-task OPEN ritual (manual: "search the queue folds for the topic; read the
+# relevant conversation records; follow refs") had no primitive, so it was a self-report.
+# This op does the search box-side and logs it. Fetch path = read_repo's (token per call
+# on a private corpus; raw-CDN/unauth API on a public one). No token is stored.
+
+def _repo_fetch_text(repo, path, ref, token):
+    """read_repo's source order, as a helper: api(auth) if token -> raw cachebust -> api(unauth)."""
+    attempts = []
+    def _api(tok):
+        url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
+        hdrs = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+        if tok: hdrs["Authorization"] = f"Bearer {tok}"
+        with urllib.request.urlopen(urllib.request.Request(url, headers=hdrs), timeout=30) as r:
+            data = json.loads(r.read().decode())
+        if isinstance(data, list):
+            return data  # directory listing
+        return base64.b64decode(data["content"]).decode("utf-8", "replace")
+    def _raw():
+        import time as _t
+        url = f"https://raw.githubusercontent.com/{repo}/{ref}/{path}?cb={int(_t.time())}"
+        with urllib.request.urlopen(urllib.request.Request(url), timeout=30) as r:
+            return r.read().decode("utf-8", "replace")
+    if token:
+        try: return _api(token), "github_api_authenticated"
+        except Exception as e: attempts.append(f"api(auth): {str(e)[:60]}")
+    try: return _raw(), "raw_cdn_cachebust"
+    except Exception as e: attempts.append(f"raw: {str(e)[:60]}")
+    try: return _api(""), "github_api_unauthenticated"
+    except Exception as e: attempts.append(f"api(unauth): {str(e)[:60]}")
+    raise RuntimeError("; ".join(attempts))
+
+
+def _repo_list_dir(repo, path, ref, token):
+    """Directory listing via the contents API (the only listing path; raw CDN cannot list)."""
+    url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
+    hdrs = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    if token: hdrs["Authorization"] = f"Bearer {token}"
+    with urllib.request.urlopen(urllib.request.Request(url, headers=hdrs), timeout=30) as r:
+        data = json.loads(r.read().decode())
+    return [d["path"] for d in data if d.get("type") == "file" and d["name"].endswith(".md")]
+
+
+@box_ops_bp.route("/op/orient", methods=["POST"])
+def op_orient():
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    topic = (b.get("topic") or "").strip()
+    if not topic:
+        return jsonify({"error": "topic required"}), 400
+    repo = (b.get("repo") or GITHUB_REPO_DEFAULT).strip()
+    ref = (b.get("ref") or b.get("branch") or GITHUB_BRANCH_DEFAULT).strip()
+    token = (b.get("github_token") or "").strip()
+    try: max_hits = max(1, min(int(b.get("max_hits") or 40), 200))
+    except Exception: max_hits = 40
+    op_id = _ledger_begin("orient", {"topic": topic[:120], "repo": repo, "ref": ref, "auth": bool(token)})
+
+    import re as _re
+    phrase = topic.lower()
+    tokens = [t for t in _re.findall(r"[a-z0-9_\-]{3,}", phrase)]
+    def _match(line):
+        l = line.lower()
+        if phrase in l: return "phrase"
+        if tokens and all(t in l for t in tokens): return "all-tokens"
+        return None
+
+    hits, files_searched, sources, errors = [], [], {}, []
+    # 1) the queue folds
+    try:
+        q, src = _repo_fetch_text(repo, "live/agent_queue.md", ref, token)
+        sources["live/agent_queue.md"] = src; files_searched.append("live/agent_queue.md")
+        fold = None
+        for i, line in enumerate(q.splitlines(), 1):
+            if line.startswith("## CURRENT-STATE TOUCH POINT"): fold = line[3:].strip()[:100]
+            m = _match(line)
+            if m:
+                hits.append({"file": "live/agent_queue.md", "line": i, "fold": fold, "match": m, "excerpt": line.strip()[:220]})
+    except Exception as e:
+        errors.append(f"agent_queue: {str(e)[:100]}")
+    # 2) every conversation record
+    try:
+        for p in _repo_list_dir(repo, "live/conversations", ref, token):
+            try:
+                txt, src = _repo_fetch_text(repo, p, ref, token)
+                sources[p] = src; files_searched.append(p)
+                for i, line in enumerate(txt.splitlines(), 1):
+                    m = _match(line)
+                    if m:
+                        hits.append({"file": p, "line": i, "fold": None, "match": m, "excerpt": line.strip()[:220]})
+            except Exception as e:
+                errors.append(f"{p}: {str(e)[:60]}")
+    except Exception as e:
+        errors.append(f"conversations listing: {str(e)[:100]}")
+
+    truncated = len(hits) > max_hits
+    out = {"ok": True, "topic": topic, "repo": repo, "ref": ref, "count": len(hits),
+           "hits": hits[:max_hits], "truncated": truncated,
+           "files_searched": len(files_searched), "errors": errors, "sources": sources}
+    status = "ok" if not errors or hits else ("ok" if files_searched else "fail")
+    _ledger_finish(op_id, status, f"topic={topic[:60]} hits={len(hits)} files={len(files_searched)} errors={len(errors)}")
+    return jsonify(out), (200 if status == "ok" else 502)
 
 
 @box_ops_bp.route("/op/read_repo", methods=["POST"])
