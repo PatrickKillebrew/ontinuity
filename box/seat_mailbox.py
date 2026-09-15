@@ -160,11 +160,27 @@ def _caller_seat(default="diag-key"):
     Falls back to the auth-method label 'diag-key' when no seat is in the body
     (e.g. box_ops read/write, which carry no seat)."""
     try:
+        ident = _authed_identity()
+        if ident and ident.get("authenticated") and ident.get("seat"):
+            return "seat:" + ident["seat"] + " (auth)"          # L4b: key-derived, attributable
         b = request.get_json(silent=True) or {}
         s = (b.get("seat") or b.get("from_seat") or "").strip()
         return ("seat:" + s) if s else default
     except Exception:
         return default
+
+
+def _current_seat_session_id():
+    """L3/L4b: the seat session for this call — from the per-identity key when authenticated,
+    else a body-supplied seat_session_id (shared-key mode)."""
+    try:
+        ident = _authed_identity()
+        if ident and ident.get("authenticated") and ident.get("seat_session_id"):
+            return ident["seat_session_id"]
+        b = request.get_json(silent=True) or {}
+        return (b.get("seat_session_id") or "").strip() or None
+    except Exception:
+        return None
 
 
 def _authed_identity():
@@ -173,7 +189,10 @@ def _authed_identity():
     per-identity key; the shared DIAG_KEY -> {seat:'unattributed', authenticated:False}."""
     try:
         import file_server
-        presented = request.headers.get("X-Diag-Key", "") or request.args.get("diag_key", "")
+        # L4b: identity comes from X-Seat-Key (forwarded by the courier); X-Diag-Key is the
+        # relay's shared key and only resolves to 'unattributed'.
+        presented = (request.headers.get("X-Seat-Key", "") or request.headers.get("X-Diag-Key", "")
+                     or request.args.get("diag_key", ""))
         return file_server.authenticate_identity(presented)
     except Exception:
         return None
@@ -194,7 +213,11 @@ def _ledger(op, status_or_none, *, begin=False, **kw):
         import file_server
         if begin:
             # caller = self-asserted seat (trusted-not-authenticated; see _caller_seat)
-            return file_server._ops_begin(op, "SAFE", _caller_seat(), request.remote_addr, kw.get("args", {}))
+            try:
+                return file_server._ops_begin(op, "SAFE", _caller_seat(), request.remote_addr, kw.get("args", {}),
+                                              seat_session_id=_current_seat_session_id())
+            except TypeError:
+                return file_server._ops_begin(op, "SAFE", _caller_seat(), request.remote_addr, kw.get("args", {}))
         else:
             file_server._ops_finish(kw.get("op_id"), status_or_none, kw.get("result", ""))
     except Exception:
@@ -210,6 +233,16 @@ def mailbox_send():
     to_seat   = (b.get("to_seat") or "").strip()
     kind      = (b.get("kind") or "note").strip()
     body      = b.get("body")
+    # L4b (per_identity_keys.md Q1): with a per-identity key, from_seat IS the key's seat.
+    # A body from_seat that disagrees is refused and logged, never inserted.
+    _ts, _tl, _tauth = _trusted_seat(from_seat, b.get("from_lineage"))
+    if _tauth:
+        if from_seat and from_seat != _ts:
+            _oid = _ledger("mailbox_send", None, begin=True, args={"from": from_seat, "to": to_seat, "kind": kind, "refused": "from_seat mismatch"})
+            _ledger("mailbox_send", "fail", op_id=_oid, result=f"from_seat mismatch: body={from_seat} key={_ts}")
+            return jsonify({"error": "from_seat does not match the presenting key's identity", "key_seat": _ts}), 403
+        from_seat = _ts
+        b["from_lineage"] = _tl or b.get("from_lineage")
     if not from_seat or not to_seat or body is None:
         return jsonify({"error": "from_seat, to_seat, body required"}), 400
     if kind not in _KINDS:
@@ -347,6 +380,13 @@ def mailbox_ack():
             if owner is None:
                 c.close(); _ledger("mailbox_ack", "fail", op_id=op_id, result="no such msg")
                 return jsonify({"error": "no such msg_id"}), 404
+            # L4b (Q2): with a per-identity key the ack REQUIRES claimed_by == the key's seat —
+            # an unclaimed or foreign-claimed message cannot be acked away by anyone.
+            if _authed and owner[0] != seat:
+                c.close(); _ledger("mailbox_ack", "fail", op_id=op_id,
+                                   result=f"ack refused: claimed_by={owner[0]} key_seat={seat}")
+                return jsonify({"error": "ack refused: message not claimed by the presenting key's seat",
+                                "claimed_by": owner[0], "key_seat": seat}), 403
             if owner[0] is not None and owner[0] != seat:
                 c.close(); _ledger("mailbox_ack", "fail", op_id=op_id,
                                    result=f"claimed_by={owner[0]} != seat={seat}")
@@ -414,6 +454,12 @@ def mailbox_purge():
         return jsonify({"error": "unauthorized"}), 401
     b = request.get_json(silent=True) or {}
     seat = (b.get("seat") or "").strip()
+    _ps, _pl, _pauth = _trusted_seat(seat, b.get("lineage"))
+    if _pauth:
+        _ident = _authed_identity() or {}
+        if seat and seat != _ps and _ident.get("role") != "control":   # L4b: a seat purges only its own backlog
+            return jsonify({"error": "seat does not match the presenting key's identity", "key_seat": _ps}), 403
+        seat = seat or _ps
     if not seat:
         return jsonify({"error": "seat required"}), 400
     purge_all = bool(b.get("all"))
@@ -459,6 +505,12 @@ def mailbox_reclaim():
     seat, _lin, _authed = _trusted_seat(b.get("seat"), b.get("lineage"))  # KEYS-2
     seat = seat or ""
     sweep_all = bool(b.get("all"))
+    if sweep_all and _authed:
+        _ident = _authed_identity() or {}
+        if _ident.get("role") not in (None, "control"):   # L4b: a worker key sweeps only its own claims
+            _oid = _ledger("mailbox_reclaim", None, begin=True, args={"seat": seat, "all": True, "refused": "role"})
+            _ledger("mailbox_reclaim", "fail", op_id=_oid, result="all=true refused for non-control key")
+            return jsonify({"error": "all=true requires a control identity", "seat": seat}), 403
     op_id = _ledger("mailbox_reclaim", None, begin=True, args={"seat": seat, "all": sweep_all})
     try:
         c = _mb_conn()

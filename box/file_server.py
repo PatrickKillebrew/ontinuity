@@ -1463,7 +1463,8 @@ def authenticate_identity(presented_key):
                     "seat_session_id": match.get("seat_session_id"), "key_hash": h}
         return {"seat": match.get("seat"), "lineage": match.get("lineage"),
                 "status": "active", "authenticated": True, "mode": "per_identity",
-                "seat_session_id": match.get("seat_session_id"), "key_hash": h}
+                "seat_session_id": match.get("seat_session_id"), "key_hash": h,
+                "role": match.get("role")}
     # shared-key back-compat
     try:
         dk = load_config().get("diag_key", "") or os.environ.get("DIAG_KEY", "")
