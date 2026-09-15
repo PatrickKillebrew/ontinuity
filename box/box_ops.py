@@ -411,8 +411,8 @@ OP_SCHEMAS = {
                          "desc": "Commit the box's own allowlisted source files (file_server/seat_mailbox/box_ops...) so the repo matches the box."},
     "backup_db":        {"required": [], "optional": ["out"], "tier": "SAFE",
                          "desc": "Consistent sqlite .backup of ontinuity.db plus a .sql dump."},
-    "bootstrap_gate":   {"required": ["seat"], "optional": ["role", "lineage", "seat_invariants", "github_token"], "tier": "SAFE",
-                         "desc": "Verified boot: six checks -> {oriented, checks[], seat_session{seat_session_id,started_at}}. Booted == oriented:true from this op. Pass github_token on a private corpus (manual/queue reads). Opens a seat_sessions row on pass (L3); pass seat_session_id on later ops."},
+    "bootstrap_gate":   {"required": ["seat"], "optional": ["role", "lineage", "seat_invariants", "github_token", "takeover"], "tier": "SAFE",
+                         "desc": "Verified boot: six checks -> {oriented, checks[], seat_session{seat_session_id,started_at}}. Booted == oriented:true from this op. Pass github_token on a private corpus (manual/queue reads). Opens a seat_sessions row on pass (L3). L7: role=control is refused (409) while another control session is open on this install unless takeover:true, which closes the stale row as 'takeover by <seat>/<lineage>' and revokes its key; config contention_mode='warn' reports instead of refusing."},
     "deploy":           {"required": ["target", "signoff_block_id"], "optional": ["block_id", "commit_sha", "dry_run"], "tier": "RISK",
                          "desc": "Two-party deploy: proposal + signoff rows from DISTINCT seats on the same block_id. dry_run:true runs the full gate with no side effect. See live/specs/signoff_deploychain.md."},
     "new_project":      {"required": ["name"], "optional": ["description", "branch", "user_id"], "tier": "REVIEW",
@@ -810,7 +810,37 @@ def op_bootstrap_gate():
     lineage = (b.get("lineage") or "").strip()
     seat_invariants = b.get("seat_invariants") or {}
     canonical = b.get("canonical_op_count")
-    op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role})
+    op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role, "takeover": bool(b.get("takeover"))})
+    # ── L7 (RITUAL LOCKDOWN): one CONTROL seat per install, made mechanical. Workers are
+    # many-seats by design and are never gated here. If a control seat_sessions row is
+    # still open, a second control boot is refused with the open session named, unless
+    # the caller passes takeover:true — which closes the stale row with reason 'takeover
+    # by <seat>/<lineage>' (a ledger fact) and proceeds. config contention_mode='warn'
+    # turns the refusal into a warning field on the result (operator's choice).
+    if role == "control":
+        try:
+            import file_server
+            open_rows = file_server.seat_sessions_open(role="control")
+        except Exception:
+            open_rows = []
+        if open_rows:
+            mode = (file_server.load_config().get("contention_mode") or "refuse").strip().lower()
+            summary = [{"seat_session_id": r["seat_session_id"], "seat": r["seat"], "lineage": r.get("lineage"),
+                        "started_at": r["started_at"]} for r in open_rows]
+            if b.get("takeover"):
+                closed = []
+                for r in open_rows:
+                    ok, ts = file_server.seat_session_close(r["seat_session_id"], f"takeover by {seat}/{lineage or 'unknown-lineage'}")
+                    try: file_server.revoke_seat_keys_for_session(r["seat_session_id"], "takeover")
+                    except Exception: pass
+                    if ok: closed.append(r["seat_session_id"])
+                b["_takeover_closed"] = closed
+            elif mode != "warn":
+                _ledger_finish(op_id, "fail", f"contention: open control session(s) {[x['seat_session_id'][:8] for x in summary]}")
+                return jsonify({"oriented": False, "contention": True, "open_control_sessions": summary,
+                                "error": "another control seat session is open on this install; pass takeover:true (with your lineage) to close it and proceed, or wait for it to close"}), 409
+            else:
+                b["_contention_warning"] = summary
     try:
         gate = _load_gate()
         # CHECK-1 canonical count is governed by the gate module's own constant.
@@ -855,6 +885,10 @@ def op_bootstrap_gate():
         # shape: oriented seats get an `issued_key` bound to {seat, lineage};
         # today that key IS the shared DIAG_KEY (so nothing changes operationally),
         # but the field + binding exist so callers can start reading it now.
+        if b.get("_takeover_closed") is not None:
+            result["takeover"] = {"closed_sessions": b["_takeover_closed"]}
+        if b.get("_contention_warning"):
+            result["contention_warning"] = b["_contention_warning"]
         if result.get("oriented"):
             # L3: the seat session as a ledger fact. Opened ONLY on oriented:true.
             try:
