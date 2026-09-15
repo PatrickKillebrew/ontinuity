@@ -992,7 +992,7 @@ def artifact_path(label):
 # -----------------------------------------
 # GITHUB PERSISTENCE
 # -----------------------------------------
-GITHUB_REPO = "PatrickKillebrew/ontinuity"
+GITHUB_REPO = os.environ.get("CORPUS_REPO", "PatrickKillebrew/ontinuity").strip() or "PatrickKillebrew/ontinuity"  # per-install corpus repo; default = operator install
 GITHUB_FILE_PATH = get_github_knowtext_path()
 GITHUB_BRANCH = "main"
 
