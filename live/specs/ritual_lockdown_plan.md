@@ -16,6 +16,7 @@
 | Deploy | mechanical (two-party signoff chain) | keep |
 | Close ritual (8 items + 4b) | self-reported; spec exists, never built | BUILD `close_gate` op per the June spec with the corrections below |
 | Assertion rule ("show the read") | un-mechanizable at this layer | stays discipline until V2-E; close gate narrows it (record must cite ≥1 commit sha) |
+| Lineage (record + ledger `caller`) | self-reported: the record's HARNESS:MODEL line and the ledger's caller both come from the request body (`seat`) | per-identity keys via the box key registry (`_authed_identity` exists); courier stamps the authenticated identity into the ledger row; the record's lineage line is copied from the ledger, not typed by the seat |
 
 ## GAP AUDIT OF live/specs/close_ritual_gate.md (June) — what is missing or wrong
 1. CHECK 5 takes a seat-supplied boolean `worker_contract_changed` — a self-report inside the enforcement gate. DERIVE it: list commits since session_start; if any touched app.py's OP_ALLOWED, box_ops.py, seat_mailbox.py, file_server.py, or any *QUICKBOOT*/*BOOT_PACKET* file, the contract changed. No opinion input.
@@ -38,3 +39,6 @@
 
 ## ACCEPTANCE
 Each op: a ledger row per call; a deliberately-failing call produces the right failure message; a fresh seat on install two completes a boot+task+close where the only evidence consulted is the ledger and the repo (no self-report accepted).
+
+## PROGRESS
+- 2026-09-15 step 1 `describe` LIVE on install two (commit 6a31203; box install via write_file+restart_workspace; engine-two deployed; allowlist 22). Verified through its courier: 21 routes documented, diff = allowed-but-absent {register_egress, seed_tenant}, present-but-not-allowed {restart_burnin}; ledger rows per call. Found while building: ledger `caller` is body-supplied (lineage gap above).
