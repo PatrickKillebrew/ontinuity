@@ -52,7 +52,10 @@ def _authed_identity():
     {seat:'unattributed', authenticated:False} (back-compat)."""
     try:
         import file_server
-        presented = request.headers.get("X-Diag-Key", "") or request.args.get("diag_key", "")
+        # L4: identity comes from X-Seat-Key (forwarded by the courier); X-Diag-Key is the
+        # relay's own shared key and only ever resolves to 'unattributed'.
+        presented = (request.headers.get("X-Seat-Key", "") or request.headers.get("X-Diag-Key", "")
+                     or request.args.get("diag_key", ""))
         return file_server.authenticate_identity(presented)
     except Exception:
         return None
@@ -87,9 +90,12 @@ def _caller_seat(default="diag-key"):
         return default
 
 def _current_seat_session_id():
-    """L3: the seat session this call belongs to. Body-supplied `seat_session_id` for now;
-    L4 derives it from the per-identity key so there is no body field to forget."""
+    """The seat session this call belongs to: from the per-identity key (L4, authoritative),
+    else the body-supplied `seat_session_id` (shared-key mode, self-asserted)."""
     try:
+        ident = _authed_identity()
+        if ident and ident.get("authenticated") and ident.get("seat_session_id"):
+            return ident["seat_session_id"]
         b = request.get_json(silent=True) or {}
         return (b.get("seat_session_id") or "").strip() or None
     except Exception:
@@ -417,7 +423,7 @@ OP_SCHEMAS = {
     "orient":           {"required": ["topic"], "optional": ["seat", "repo", "ref", "github_token", "max_hits"], "tier": "SAFE",
                          "desc": "The OPEN ritual as a ledger fact: searches the queue folds (agent_queue.md) and every live/conversations/*.md for the topic; returns hits {file,line,fold,excerpt} or count 0; logs {topic,count}. Run before reasoning about a task. Pass github_token: the conversations directory listing needs the contents API (raw CDN cannot list), and unauthenticated API calls rate-limit."},
     "_common":          {"required": [], "optional": ["seat", "seat_session_id"], "tier": "n/a",
-                         "desc": "Fields every op accepts: seat (self-asserted caller label until L4) and seat_session_id (joins the ledger row to the seat session opened by bootstrap_gate)."},
+                         "desc": "Every op: header X-Seat-Key (the per-identity key bootstrap_gate issued) makes the ledger caller AUTHENTICATED and joins the row to its seat session automatically; unknown/revoked keys are refused and the refusal is logged. Without the header: body seat is a self-asserted label and seat_session_id must be passed by hand."},
     "describe":         {"required": [], "optional": ["op", "allowlist"], "tier": "SAFE",
                          "desc": "This op. Returns every /op route on the box with its schema; routes without a schema are 'undocumented'; pass the courier allowlist to get the allowed-but-absent / present-but-not-allowed diff."},
 }
@@ -774,12 +780,22 @@ def op_bootstrap_gate():
                 sid, ts = None, None
             result["seat_session"] = {"seat_session_id": sid, "started_at": ts,
                                       "note": "pass seat_session_id on every later op until per-identity keys (L4) derive it from the key"}
-            result["key_issuance"] = {
-                "issued": True,
-                "bound_to": {"seat": seat, "lineage": lineage},
-                "key_kind": "shared_diag_key_stub",   # -> 'per_identity' when the key build lands
-                "note": "stubbed to shared DIAG_KEY until per-identity key issuance ships",
-            }
+            # L4: REAL per-identity key, bound to {seat, lineage, seat_session_id}. The box keeps
+            # only its hash (registry + seat_sessions.key_hash); the plaintext is returned ONCE.
+            try:
+                plaintext = secrets.token_urlsafe(32)
+                kh = file_server.register_seat_key(plaintext, seat, lineage, "active",
+                                                   seat_session_id=sid, issued_at=ts, role=role)
+                if sid: file_server.seat_session_set_key_hash(sid, kh)
+                result["key_issuance"] = {
+                    "issued": True, "key_kind": "per_identity", "key": plaintext,
+                    "key_hash_prefix": kh[:12],
+                    "bound_to": {"seat": seat, "lineage": lineage, "seat_session_id": sid},
+                    "use": "send as header X-Seat-Key on every later op (the courier forwards it); "
+                           "it is never stored on the box; close_gate revokes it",
+                }
+            except Exception as e:
+                result["key_issuance"] = {"issued": False, "reason": f"issuance error: {str(e)[:120]}"}
         else:
             result["key_issuance"] = {"issued": False,
                                       "reason": "gate not passed — no key issued"}
@@ -787,7 +803,7 @@ def op_bootstrap_gate():
         status = "ok" if result.get("oriented") else "fail"
         # summarize the failing check (if any) for the ledger
         failed = next((c for c in result.get("checks", []) if not c.get("pass")), None)
-        detail = (f"oriented seat={seat} role={role} seat_session={(result.get('seat_session') or {}).get('seat_session_id')}" if result.get("oriented")
+        detail = (f"oriented seat={seat} role={role} seat_session={(result.get('seat_session') or {}).get('seat_session_id')} key_hash={(result.get('key_issuance') or {}).get('key_hash_prefix')}" if result.get("oriented")
                   else f"NOT ORIENTED seat={seat} role={role} at "
                        f"{failed.get('name') if failed else '?'}")
         _ledger_finish(op_id, status, detail[:200])

@@ -4201,9 +4201,16 @@ def diag_op_courier(name):
     #    exactly as _register_egress forwards to /register_egress. Return the
     #    box response verbatim so its status/body are not masked by the courier.
     try:
+        fwd_headers = {"X-Diag-Key": diag_key, "Content-Type": "application/json"}
+        # L4 (ritual lockdown): forward the seat's per-identity key unchanged. The engine never
+        # validates it; the box resolves it to an authenticated identity + seat session and
+        # refuses unknown/revoked keys itself (auditable there).
+        seat_key = request.headers.get("X-Seat-Key", "")
+        if seat_key:
+            fwd_headers["X-Seat-Key"] = seat_key
         r = http_requests.post(
             f"{WORKSPACE_URL}/op/{name}",
-            headers={"X-Diag-Key": diag_key, "Content-Type": "application/json"},
+            headers=fwd_headers,
             json=body,
             timeout=25,
         )
