@@ -5,14 +5,13 @@ ledger row a stranger can walk to, a deliberately-failing call that returns the 
 Test bed: install two (ontinuity-two). Operator install gets everything in one promotion step (L9) through the two-party chain.
 Method: the documented new-op two-step — repo commit (box/ + app.py OP_ALLOWED) -> box install (write_file + restart_workspace) -> engine deploy -> verify through the courier.*
 
-Last resolved: 2026-09-15 (list created; L1 DONE).
+Last resolved: 2026-09-15 (L1, L2 DONE; next L3).
 
 ## DONE
+- **L2 — `orient` op.** LIVE on install two (64e8722; box install + engine-two deploy; allowlist 23). Verified through its courier and the ledger via /diag/api/query: rows 75/76 = 'manual currency' hits=5, novel topic hits=0, both ok; missing topic -> 400. Found: ledger rows carry no session key — 'by session' is by timestamp until L3 lands. Tokenless public-repo mode returns queue hits but cannot list live/conversations/ (raw CDN cannot list; unauth API rate-limits) — reported in the response, documented in the schema.
 - **L1 — `describe` op.** LIVE on install two (6a31203). Every /op route reports its schema; undocumented routes surface; courier-allowlist diff; ledger row per call. Fold: ritual_lockdown_plan PROGRESS.
 
 ## SEQUENCE (dependencies in brackets; build in this order)
-
-- **L2 — `orient` op [none].** Body `{seat, topic, github_token?}`. Box searches the queue folds (agent_queue.md `## CURRENT-STATE TOUCH POINT` blocks) and live/conversations/*.md for the topic (case-insensitive, word and phrase); returns `{hits:[{file,line,excerpt}], count}` or `count:0`; logs `{topic, count}`. Reads the corpus through the same repo path read_repo uses (token per call on a private corpus). Acceptance: a topic with known prior work returns its fold; a novel topic returns 0 with an `ok` row, not an error; the row is queryable by session.
 
 - **L3 — session rows: `session_open` inside `bootstrap_gate` [none; needed by L5, L6, L8].** The June close-gate spec takes `session_start` as an INPUT — a self-report. Fix at the source: a successful `bootstrap_gate` (oriented:true) writes a `sessions` row `{session_id, seat, caller_identity, started_at, closed_at:null}` and returns `session_id`. Every later op call that carries `session_id` is joined to it. Acceptance: boot -> row; the row's `started_at` is the window every gate check uses; `closed_at` set by L5.
 
