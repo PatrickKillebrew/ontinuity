@@ -356,6 +356,92 @@ def op_backup_db():
         return jsonify({"error": str(e)[:200]}), 500
 
 
+# ── OP SCHEMAS + describe (RITUAL LOCKDOWN step 1, 2026-09-15) ───────────────────
+# The op IS the manual for op bodies. required/optional come from each route's own
+# validation; tier per OPERATING_MANUAL. A route present on the box but absent here is
+# reported as "undocumented" so drift is visible, not silent.
+OP_SCHEMAS = {
+    "read_file":        {"required": ["path"], "optional": [], "tier": "SAFE",
+                         "desc": "Read a file inside the box project dir (path traversal rejected)."},
+    "write_file":       {"required": ["path", "content"], "optional": ["description"], "tier": "REVIEW",
+                         "desc": "Bounded write to a file inside the box project dir. Repo-commit != box-install: this is the box half."},
+    "read_repo":        {"required": ["path"], "optional": ["repo", "ref", "branch", "github_token"], "tier": "SAFE",
+                         "desc": "Read any repo file. Tokenless path = raw CDN then unauth API (public repos only); pass github_token for the authoritative read or a private repo. repo defaults to CORPUS_REPO."},
+    "commit_file":      {"required": ["path", "github_token"], "optional": ["repo_path", "repo", "branch", "message"], "tier": "REVIEW",
+                         "desc": "Commit a file that EXISTS ON THE BOX to the repo (write_file first). repo_path defaults to the box path. Token passed per call, never stored."},
+    "commit_self":      {"required": ["github_token"], "optional": ["files", "repo", "branch", "repo_dir"], "tier": "REVIEW",
+                         "desc": "Commit the box's own allowlisted source files (file_server/seat_mailbox/box_ops...) so the repo matches the box."},
+    "backup_db":        {"required": [], "optional": ["out"], "tier": "SAFE",
+                         "desc": "Consistent sqlite .backup of ontinuity.db plus a .sql dump."},
+    "bootstrap_gate":   {"required": ["seat"], "optional": ["role", "lineage", "canonical_op_count", "seat_invariants"], "tier": "SAFE",
+                         "desc": "Verified boot: six checks -> {oriented: bool, checks[]}. Booted == oriented:true from this op, not a self-report."},
+    "deploy":           {"required": ["target", "signoff_block_id"], "optional": ["block_id", "commit_sha", "dry_run"], "tier": "RISK",
+                         "desc": "Two-party deploy: proposal + signoff rows from DISTINCT seats on the same block_id. dry_run:true runs the full gate with no side effect. See live/specs/signoff_deploychain.md."},
+    "new_project":      {"required": ["name"], "optional": ["description", "branch", "user_id"], "tier": "REVIEW",
+                         "desc": "Create a per-project matter: projects+branch rows + per-project Knowtext/ERL files keyed on name-slug. Idempotent."},
+    "railway_set_var":  {"required": ["name", "value"], "optional": ["project_id", "environment_id", "service_id", "resolved_cause"], "tier": "REVIEW",
+                         "desc": "The first WRAPPED op: box constructs the Railway variableUpsert call; seat supplies only {name,value}. Self-counts failures; refuses after 3 until resolved_cause is given."},
+    "read_journal":     {"required": [], "optional": ["lines"], "tier": "SAFE",
+                         "desc": "Tail the ontinuity-workspace unit's journal."},
+    "restart_workspace":{"required": [], "optional": [], "tier": "REVIEW",
+                         "desc": "systemctl restart ontinuity-workspace (the box-install half of a box code change)."},
+    "restart_burnin":   {"required": [], "optional": [], "tier": "REVIEW", "desc": "Restart the burn-in resident."},
+    "mailbox_send":     {"required": ["from_seat", "to_seat", "body"], "optional": ["kind", "block_id", "reply_to", "corr_id", "ref", "citations", "confidence", "depends_on", "from_lineage", "author_seat", "author_lineage"], "tier": "REVIEW",
+                         "desc": "Post to the seat mailbox (task distribution + the two-party signoff chain). Proposals go to any_worker, never a named seat."},
+    "mailbox_fetch":    {"required": ["seat"], "optional": ["kinds", "roles", "block_id", "reply_to", "newest", "lineage"], "tier": "REVIEW",
+                         "desc": "Atomic claim with lease. reply_to=<task_msg_id> claims that result; newest=true drains newest-first. ACK immediately after."},
+    "mailbox_ack":      {"required": ["msg_id"], "optional": ["seat", "reply", "ref", "lineage", "from_lineage"], "tier": "REVIEW",
+                         "desc": "Mark a claimed message done. Never leave a dangling claim."},
+    "mailbox_peek":     {"required": [], "optional": ["seat", "from_seat", "block_id", "status", "limit"], "tier": "SAFE",
+                         "desc": "Read-only view, newest-first (default limit 20, max 100). Never marks done."},
+    "mailbox_purge":    {"required": ["seat"], "optional": ["kinds", "older_than_secs", "all"], "tier": "REVIEW",
+                         "desc": "Bulk-clear result/note backlog for a seat."},
+    "mailbox_reclaim":  {"required": ["seat"], "optional": ["all", "lineage"], "tier": "REVIEW",
+                         "desc": "Release expired/orphaned claims."},
+    "you_there":        {"required": ["seat"], "optional": ["kinds", "roles", "block_id", "wait_seconds", "lineage"], "tier": "REVIEW",
+                         "desc": "Nudge: a worker self-drains its whole turn on one call. Keep wait_seconds <= 20 (relay read-timeout 25)."},
+    "describe":         {"required": [], "optional": ["op", "allowlist"], "tier": "SAFE",
+                         "desc": "This op. Returns every /op route on the box with its schema; routes without a schema are 'undocumented'; pass the courier allowlist to get the allowed-but-absent / present-but-not-allowed diff."},
+}
+
+
+@box_ops_bp.route("/op/describe", methods=["POST"])
+def op_describe():
+    """RITUAL LOCKDOWN step 1: the op is the manual for op bodies. Introspects the
+    live Flask url_map so a new route without a schema shows up as undocumented
+    (drift made visible). Logs to the ledger like every other op."""
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    from flask import current_app
+    present = sorted({r.rule[len("/op/"):] for r in current_app.url_map.iter_rules()
+                      if r.rule.startswith("/op/") and "POST" in (r.methods or set())})
+    want = (b.get("op") or "").strip()
+    op_id = _ledger_begin("describe", {"op": want or "*", "allowlist_given": bool(b.get("allowlist"))})
+    out = {"ok": True, "box_routes": present, "ops": {}, "undocumented": [], "schema_only": []}
+    for name in present:
+        if name in OP_SCHEMAS:
+            out["ops"][name] = dict(OP_SCHEMAS[name], present_on_box=True)
+        else:
+            out["undocumented"].append(name)
+    out["schema_only"] = sorted(n for n in OP_SCHEMAS if n not in present)
+    if want:
+        out = {"ok": want in OP_SCHEMAS or want in present, "op": want,
+               "schema": OP_SCHEMAS.get(want), "present_on_box": want in present}
+        if not out["ok"]:
+            out["error"] = "unknown op"
+    al = b.get("allowlist")
+    if isinstance(al, list):
+        al = sorted(str(x) for x in al)
+        out["allowlist_diff"] = {"allowed_but_absent_on_box": sorted(set(al) - set(present)),
+                                 "present_on_box_but_not_allowed": sorted(set(present) - set(al))}
+    if want and not out["ok"]:
+        _ledger_finish(op_id, "fail", f"unknown op {want}")
+        return jsonify(out), 404
+    _ledger_finish(op_id, "ok", f"routes={len(present)} undocumented={len(out.get('undocumented', []))}")
+    return jsonify(out)
+
+
 @box_ops_bp.route("/op/read_repo", methods=["POST"])
 def op_read_repo():
     """Read ANY file from the repo and return its content, so a worker can read
