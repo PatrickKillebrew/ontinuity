@@ -282,11 +282,18 @@ def op_commit_file():
     branch = (b.get("branch") or GITHUB_BRANCH_DEFAULT).strip()
     # repo path defaults to the same relative path the file has on the box
     path_in_repo = (b.get("repo_path") or name).strip().lstrip("/")
-    message = (b.get("message") or f"commit_file: {path_in_repo}").strip()
-    op_id = _ledger_begin("commit_file", {"path": name, "repo_path": path_in_repo, "repo": repo})
+    # L6 (RITUAL LOCKDOWN): message is REQUIRED — a commit is a record; no default text.
+    message = (b.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "message required (a commit is a record; say what it is)"}), 400
+    dry_run = bool(b.get("dry_run"))
+    op_id = _ledger_begin("commit_file", {"path": name, "repo_path": path_in_repo, "repo": repo, "dry_run": dry_run})
     try:
-        with open(full, "r", encoding="utf-8") as f:
-            content = f.read()
+        with open(full, "rb") as f:
+            raw_bytes = f.read()
+        # L6: git blob sha of the BOX bytes, computed locally — lets us know "unchanged" without downloading.
+        import hashlib as _hl
+        local_blob_sha = _hl.sha1(b"blob %d\0" % len(raw_bytes) + raw_bytes).hexdigest()
         url = f"https://api.github.com/repos/{repo}/contents/{path_in_repo}"
         sha = None
         try:
@@ -296,8 +303,19 @@ def op_commit_file():
                 sha = json.loads(r.read()).get("sha")
         except Exception:
             pass
+        unchanged = (sha is not None and sha == local_blob_sha)
+        if dry_run:
+            _ledger_finish(op_id, "ok", f"dry_run {path_in_repo} {'unchanged' if unchanged else ('update' if sha else 'create')}")
+            return jsonify({"ok": True, "dry_run": True, "repo_path": path_in_repo, "exists_in_repo": sha is not None,
+                            "would": "nothing (unchanged)" if unchanged else ("update" if sha else "create"),
+                            "bytes": len(raw_bytes), "box_blob_sha": local_blob_sha, "repo_blob_sha": sha})
+        if unchanged:
+            # L6: no empty commits (the f86c20d class). Same bytes already at ref -> no-op, logged.
+            _ledger_finish(op_id, "ok", f"unchanged {path_in_repo} {sha[:12]}")
+            return jsonify({"ok": True, "unchanged": True, "repo_path": path_in_repo, "blob_sha": sha,
+                            "note": "box bytes identical to the repo at ref; no commit made"})
         body = {"message": message,
-                "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+                "content": base64.b64encode(raw_bytes).decode("ascii"),
                 "branch": branch}
         if sha:
             body["sha"] = sha
@@ -387,8 +405,8 @@ OP_SCHEMAS = {
                          "desc": "Bounded write to a file inside the box project dir. Repo-commit != box-install: this is the box half."},
     "read_repo":        {"required": ["path"], "optional": ["repo", "ref", "branch", "github_token"], "tier": "SAFE",
                          "desc": "Read any repo file. Tokenless path = raw CDN then unauth API (public repos only); pass github_token for the authoritative read or a private repo. repo defaults to CORPUS_REPO."},
-    "commit_file":      {"required": ["path", "github_token"], "optional": ["repo_path", "repo", "branch", "message"], "tier": "REVIEW",
-                         "desc": "Commit a file that EXISTS ON THE BOX to the repo (write_file first). repo_path defaults to the box path. Token passed per call, never stored."},
+    "commit_file":      {"required": ["path", "github_token", "message"], "optional": ["repo_path", "repo", "branch", "dry_run"], "tier": "REVIEW",
+                         "desc": "Commit a file that EXISTS ON THE BOX to the repo (write_file first). repo_path defaults to the box path. message REQUIRED. Identical bytes at ref -> no commit ({unchanged:true}); dry_run:true reports create/update/unchanged and commits nothing. Token passed per call, never stored."},
     "commit_self":      {"required": ["github_token"], "optional": ["files", "repo", "branch", "repo_dir"], "tier": "REVIEW",
                          "desc": "Commit the box's own allowlisted source files (file_server/seat_mailbox/box_ops...) so the repo matches the box."},
     "backup_db":        {"required": [], "optional": ["out"], "tier": "SAFE",
