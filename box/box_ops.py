@@ -86,10 +86,24 @@ def _caller_seat(default="diag-key"):
     except Exception:
         return default
 
+def _current_seat_session_id():
+    """L3: the seat session this call belongs to. Body-supplied `seat_session_id` for now;
+    L4 derives it from the per-identity key so there is no body field to forget."""
+    try:
+        b = request.get_json(silent=True) or {}
+        return (b.get("seat_session_id") or "").strip() or None
+    except Exception:
+        return None
+
+
 def _ledger_begin(op, args):
     try:
         import file_server
         # caller = self-asserted seat (trusted-not-authenticated; see _caller_seat)
+        return file_server._ops_begin(op, "REVIEW", _caller_seat(), request.remote_addr, args,
+                                      seat_session_id=_current_seat_session_id())
+    except TypeError:
+        import file_server
         return file_server._ops_begin(op, "REVIEW", _caller_seat(), request.remote_addr, args)
     except Exception:
         return None
@@ -373,8 +387,8 @@ OP_SCHEMAS = {
                          "desc": "Commit the box's own allowlisted source files (file_server/seat_mailbox/box_ops...) so the repo matches the box."},
     "backup_db":        {"required": [], "optional": ["out"], "tier": "SAFE",
                          "desc": "Consistent sqlite .backup of ontinuity.db plus a .sql dump."},
-    "bootstrap_gate":   {"required": ["seat"], "optional": ["role", "lineage", "canonical_op_count", "seat_invariants"], "tier": "SAFE",
-                         "desc": "Verified boot: six checks -> {oriented: bool, checks[]}. Booted == oriented:true from this op, not a self-report."},
+    "bootstrap_gate":   {"required": ["seat"], "optional": ["role", "lineage", "seat_invariants", "github_token"], "tier": "SAFE",
+                         "desc": "Verified boot: six checks -> {oriented, checks[], seat_session{seat_session_id,started_at}}. Booted == oriented:true from this op. Pass github_token on a private corpus (manual/queue reads). Opens a seat_sessions row on pass (L3); pass seat_session_id on later ops."},
     "deploy":           {"required": ["target", "signoff_block_id"], "optional": ["block_id", "commit_sha", "dry_run"], "tier": "RISK",
                          "desc": "Two-party deploy: proposal + signoff rows from DISTINCT seats on the same block_id. dry_run:true runs the full gate with no side effect. See live/specs/signoff_deploychain.md."},
     "new_project":      {"required": ["name"], "optional": ["description", "branch", "user_id"], "tier": "REVIEW",
@@ -402,6 +416,8 @@ OP_SCHEMAS = {
                          "desc": "Nudge: a worker self-drains its whole turn on one call. Keep wait_seconds <= 20 (relay read-timeout 25)."},
     "orient":           {"required": ["topic"], "optional": ["seat", "repo", "ref", "github_token", "max_hits"], "tier": "SAFE",
                          "desc": "The OPEN ritual as a ledger fact: searches the queue folds (agent_queue.md) and every live/conversations/*.md for the topic; returns hits {file,line,fold,excerpt} or count 0; logs {topic,count}. Run before reasoning about a task. Pass github_token: the conversations directory listing needs the contents API (raw CDN cannot list), and unauthenticated API calls rate-limit."},
+    "_common":          {"required": [], "optional": ["seat", "seat_session_id"], "tier": "n/a",
+                         "desc": "Fields every op accepts: seat (self-asserted caller label until L4) and seat_session_id (joins the ledger row to the seat session opened by bootstrap_gate)."},
     "describe":         {"required": [], "optional": ["op", "allowlist"], "tier": "SAFE",
                          "desc": "This op. Returns every /op route on the box with its schema; routes without a schema are 'undocumented'; pass the courier allowlist to get the allowed-but-absent / present-but-not-allowed diff."},
 }
@@ -426,7 +442,8 @@ def op_describe():
             out["ops"][name] = dict(OP_SCHEMAS[name], present_on_box=True)
         else:
             out["undocumented"].append(name)
-    out["schema_only"] = sorted(n for n in OP_SCHEMAS if n not in present)
+    out["schema_only"] = sorted(n for n in OP_SCHEMAS if n not in present and not n.startswith("_"))
+    out["common_fields"] = OP_SCHEMAS.get("_common")
     if want:
         out = {"ok": want in OP_SCHEMAS or want in present, "op": want,
                "schema": OP_SCHEMAS.get(want), "present_on_box": want in present}
@@ -719,8 +736,30 @@ def op_bootstrap_gate():
             diag_key = file_server.load_config().get("diag_key", "") or os.environ.get("DIAG_KEY", "")
         except Exception:
             diag_key = os.environ.get("DIAG_KEY", "")
+        # PORTABLE-1 (L3a): the gate takes THIS install's values from the box config
+        # (written by box_boot from env), never hardcoded; a private corpus needs the
+        # caller's token for the manual/queue reads — passed per call, never stored.
+        # RULE: an install value ABSENT from this box's config means "this install has none",
+        # never "fall back to the operator's" — the gate's module defaults exist only for the
+        # operator box until L9. So every field is passed explicitly here.
+        install = {}
+        try:
+            cfg = file_server.load_config()
+            proj = (cfg.get("projects") or [{}])[0]
+            install = {"engine_url": (cfg.get("engine_url") or "").strip() or None,   # None -> gate default (operator engine) ONLY if unset
+                       "farm_url": (cfg.get("farm_url") or "").strip(),                # "" -> no FARM on this install
+                       "corpus_repo": (proj.get("github_repo") or os.environ.get("CORPUS_REPO") or "").strip() or None,
+                       "session_floor": int(cfg.get("corpus_session_floor") or 0)}
+            if install["engine_url"] is None:
+                install.pop("engine_url")
+            if install["corpus_repo"] is None:
+                install.pop("corpus_repo")
+        except Exception:
+            install = {}
+        gtoken = (b.get("github_token") or "").strip()
         result = gate.run_gate(seat, lineage, role=role, diag_key=diag_key,
-                               seat_invariants=seat_invariants)
+                               seat_invariants=seat_invariants,
+                               github_token=gtoken, install=install)
 
         # KEY ISSUANCE-ON-PASS (stubbed). Structured so real per-identity keys
         # (CALLER-1 + the key build) drop in here without changing the response
@@ -728,6 +767,13 @@ def op_bootstrap_gate():
         # today that key IS the shared DIAG_KEY (so nothing changes operationally),
         # but the field + binding exist so callers can start reading it now.
         if result.get("oriented"):
+            # L3: the seat session as a ledger fact. Opened ONLY on oriented:true.
+            try:
+                sid, ts = file_server.seat_session_open(seat, role, lineage)
+            except Exception:
+                sid, ts = None, None
+            result["seat_session"] = {"seat_session_id": sid, "started_at": ts,
+                                      "note": "pass seat_session_id on every later op until per-identity keys (L4) derive it from the key"}
             result["key_issuance"] = {
                 "issued": True,
                 "bound_to": {"seat": seat, "lineage": lineage},
@@ -741,7 +787,7 @@ def op_bootstrap_gate():
         status = "ok" if result.get("oriented") else "fail"
         # summarize the failing check (if any) for the ledger
         failed = next((c for c in result.get("checks", []) if not c.get("pass")), None)
-        detail = (f"oriented seat={seat} role={role}" if result.get("oriented")
+        detail = (f"oriented seat={seat} role={role} seat_session={(result.get('seat_session') or {}).get('seat_session_id')}" if result.get("oriented")
                   else f"NOT ORIENTED seat={seat} role={role} at "
                        f"{failed.get('name') if failed else '?'}")
         _ledger_finish(op_id, status, detail[:200])

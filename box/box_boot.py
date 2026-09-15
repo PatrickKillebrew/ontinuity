@@ -12,6 +12,8 @@ Env consumed:
   RAILWAY_TOKEN, RAILWAY_PROJECT_ID, RAILWAY_ENVIRONMENT_ID, RAILWAY_SERVICE_ID_MAIN
                       optional — the box's own deploy/vault hand (only if this install uses /op/deploy)
   ONTINUITY_DB_PATH   optional — put on a volume (e.g. /data/ontinuity.db) so the DB survives redeploys
+  ENGINE_URL          this install's engine base URL (the bootstrap gate reads it from config.json)
+  FARM_URL            optional second engine; CORPUS_SESSION_FLOOR optional (gate CHECK 3; default 0)
 """
 import json, os, sys, runpy
 
@@ -38,6 +40,9 @@ cfg.update({
     "max_log_lines": cfg.get("max_log_lines", 100),
     "safe_commands": cfg.get("safe_commands", ["python --version"]),
 })
+for k, envk in (("engine_url","ENGINE_URL"),("farm_url","FARM_URL"),("corpus_session_floor","CORPUS_SESSION_FLOOR")):
+    v = os.environ.get(envk, "").strip()
+    if v: cfg[k] = int(v) if k == "corpus_session_floor" else v
 for k in ("railway_token","railway_project_id","railway_environment_id","railway_service_id_main"):
     v = os.environ.get(k.upper(), "").strip()
     if v: cfg[k] = v

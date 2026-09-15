@@ -1499,11 +1499,72 @@ def _ops_ledger_init():
             status      TEXT NOT NULL,   -- started | ok | fail
             started_at  TEXT NOT NULL,
             finished_at TEXT )""")
+        # RITUAL LOCKDOWN L3 (2026-09-15): a seat's session as a ledger fact. NOT `sessions`
+        # (that is the four-model research session); this is the SEAT's boot->close window.
+        c.execute("""CREATE TABLE IF NOT EXISTS seat_sessions (
+            seat_session_id TEXT PRIMARY KEY,
+            seat            TEXT NOT NULL,
+            role            TEXT NOT NULL,
+            lineage         TEXT,
+            key_hash        TEXT,
+            started_at      TEXT NOT NULL,
+            closed_at       TEXT,
+            closed_reason   TEXT )""")
+        cols = [r[1] for r in c.execute("PRAGMA table_info(operations_ledger)")]
+        if "seat_session_id" not in cols:
+            c.execute("ALTER TABLE operations_ledger ADD COLUMN seat_session_id TEXT")
         c.commit(); c.close()
     except Exception as e:
         print(f"ops_ledger init failed: {e}")
 
-def _ops_begin(operation, tier, caller, source_ip, args):
+
+def seat_session_open(seat, role, lineage="", key_hash=""):
+    """Open a seat session row; returns (seat_session_id, started_at). Never raises."""
+    import uuid as _uuid
+    try:
+        sid = _uuid.uuid4().hex
+        ts = _ops_dt.now(_ops_tz.utc).isoformat()
+        c = _ops_sqlite.connect(_OPS_DB)
+        c.execute("INSERT INTO seat_sessions (seat_session_id,seat,role,lineage,key_hash,started_at) VALUES (?,?,?,?,?,?)",
+                  (sid, seat, role, lineage or "", key_hash or "", ts))
+        c.commit(); c.close()
+        return sid, ts
+    except Exception as e:
+        print(f"seat_session_open failed: {e}"); return None, None
+
+
+def seat_session_close(seat_session_id, reason="close_gate"):
+    try:
+        ts = _ops_dt.now(_ops_tz.utc).isoformat()
+        c = _ops_sqlite.connect(_OPS_DB)
+        cur = c.execute("UPDATE seat_sessions SET closed_at=?, closed_reason=? WHERE seat_session_id=? AND closed_at IS NULL",
+                        (ts, reason, seat_session_id))
+        c.commit(); n = cur.rowcount; c.close()
+        return n == 1, ts
+    except Exception as e:
+        print(f"seat_session_close failed: {e}"); return False, None
+
+
+def seat_session_get(seat_session_id):
+    try:
+        c = _ops_sqlite.connect(_OPS_DB); c.row_factory = _ops_sqlite.Row
+        r = c.execute("SELECT * FROM seat_sessions WHERE seat_session_id=?", (seat_session_id,)).fetchone(); c.close()
+        return dict(r) if r else None
+    except Exception:
+        return None
+
+
+def seat_sessions_open(role=None):
+    """Open (unclosed) seat sessions, optionally for one role — L7 reads this."""
+    try:
+        c = _ops_sqlite.connect(_OPS_DB); c.row_factory = _ops_sqlite.Row
+        q = "SELECT * FROM seat_sessions WHERE closed_at IS NULL" + (" AND role=?" if role else "") + " ORDER BY started_at"
+        rows = c.execute(q, (role,) if role else ()).fetchall(); c.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+def _ops_begin(operation, tier, caller, source_ip, args, seat_session_id=None):
     """Log intent; return op_id (or None on failure — never blocks the op).
     CALLER-1: `caller` is a TRUSTED-NOT-AUTHENTICATED label. For seat ops it is the
     self-asserted seat name ('seat:<name>', threaded by the _ledger wrappers in
@@ -1517,8 +1578,8 @@ def _ops_begin(operation, tier, caller, source_ip, args):
     try:
         c = _ops_sqlite.connect(_OPS_DB)
         cur = c.execute(
-            "INSERT INTO operations_ledger (operation,tier,caller,source_ip,args,status,started_at) VALUES (?,?,?,?,?, 'started', ?)",
-            (operation, tier, caller, source_ip, str(args)[:1000], _ops_dt.now(_ops_tz.utc).isoformat()))
+            "INSERT INTO operations_ledger (operation,tier,caller,source_ip,args,status,started_at,seat_session_id) VALUES (?,?,?,?,?, 'started', ?, ?)",
+            (operation, tier, caller, source_ip, str(args)[:1000], _ops_dt.now(_ops_tz.utc).isoformat(), seat_session_id))
         c.commit(); oid = cur.lastrowid; c.close()
         return oid
     except Exception as e:
