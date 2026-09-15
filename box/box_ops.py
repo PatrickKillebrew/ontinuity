@@ -422,6 +422,8 @@ OP_SCHEMAS = {
                          "desc": "Nudge: a worker self-drains its whole turn on one call. Keep wait_seconds <= 20 (relay read-timeout 25)."},
     "orient":           {"required": ["topic"], "optional": ["seat", "repo", "ref", "github_token", "max_hits"], "tier": "SAFE",
                          "desc": "The OPEN ritual as a ledger fact: searches the queue folds (agent_queue.md) and every live/conversations/*.md for the topic; returns hits {file,line,fold,excerpt} or count 0; logs {topic,count}. Run before reasoning about a task. Pass github_token: the conversations directory listing needs the contents API (raw CDN cannot list), and unauthenticated API calls rate-limit."},
+    "close_gate":       {"required": ["github_token"], "optional": ["seat", "seat_session_id", "dry_run"], "tier": "REVIEW",
+                         "desc": "The CLOSE ritual as a ledger fact: nine checks reported all at once (punch list, record citing a commit, fold with one NEXT, manual==live, contract docs derived from the commit list, secrets, state clean, handoff, orient row), window = the seat_sessions row from bootstrap_gate. closed:true closes the session and revokes its key; dry_run:true only reports."},
     "_common":          {"required": [], "optional": ["seat", "seat_session_id"], "tier": "n/a",
                          "desc": "Every op: header X-Seat-Key (the per-identity key bootstrap_gate issued) makes the ledger caller AUTHENTICATED and joins the row to its seat session automatically; unknown/revoked keys are refused and the refusal is logged. Without the header: body seat is a self-asserted label and seat_session_id must be passed by hand."},
     "describe":         {"required": [], "optional": ["op", "allowlist"], "tier": "SAFE",
@@ -569,6 +571,69 @@ def op_orient():
     status = "ok" if not errors or hits else ("ok" if files_searched else "fail")
     _ledger_finish(op_id, status, f"topic={topic[:60]} hits={len(hits)} files={len(files_searched)} errors={len(errors)}")
     return jsonify(out), (200 if status == "ok" else 502)
+
+
+# ── close_gate (RITUAL LOCKDOWN L5, 2026-09-15) ─────────────────────────────────
+# The CLOSE ritual as a box op: nine checks (the June spec's eight + ORIENT), reported ALL at
+# once, the session window taken from the seat_sessions row (L3) instead of a seat-typed date.
+# On closed:true the seat session is closed and its per-identity key revoked (L4). The gate's own
+# run is a ledger row. Runnable: close_gate.py beside this file (lineage: staging/close_gate.py).
+_close_gate_mod = None
+
+def _load_close_gate():
+    global _close_gate_mod
+    if _close_gate_mod is None:
+        path = os.path.join(_BASE_DIR, "close_gate.py")
+        spec = _ilu.spec_from_file_location("ontinuity_close_gate", path)
+        mod = _ilu.module_from_spec(spec); spec.loader.exec_module(mod); _close_gate_mod = mod
+    return _close_gate_mod
+
+
+@box_ops_bp.route("/op/close_gate", methods=["POST"])
+def op_close_gate():
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    import file_server
+    ident = _authed_identity() or {}
+    seat_session_id = (ident.get("seat_session_id") if ident.get("authenticated") else None) or (b.get("seat_session_id") or "").strip() or None
+    seat = (ident.get("seat") if ident.get("authenticated") else None) or (b.get("seat") or "").strip() or "control"
+    dry_run = bool(b.get("dry_run"))
+    gtoken = (b.get("github_token") or "").strip()
+    op_id = _ledger_begin("close_gate", {"seat": seat, "seat_session_id": seat_session_id, "dry_run": dry_run, "auth": bool(gtoken)})
+    if not seat_session_id:
+        _ledger_finish(op_id, "fail", "no seat session")
+        return jsonify({"closed": False, "error": "seat_session_id required (from your X-Seat-Key, or pass it) — the session window is not inferred"}), 400
+    row = file_server.seat_session_get(seat_session_id)
+    if not row:
+        _ledger_finish(op_id, "fail", "unknown seat session")
+        return jsonify({"closed": False, "error": "unknown seat_session_id"}), 404
+    if row.get("closed_at"):
+        _ledger_finish(op_id, "fail", "session already closed")
+        return jsonify({"closed": False, "error": "seat session already closed", "closed_at": row["closed_at"]}), 409
+    try:
+        cg = _load_close_gate()
+        cfg = file_server.load_config(); proj = (cfg.get("projects") or [{}])[0]
+        cg.configure(engine_url=(cfg.get("engine_url") or "").strip() or None,
+                     farm_url=(cfg.get("farm_url") or "").strip(),
+                     corpus_repo=(proj.get("github_repo") or os.environ.get("CORPUS_REPO") or "").strip() or None,
+                     db_path=os.environ.get("ONTINUITY_DB_PATH", os.path.join(_BASE_DIR, "ontinuity.db")))
+        diag_key = cfg.get("diag_key", "") or os.environ.get("DIAG_KEY", "")
+        secret_values = [v for v in (diag_key, cfg.get("api_key", ""), cfg.get("railway_token", "")) if v]
+        result = cg.run_gate(seat, seat_session_id, row["started_at"], diag_key, gtoken, secret_values)
+        result["dry_run"] = dry_run
+        if result.get("closed") and not dry_run:
+            ok, ts = file_server.seat_session_close(seat_session_id, "close_gate")
+            n = file_server.revoke_seat_keys_for_session(seat_session_id, "close_gate")
+            result["session_closed"] = {"closed_at": ts, "keys_revoked": n}
+        result["ledger_row_id"] = op_id
+        failed = [c["name"] for c in result.get("checks", []) if not c.get("pass")]
+        _ledger_finish(op_id, "ok" if result.get("closed") else "fail",
+                       (f"CLOSED session={seat_session_id[:8]} dry_run={dry_run}" if result.get("closed") else f"NOT COMPLETE failed={failed}"))
+        return jsonify(result)
+    except Exception as e:
+        _ledger_finish(op_id, "fail", f"gate error: {str(e)[:160]}")
+        return jsonify({"closed": False, "error": f"close_gate error: {str(e)[:200]}"}), 500
 
 
 @box_ops_bp.route("/op/read_repo", methods=["POST"])
