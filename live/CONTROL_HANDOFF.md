@@ -1,5 +1,5 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-14 by Control (claude.ai-chat:claude-fable-5.1) — reflex-layer exploration SHELVED to V2_ASPIRATIONS §V2-E; focus returned to v1 packaging. Prior update 2026-09-13 (post-GPT rollback reconciliation; B1 to museum/).
+# Updated 2026-09-15 by Control (claude.ai-chat:claude-fable-5.1) — INSTALL TWO PROVISIONED (runbook Phase 2 executed; C6 first boot pending). Prior 2026-09-14: reflex-layer research shelved to V2-E. Prior update 2026-09-13 (post-GPT rollback reconciliation; B1 to museum/).
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest CURRENT-STATE TOUCH POINT fold at the queue tail.
 
 ## STATE AT FOLD
@@ -10,8 +10,8 @@
 - Recovery + mapping record: `live/conversations/2026-09-12_recovery-mapping-two-product-packaging.md`; maps: `live/ONTINUITY_MASTER_SYSTEM_MAP.md`, `live/ONTINUITY_CONTINUITY_MECHANISM.md`, `live/ONTINUITY_PACKAGING_PLAN.md`; the packaging project itself lives in the PRIVATE repo `projects/the-package/` (runbook, roadmap, punch list, ritual mechanics).
 
 ## SINGLE NEXT ACTION
-Execute PROVISIONING_RUNBOOK.md (private repo `projects/the-package/`) Phase 2: stand up ONE operator-controlled second install and boot a Claude seat into it (ROADMAP Phase 2 gate). Phase 3 (a non-Claude model in the seat) only after Phase 2 passes. The mapping audit named here previously is CLOSED (record 2026-09-13b, commit 2a43da4).
-SINCE 2026-09-13: compliance mechanism v1 live (`railway_set_var`, the first wrapped op; 22-op allowlist; record 2026-09-14a, fold 1e5d613). The reflex-layer research (a small Ontinuity-trained model as a proxy-tuning expert steering a frozen capable model — no facts in weights) is captured in `live/horizons/V2_ASPIRATIONS.md` §V2-E and record 2026-09-14b; it is DEFERRED past v1 by operator ruling. Do not front-load it over Phase 2.
+C6 FIRST BOOT of install two (operator step): in the "Ontinuity 2" Claude project with LLaves.txt attached, paste the parameterized CONTROL_QUICKBOOT from `ontinuity-two/live/`; the seat must report the REAL allowlist from `__probe__` (engine-two), a REAL line from each of the five doc groups, and the one-line next action; then run its close ritual so a record/fold/handoff land in `ontinuity-two` (Section G check 5). Phase 2 gate = all five Section G checks. Then ROADMAP Phase 3 (non-Claude seat).
+STATE OF INSTALL TWO (2026-09-15): corpus `PatrickKillebrew/ontinuity-two` seeded fcfcfd0; Railway `engine-two` (this repo @89fa24a); Hetzner box `ontinuity-two-box` (new Hetzner project `ontinuity-two`; IP in engine-two's vault WORKSPACE_URL). Section G 1/3/4/5 PASS through its own courier. Record: `live/conversations/2026-09-15_install-two-provisioned.md`. Runbook corrections: private repo PROVISIONING_RUNBOOK.md §J. Idle Railway `box-two` awaits operator deletion.
 
 ## WHAT SHIPPED THIS SHIFT — THE MAILBOX FIX (root-cause, deployed, proven)
 THE BUG (fully diagnosed): the seat_mailbox is a TASK-DISTRIBUTION queue (atomic claim + lease so
