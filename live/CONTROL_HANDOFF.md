@@ -1,5 +1,5 @@
 # CONTROL HANDOFF — current state + the single next action
-# Updated 2026-09-15 (evening) by Control (claude.ai-chat:claude-fable-5.1) — Phase 2 PASSED; RITUAL LOCKDOWN L1–L5 LIVE on install two; contract/receipt design + prose-to-code walk filed. Prior same day: install two provisioned. Prior 2026-09-14: reflex-layer research shelved to V2-E. Prior update 2026-09-13 (post-GPT rollback reconciliation; B1 to museum/).
+# Updated 2026-09-16 (night) by Control (claude.ai-chat:claude-fable-5.1) — L6/L4b/L7 live; STAFFING check; first Researcher-seat sessions (no work product; two defects found); engine fix MERGED to main a0c61f0 under operator directive; both engines idle. Prior: 2026-09-15 evening. Prior 2026-09-14: reflex-layer research shelved to V2-E. Prior update 2026-09-13 (post-GPT rollback reconciliation; B1 to museum/).
 # Orient from the corpus, not from memory. Read this, then PUNCH_LIST.md + the latest CURRENT-STATE TOUCH POINT fold at the queue tail.
 
 ## STATE AT FOLD
@@ -10,8 +10,8 @@
 - Recovery + mapping record: `live/conversations/2026-09-12_recovery-mapping-two-product-packaging.md`; maps: `live/ONTINUITY_MASTER_SYSTEM_MAP.md`, `live/ONTINUITY_CONTINUITY_MECHANISM.md`, `live/ONTINUITY_PACKAGING_PLAN.md`; the packaging project itself lives in the PRIVATE repo `projects/the-package/` (runbook, roadmap, punch list, ritual mechanics).
 
 ## SINGLE NEXT ACTION
-Operator reads live/specs/prose_to_code_walk.md §6 (points 3–4: Product 2 per-install requirements; v1 vs Product 2 reconciliation) and rules. Then continue the work order live/specs/ritual_lockdown_punchlist.md in order: L6 commit_file hardening -> L4b mailbox routes on key-derived identity -> L6.5 seat contract/receipt (mirror the engine's PRE_SESSION / contract_close_check / queue_update; the ERL is read-only to the design door) -> L7 -> L8 packet v3 -> L9 two-party promotion with a worker signing.
-STATE: install two has L1–L5 live (allowlist 24), Phase 2 gate met, lifecycle proven across two fresh seats; its corpus was closed by seat C via close_gate (session 1e9cdf0a). Operator install untouched; promotion is L9. Records: 2026-09-15_install-two-provisioned, 2026-09-15b. Design: two_doors_one_memory.md (read the CORRECTION), prose_to_code_walk.md.
+SHIP THE SEAT: Phase 3 — a non-Claude model holds the CONTROL seat on install two from packet v2.1 (ontinuity-two/live/CONTROL_QUICKBOOT.md), then Phase 4 (Cornel's install, his accounts). Before any ENGINE session anywhere: the operator answers the modals (the seat may not author the operator's side), and MAIN's dead role strings (MODEL_B_MODEL=llama-3.3-70b, PROJENIUS_MODEL=deepseek/deepseek-v3-0324) are replaced (railway_set_var; a variable change redeploys MAIN) — or the session runs on install two, which is staffed and gated.
+STATE (2026-09-16): both engines at a0c61f0 (contract enforcement + staffing probe at start; no contract-less run). Install two: L1–L7 live, allowlist 24, roles alive, mailbox proposal FIX-CONTRACT-1 recorded. Operator install: box runs the old box_ops, manual says 21 — reconcile via L9 (also gate Railway's auto-deploy). Records: 2026-09-16_night-close (this), 2026-09-15b, 2026-09-15.
 
 ## WHAT SHIPPED THIS SHIFT — THE MAILBOX FIX (root-cause, deployed, proven)
 THE BUG (fully diagnosed): the seat_mailbox is a TASK-DISTRIBUTION queue (atomic claim + lease so
