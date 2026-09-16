@@ -821,6 +821,7 @@ def build_session_payload():
     _unreviewed = bool(s.get("unreviewed_cycles"))
     _final_status = (
         _end_status if _end_status != "complete"
+        else "incomplete_no_contract" if s.get("ended_no_contract")   # 2026-09-16: ended with no frozen contract
         else "incomplete_challenger_dead" if _unreviewed
         else "complete" if _has_close
         else "incomplete_no_close")
@@ -992,7 +993,7 @@ def artifact_path(label):
 # -----------------------------------------
 # GITHUB PERSISTENCE
 # -----------------------------------------
-GITHUB_REPO = os.environ.get("CORPUS_REPO", "PatrickKillebrew/ontinuity").strip() or "PatrickKillebrew/ontinuity"  # per-install corpus repo; default = operator install
+GITHUB_REPO = "PatrickKillebrew/ontinuity"
 GITHUB_FILE_PATH = get_github_knowtext_path()
 GITHUB_BRANCH = "main"
 
@@ -2543,6 +2544,7 @@ def run_pre_session(objective, orient_context=""):
     if WORKSPACE_BRANCH:
         kwargs["branch"] = WORKSPACE_BRANCH
     response = call_parietal("PRE_SESSION", **kwargs)
+    active_session["_pre_session_raw"] = response or ""
     if not response:
         return objective, False, []
     if "READY:" in response.upper():
@@ -2562,6 +2564,7 @@ def run_pre_session_with_answers(raw_objective, answers):
     response = call_parietal("PRE_SESSION",
                              objective=raw_objective,
                              operator_answers=answers)
+    active_session["_pre_session_raw"] = response or ""
     if not response:
         return raw_objective, []
     if "READY:" in response.upper():
@@ -3077,6 +3080,14 @@ def run_session_loop(objective, start_fresh=False, contract=None,
                 socketio.emit('routing_action', {'type': 'session_end', 'message': 'SESSION_END requested at cycle 1 — below minimum; one adversarial review required before any close. Continuing.'})
                 conversation.append({"role": "user", "content": f"A session cannot close before at least one full adversarial review has occurred. Continue the work toward the objective.\n{ambient_line}"})
                 continue
+            # 2026-09-16: a session with NO frozen contract cannot certify anything; ending it through the
+            # review path only trips Friction Signal 4 ("ending without a contract") and loops forever.
+            # End it honestly instead: outcome 'incomplete_no_contract' (see build_session_payload).
+            if not active_session.get("contract"):
+                socketio.emit('routing_action', {'type': 'session_end',
+                    'message': 'SESSION_END with no frozen contract: ending as incomplete_no_contract (nothing can certify).'})
+                active_session["ended_no_contract"] = True
+                break
             # At or above the floor: do not break here. Fall through to the Challenger review,
             # then let the post-review decision rule decide whether the session actually ends.
             researcher_requested_end = True
@@ -4115,7 +4126,8 @@ def diag_relay(endpoint):
                         "started_by": active_session.get("started_by", "dashboard"),
                         "stopped_by": active_session.get("stopped_by"),
                         "finalizing": bool(active_session.get("finalizing")),
-                        "contract_criteria": len(active_session.get("contract", []))})
+                        "contract_criteria": len(active_session.get("contract", [])),
+                        "start_error": active_session.get("start_error")})
     if not WORKSPACE_URL:
         return jsonify({"error": "WORKSPACE_URL not configured"}), 503
     try:
@@ -4170,7 +4182,7 @@ def diag_relay(endpoint):
 # /op/* allowlist (corpus: scoped-op folds, June 10). Adding a box op = add
 # its name here too. This is a name-gate, NOT a contract relaxation: the box
 # remains the authority on args/tier/ledger.
-OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "new_project", "railway_set_var", "backup_db", "describe", "orient", "close_gate"}  # describe: RITUAL LOCKDOWN step 1 (2026-09-15) — the op is the manual for op bodies  # seed_tenant: DEPRECATED/unimplemented (no box handler; superseded by new_project 2026-09-13)
+OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "new_project", "railway_set_var", "backup_db"}  # seed_tenant: DEPRECATED/unimplemented (no box handler; superseded by new_project 2026-09-13)
 
 @app.route('/diag/op/<name>', methods=['POST'])
 def diag_op_courier(name):
@@ -4201,16 +4213,9 @@ def diag_op_courier(name):
     #    exactly as _register_egress forwards to /register_egress. Return the
     #    box response verbatim so its status/body are not masked by the courier.
     try:
-        fwd_headers = {"X-Diag-Key": diag_key, "Content-Type": "application/json"}
-        # L4 (ritual lockdown): forward the seat's per-identity key unchanged. The engine never
-        # validates it; the box resolves it to an authenticated identity + seat session and
-        # refuses unknown/revoked keys itself (auditable there).
-        seat_key = request.headers.get("X-Seat-Key", "")
-        if seat_key:
-            fwd_headers["X-Seat-Key"] = seat_key
         r = http_requests.post(
             f"{WORKSPACE_URL}/op/{name}",
-            headers=fwd_headers,
+            headers={"X-Diag-Key": diag_key, "Content-Type": "application/json"},
             json=body,
             timeout=25,
         )
@@ -4711,6 +4716,62 @@ def handle_start_session(data):
     thread.daemon = True
     thread.start()
 
+
+# ── CONTRACT ENFORCEMENT AT START (2026-09-16; found by the first Researcher-seat sessions on install two) ──
+# The June design tolerated an empty contract ("empty = no contract, backward compatible"). Later features
+# (Fix #1 certified close, Friction Signal 4 on ending without a contract) turned that tolerance into a
+# session that can neither work nor close. The Parietal prompt itself requires 2-6 criteria. Enforce it here.
+CONTRACT_MIN_CRITERIA = 2
+
+def _contract_ok(contract):
+    return isinstance(contract, list) and len(contract) >= CONTRACT_MIN_CRITERIA
+
+def _refuse_start_no_contract(where, raw_reply=""):
+    head = (raw_reply or "")[:240].replace("\n", " ")
+    msg = (f"START REFUSED: PRE_SESSION ({where}) did not yield a usable contract "
+           f"(fewer than {CONTRACT_MIN_CRITERIA} criteria). The session was not started. Parietal reply head: {head!r}")
+    socketio.emit('routing_action', {'type': 'error', 'message': msg})
+    active_session["start_error"] = msg
+    active_session["running"] = False
+
+
+# ── STAFFING PROBE AT START (2026-09-16): every model role the session will call must answer a
+# one-token completion BEFORE PRE_SESSION runs. A dead role (retired model string, bad key) is a
+# refused start with the role named — not four cycles of unreviewed work and a close that cannot certify.
+SESSION_ROLES = ("model_a", "model_b", "model_c", "parietal", "projenius")
+
+def _probe_role_alive(role):
+    """Returns (alive, detail). External Model A (a seat via the mailbox) counts as alive. Never raises."""
+    cfg = get_effective_config(role) or {}
+    url = (cfg.get("url") or "").strip(); model = (cfg.get("model") or "").strip(); key = (cfg.get("api_key") or "").strip()
+    if role == "model_a" and url.lower().startswith("external"):
+        return True, "external (mailbox seat)"
+    if not url or not key:
+        return False, "unconfigured"
+    try:
+        r = http_requests.post(url, json={"model": model, "messages": [{"role": "user", "content": "Reply with the single word OK."}],
+                                          "max_tokens": 8, "temperature": 0},
+                               headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                                        "User-Agent": "ontinuity-engine/1.0"}, timeout=40)
+        return (r.status_code == 200), (f"{model} {'alive' if r.status_code == 200 else 'HTTP ' + str(r.status_code) + ' ' + r.text[:80]}")
+    except Exception as e:
+        return False, f"{model} {str(e)[:80]}"
+
+def staffing_probe(require_parietal=True):
+    """Probe every role; returns (all_alive, facts, dead).
+    RULE: a CONFIGURED role that does not answer is fatal for EVERY role (a dead configured seat is a
+    misconfiguration the operator asked to be caught at start). An UNCONFIGURED role is fatal only for
+    the Challenger and the Parietal (operator ruling 2026-09-16: there is no contract-less run)."""
+    facts, dead = [], []
+    for role in SESSION_ROLES:
+        alive, detail = _probe_role_alive(role)
+        facts.append(f"{role}: {detail}")
+        if not alive and detail != "unconfigured":
+            dead.append(role)
+        elif detail == "unconfigured" and (role == "model_b" or (role == "parietal" and require_parietal)):
+            dead.append(role)   # required for a gated session
+    return (not dead), facts, dead
+
 def pre_session_then_start(obj, start_fresh=False, start_token=None):
     retain_dashboard_pending = False
     if start_token:
@@ -4752,8 +4813,24 @@ def pre_session_then_start(obj, start_fresh=False, start_token=None):
                 socketio.emit('routing_action', {'type': 'error',
                     'message': f'Projenius ORIENT error ({type(exc).__name__}) — continuing without project context.'})
 
+        # 2026-09-16: staffing probe first — a dead role is a refused start, named.
+        # 2026-09-16 operator ruling: there is no contract-less run. A gated session needs a Parietal.
+        ok_staff, staff_facts, dead_roles = staffing_probe(require_parietal=True)
+        socketio.emit('routing_action', {'type': 'injection', 'message': 'Staffing probe: ' + '; '.join(staff_facts)})
+        if not ok_staff:
+            msg = f"START REFUSED: dead or missing model role(s) {dead_roles} — a session would freeze a contract that can never be reviewed or distilled. Fix the provider/model string, then start again."
+            socketio.emit('routing_action', {'type': 'error', 'message': msg})
+            active_session["start_error"] = msg; active_session["running"] = False
+            _abort_pre_session_start(start_token, "dead_role")
+            return
         parietal_cfg = get_effective_config("parietal")
         has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
+        if not has_parietal:
+            msg = "START REFUSED: no Parietal configured, so no contract can be authored; a gated session cannot run contract-less."
+            socketio.emit('routing_action', {'type': 'error', 'message': msg})
+            active_session["start_error"] = msg; active_session["running"] = False
+            _abort_pre_session_start(start_token, "no_parietal")
+            return
         if has_parietal:
             refined, needs_answers, contract = run_pre_session(
                 obj, orient_context=orient_context)
@@ -4769,6 +4846,14 @@ def pre_session_then_start(obj, start_fresh=False, start_token=None):
                         kind="pre_session_questions")
                     if answers:
                         obj2, contract = run_pre_session_with_answers(obj, answers)
+                        if not _contract_ok(contract):
+                            socketio.emit('routing_action', {'type': 'error',
+                                'message': 'PRE_SESSION returned no usable contract after answers; retrying once.'})
+                            obj2, contract = run_pre_session_with_answers(obj, answers)
+                        if not _contract_ok(contract):
+                            _refuse_start_no_contract("with answers", active_session.get("_pre_session_raw", ""))
+                            _abort_pre_session_start(start_token, "no_contract")
+                            return
                         run_session_loop(obj2, start_fresh=start_fresh,
                                          contract=contract,
                                          start_token=start_token)
@@ -4782,6 +4867,16 @@ def pre_session_then_start(obj, start_fresh=False, start_token=None):
                     start_token, obj, start_fresh)
                 return
             obj = refined
+            if has_parietal and not _contract_ok(contract):
+                socketio.emit('routing_action', {'type': 'error',
+                    'message': 'PRE_SESSION returned no usable contract; retrying once.'})
+                refined, needs_answers, contract = run_pre_session(obj, orient_context=orient_context)
+                if not needs_answers and refined:
+                    obj = refined
+            if has_parietal and not _contract_ok(contract):
+                _refuse_start_no_contract("no questions", active_session.get("_pre_session_raw", ""))
+                _abort_pre_session_start(start_token, "no_contract")
+                return
         else:
             socketio.emit('routing_action', {'type': 'error', 'message': 'Parietal not configured — starting without PRE_SESSION.'})
             contract = []
