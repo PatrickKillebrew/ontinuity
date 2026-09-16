@@ -1610,7 +1610,11 @@ def seat_contract_set(seat_session_id, items, project=""):
         kind = (it.get("kind") or "JUDGED").upper()
         if kind not in ("VERIFIABLE", "JUDGED"): kind = "JUDGED"
         iid = (it.get("id") or "").strip() or ("C-" + _uuid.uuid4().hex[:8])
-        c.execute("INSERT OR REPLACE INTO seat_contracts (item_id,seat_session_id,project,title,kind,evidence_rule,status,set_at) VALUES (?,?,?,?,?,?,'OPEN',?)",
+        # L6.5 review fix: a registered item is FROZEN — never replaced; a duplicate id is refused (reported, not silently overwritten).
+        exists = c.execute("SELECT 1 FROM seat_contracts WHERE item_id=?", (iid,)).fetchone()
+        if exists:
+            out.append({"item_id": iid, "error": "item_id already registered (contract items are frozen); use resolve"}); continue
+        c.execute("INSERT INTO seat_contracts (item_id,seat_session_id,project,title,kind,evidence_rule,status,set_at) VALUES (?,?,?,?,?,?,'OPEN',?)",
                   (iid, seat_session_id, project or "", (it.get("title") or "").strip(), kind, (it.get("evidence_rule") or "").strip(), ts))
         out.append({"item_id": iid, "title": (it.get("title") or "").strip(), "kind": kind, "evidence_rule": (it.get("evidence_rule") or "").strip(), "status": "OPEN"})
     c.commit(); c.close(); return out

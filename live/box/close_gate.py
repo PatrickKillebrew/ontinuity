@@ -92,7 +92,7 @@ def _fail(name, fact, msg): return {"name": name, "pass": False, "returned_fact"
 def _touched(commits, path): return [c["sha"][:7] for c in commits if path in c["files"]]
 
 # ---- the checks --------------------------------------------------------------
-def check_punch_list(commits, contract_items=None):
+def check_punch_list(commits, contract_items=None, seat_session_id_for_check=None, session_start_for_check=""):
     """CHECK 1 — RECONCILIATION (L6.5). If the session registered a contract, every item must be DONE with
     evidence that exists in this session's window (a commit sha, or a ledger op_id) or CARRIED with a note;
     JUDGED items close on the operator's recorded ruling. The punch list itself must also have been committed."""
@@ -112,7 +112,16 @@ def check_punch_list(commits, contract_items=None):
         elif stt == "CARRIED" and not ev:
             unmet.append(f"{it['item_id']} ({it['title'][:40]}): CARRIED without a carry note")
         elif stt == "DONE" and kind == "VERIFIABLE":
-            ok = any(tok in shas for tok in re.findall(r"\b[0-9a-f]{7,40}\b", ev)) or bool(re.search(r"\bop_id[:= ]\s*\d+", ev))
+            ok = any(tok in shas for tok in re.findall(r"\b[0-9a-f]{7,40}\b", ev))
+            if not ok:
+                # L6.5 review fix: an op_id counts only if that ledger row EXISTS for this session (not just the string)
+                m_op = re.search(r"\bop_id[:= ]\s*(\d+)", ev)
+                if m_op:
+                    try:
+                        c = sqlite3.connect(INSTALL["db_path"])
+                        ok = bool(c.execute("SELECT 1 FROM operations_ledger WHERE op_id=? AND (seat_session_id=? OR started_at>=?)", (int(m_op.group(1)), seat_session_id_for_check, session_start_for_check)).fetchone()); c.close()
+                    except Exception:
+                        ok = False
             if not ok:
                 unmet.append(f"{it['item_id']} ({it['title'][:40]}): DONE but evidence '{ev[:30]}' is not a commit in this session's window or a ledger op_id")
         elif stt == "DONE" and kind == "JUDGED" and not ev:
@@ -293,7 +302,7 @@ def run_gate(seat, seat_session_id, started_at, diag_key, github_token, secret_v
         checks = [_ok("EXPLORATION-ONLY", "declared by the seat; verified: zero commits in the window, no contract items — corpus-write checks N/A"),
                   check_manual_currency(diag_key), check_state_clean(diag_key)]
         result["checks"] = checks; result["closed"] = all(c["pass"] for c in checks); INSTALL["github_token"] = ""; return result
-    checks = [check_punch_list(commits, contract_items), check_conversation(commits), check_queue_fold(commits), check_manual_currency(diag_key),
+    checks = [check_punch_list(commits, contract_items, seat_session_id, started_at), check_conversation(commits), check_queue_fold(commits), check_manual_currency(diag_key),
               check_contract_doc(commits), check_secrets(commits, secret_values), check_state_clean(diag_key), check_handoff(commits),
               check_orient(seat_session_id, started_at)]
     result["checks"] = checks; result["closed"] = all(c["pass"] for c in checks)
