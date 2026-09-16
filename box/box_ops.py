@@ -440,7 +440,9 @@ OP_SCHEMAS = {
                          "desc": "Nudge: a worker self-drains its whole turn on one call. Keep wait_seconds <= 20 (relay read-timeout 25)."},
     "orient":           {"required": ["topic"], "optional": ["seat", "repo", "ref", "github_token", "max_hits"], "tier": "SAFE",
                          "desc": "The OPEN ritual as a ledger fact: searches the queue folds (agent_queue.md) and every live/conversations/*.md for the topic; returns hits {file,line,fold,excerpt} or count 0; logs {topic,count}. Run before reasoning about a task. Pass github_token: the conversations directory listing needs the contents API (raw CDN cannot list), and unauthenticated API calls rate-limit."},
-    "close_gate":       {"required": ["github_token"], "optional": ["seat", "seat_session_id", "dry_run"], "tier": "REVIEW",
+    "contract":         {"required": [], "optional": ["action", "items", "project", "item_id", "status", "evidence", "seat_session_id"], "tier": "REVIEW",
+                         "desc": "The seat's contract (L6.5): the punch-list slice this session takes on. set {items:[{id?,title,kind:VERIFIABLE|JUDGED,evidence_rule?}]}; resolve {item_id,status:DONE|CARRIED,evidence}; get. Registered by the seat at distillation; reconciled by close_gate CHECK 1 (DONE needs evidence in this session's window; CARRIED needs a note)."},
+    "close_gate":       {"required": ["github_token"], "optional": ["seat", "seat_session_id", "dry_run", "exploration_only"], "tier": "REVIEW",
                          "desc": "The CLOSE ritual as a ledger fact: nine checks reported all at once (punch list, record citing a commit, fold with one NEXT, manual==live, contract docs derived from the commit list, secrets, state clean, handoff, orient row), window = the seat_sessions row from bootstrap_gate. closed:true closes the session and revokes its key; dry_run:true only reports."},
     "_common":          {"required": [], "optional": ["seat", "seat_session_id"], "tier": "n/a",
                          "desc": "Every op: header X-Seat-Key (the per-identity key bootstrap_gate issued) makes the ledger caller AUTHENTICATED and joins the row to its seat session automatically; unknown/revoked keys are refused and the refusal is logged. Without the header: body seat is a self-asserted label and seat_session_id must be passed by hand."},
@@ -638,7 +640,9 @@ def op_close_gate():
                      db_path=os.environ.get("ONTINUITY_DB_PATH", os.path.join(_BASE_DIR, "ontinuity.db")))
         diag_key = cfg.get("diag_key", "") or os.environ.get("DIAG_KEY", "")
         secret_values = [v for v in (diag_key, cfg.get("api_key", ""), cfg.get("railway_token", "")) if v]
-        result = cg.run_gate(seat, seat_session_id, row["started_at"], diag_key, gtoken, secret_values)
+        result = cg.run_gate(seat, seat_session_id, row["started_at"], diag_key, gtoken, secret_values,
+                             contract_items=file_server.seat_contract_items(seat_session_id),
+                             exploration_only=bool(b.get("exploration_only")))
         result["dry_run"] = dry_run
         if result.get("closed") and not dry_run:
             ok, ts = file_server.seat_session_close(seat_session_id, "close_gate")
@@ -652,6 +656,52 @@ def op_close_gate():
     except Exception as e:
         _ledger_finish(op_id, "fail", f"gate error: {str(e)[:160]}")
         return jsonify({"closed": False, "error": f"close_gate error: {str(e)[:200]}"}), 500
+
+
+# ── contract (RITUAL LOCKDOWN L6.5, 2026-09-16) ──────────────────────────────────
+# The seat's contract = the punch-list slice this session takes on, registered by the SEAT at the
+# moment the work is distilled (the operator never authors it), reconciled by close_gate CHECK 1.
+# Mirrors the engine's frozen contract: VERIFIABLE items need evidence (a commit sha in this session's
+# window or a ledger op_id); JUDGED items need the operator's ruling, recorded verbatim. Actions:
+#   set     {items:[{id?,title,kind,evidence_rule?}], project?}  -> rows (OPEN)
+#   resolve {item_id, status: DONE|CARRIED, evidence}            -> the join
+#   get     {}                                                   -> this session's items
+@box_ops_bp.route("/op/contract", methods=["POST"])
+def op_contract():
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    import file_server
+    ident = _authed_identity() or {}
+    sid = (ident.get("seat_session_id") if ident.get("authenticated") else None) or (b.get("seat_session_id") or "").strip() or None
+    action = (b.get("action") or "get").strip().lower()
+    op_id = _ledger_begin("contract", {"action": action, "seat_session_id": sid, "n_items": len(b.get("items") or [])})
+    if not sid or not file_server.seat_session_get(sid):
+        _ledger_finish(op_id, "fail", "no/unknown seat session")
+        return jsonify({"ok": False, "error": "a seat session is required (boot through bootstrap_gate and send your X-Seat-Key)"}), 400
+    try:
+        if action == "set":
+            items = [it for it in (b.get("items") or []) if isinstance(it, dict) and (it.get("title") or "").strip()]
+            if not items:
+                _ledger_finish(op_id, "fail", "no items"); return jsonify({"ok": False, "error": "items[] with titles required"}), 400
+            rows = file_server.seat_contract_set(sid, items, (b.get("project") or "").strip())
+            _ledger_finish(op_id, "ok", f"set {len(rows)} items: " + ", ".join(r["item_id"] for r in rows))
+            return jsonify({"ok": True, "seat_session_id": sid, "items": rows})
+        if action == "resolve":
+            iid = (b.get("item_id") or "").strip(); st = (b.get("status") or "").strip().upper(); ev = (b.get("evidence") or "").strip()
+            if st not in ("DONE", "CARRIED") or not iid:
+                _ledger_finish(op_id, "fail", "bad resolve"); return jsonify({"ok": False, "error": "item_id and status DONE|CARRIED required"}), 400
+            if st == "DONE" and not ev:
+                _ledger_finish(op_id, "fail", "DONE without evidence"); return jsonify({"ok": False, "error": "DONE requires evidence (commit sha / ledger op_id for VERIFIABLE; the operator's ruling for JUDGED)"}), 400
+            ok = file_server.seat_contract_resolve(sid, iid, st, ev)
+            _ledger_finish(op_id, "ok" if ok else "fail", f"{iid} -> {st} ({ev[:40]})")
+            return jsonify({"ok": ok, "item_id": iid, "status": st, "evidence": ev}), (200 if ok else 404)
+        items = file_server.seat_contract_items(sid)
+        _ledger_finish(op_id, "ok", f"get {len(items)} items")
+        return jsonify({"ok": True, "seat_session_id": sid, "items": items})
+    except Exception as e:
+        _ledger_finish(op_id, "fail", f"error {str(e)[:100]}")
+        return jsonify({"ok": False, "error": str(e)[:200]}), 500
 
 
 @box_ops_bp.route("/op/read_repo", methods=["POST"])

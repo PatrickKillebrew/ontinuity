@@ -1567,6 +1567,20 @@ def _ops_ledger_init():
         cols = [r[1] for r in c.execute("PRAGMA table_info(operations_ledger)")]
         if "seat_session_id" not in cols:
             c.execute("ALTER TABLE operations_ledger ADD COLUMN seat_session_id TEXT")
+        # RITUAL LOCKDOWN L6.5 (2026-09-16): the seat's CONTRACT — the punch-list slice a session takes on,
+        # registered at distillation, reconciled at close. Mirrors the engine's PRE_SESSION contract:
+        # VERIFIABLE items close on evidence (a commit sha / ledger op_id); JUDGED items close on the operator's ruling.
+        c.execute("""CREATE TABLE IF NOT EXISTS seat_contracts (
+            item_id         TEXT PRIMARY KEY,
+            seat_session_id TEXT NOT NULL,
+            project         TEXT,
+            title           TEXT NOT NULL,
+            kind            TEXT NOT NULL,
+            evidence_rule   TEXT,
+            status          TEXT NOT NULL DEFAULT 'OPEN',
+            evidence        TEXT,
+            set_at          TEXT NOT NULL,
+            resolved_at     TEXT )""")
         c.commit(); c.close()
     except Exception as e:
         print(f"ops_ledger init failed: {e}")
@@ -1585,6 +1599,35 @@ def seat_session_open(seat, role, lineage="", key_hash=""):
         return sid, ts
     except Exception as e:
         print(f"seat_session_open failed: {e}"); return None, None
+
+
+def seat_contract_set(seat_session_id, items, project=""):
+    """Register the session's contract slice. items: [{id?, title, kind, evidence_rule?}]. Returns the rows."""
+    import uuid as _uuid
+    ts = _ops_dt.now(_ops_tz.utc).isoformat(); out = []
+    c = _ops_sqlite.connect(_OPS_DB)
+    for it in items:
+        kind = (it.get("kind") or "JUDGED").upper()
+        if kind not in ("VERIFIABLE", "JUDGED"): kind = "JUDGED"
+        iid = (it.get("id") or "").strip() or ("C-" + _uuid.uuid4().hex[:8])
+        c.execute("INSERT OR REPLACE INTO seat_contracts (item_id,seat_session_id,project,title,kind,evidence_rule,status,set_at) VALUES (?,?,?,?,?,?,'OPEN',?)",
+                  (iid, seat_session_id, project or "", (it.get("title") or "").strip(), kind, (it.get("evidence_rule") or "").strip(), ts))
+        out.append({"item_id": iid, "title": (it.get("title") or "").strip(), "kind": kind, "evidence_rule": (it.get("evidence_rule") or "").strip(), "status": "OPEN"})
+    c.commit(); c.close(); return out
+
+
+def seat_contract_resolve(seat_session_id, item_id, status, evidence):
+    ts = _ops_dt.now(_ops_tz.utc).isoformat()
+    c = _ops_sqlite.connect(_OPS_DB)
+    cur = c.execute("UPDATE seat_contracts SET status=?, evidence=?, resolved_at=? WHERE item_id=? AND seat_session_id=?",
+                    (status, evidence or "", ts, item_id, seat_session_id))
+    c.commit(); n = cur.rowcount; c.close(); return n == 1
+
+
+def seat_contract_items(seat_session_id):
+    c = _ops_sqlite.connect(_OPS_DB); c.row_factory = _ops_sqlite.Row
+    rows = c.execute("SELECT * FROM seat_contracts WHERE seat_session_id=? ORDER BY set_at", (seat_session_id,)).fetchall(); c.close()
+    return [dict(r) for r in rows]
 
 
 def seat_session_set_key_hash(seat_session_id, key_hash):

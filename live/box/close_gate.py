@@ -92,17 +92,38 @@ def _fail(name, fact, msg): return {"name": name, "pass": False, "returned_fact"
 def _touched(commits, path): return [c["sha"][:7] for c in commits if path in c["files"]]
 
 # ---- the checks --------------------------------------------------------------
-def check_punch_list(commits):
+def check_punch_list(commits, contract_items=None):
+    """CHECK 1 — RECONCILIATION (L6.5). If the session registered a contract, every item must be DONE with
+    evidence that exists in this session's window (a commit sha, or a ledger op_id) or CARRIED with a note;
+    JUDGED items close on the operator's recorded ruling. The punch list itself must also have been committed."""
     name = "PUNCH-LIST"
     try: st, body = _gh_raw("live/PUNCH_LIST.md")
     except Exception as e:
         return _fail(name, f"PUNCH_LIST unreachable: {e}", "CLOSE NOT COMPLETE [CHECK 1 PUNCH-LIST]: could not read PUNCH_LIST.md to verify reconciliation.")
     m = re.search(r"Last resolved:\s*(\d{4}-\d{2}-\d{2})", body); last = m.group(1) if m else None
     hits = _touched(commits, "live/PUNCH_LIST.md")
-    fact = f"Last-resolved={last}; committed_this_session={hits or 'no'}"
+    items = contract_items or []
+    shas = {c["sha"][:7] for c in commits} | {c["sha"] for c in commits}
+    unmet = []
+    for it in items:
+        stt = (it.get("status") or "OPEN").upper(); ev = (it.get("evidence") or "").strip(); kind = (it.get("kind") or "JUDGED").upper()
+        if stt == "OPEN":
+            unmet.append(f"{it['item_id']} ({it['title'][:40]}): still OPEN")
+        elif stt == "CARRIED" and not ev:
+            unmet.append(f"{it['item_id']} ({it['title'][:40]}): CARRIED without a carry note")
+        elif stt == "DONE" and kind == "VERIFIABLE":
+            ok = any(tok in shas for tok in re.findall(r"\b[0-9a-f]{7,40}\b", ev)) or bool(re.search(r"\bop_id[:= ]\s*\d+", ev))
+            if not ok:
+                unmet.append(f"{it['item_id']} ({it['title'][:40]}): DONE but evidence '{ev[:30]}' is not a commit in this session's window or a ledger op_id")
+        elif stt == "DONE" and kind == "JUDGED" and not ev:
+            unmet.append(f"{it['item_id']} ({it['title'][:40]}): JUDGED item marked DONE without the operator's ruling")
+    fact = f"Last-resolved={last}; committed_this_session={hits or 'no'}; contract_items={len(items)}; unmet={len(unmet)}"
+    if unmet:
+        return _fail(name, fact, "CLOSE NOT COMPLETE [CHECK 1 PUNCH-LIST]: contract not reconciled — " + " | ".join(unmet))
     if not hits:
         return _fail(name, fact, "CLOSE NOT COMPLETE [CHECK 1 PUNCH-LIST]: PUNCH_LIST.md was not committed this session — punch list not reconciled this close.")
-    return _ok(name, fact)
+    return _ok(name, fact + ("" if items else " (no contract registered this session)"))
+
 
 def check_conversation(commits):
     name = "CONVERSATION"
@@ -245,10 +266,13 @@ def check_orient(seat_session_id, started_at):
     return _ok(name, fact)
 
 # ---- the gate ----------------------------------------------------------------
-def run_gate(seat, seat_session_id, started_at, diag_key, github_token, secret_values=()):
-    """Report ALL failing checks in one run. closed == every check passed."""
+def run_gate(seat, seat_session_id, started_at, diag_key, github_token, secret_values=(), contract_items=None, exploration_only=False):
+    """Report ALL failing checks in one run. closed == every check passed.
+    exploration_only (L6.5): an EXPLICIT declaration by the seat that this session did no corpus work. The gate
+    verifies it (zero commits in the window, no contract items) and then closes with the corpus-write checks
+    marked N/A; it never infers it, so a seat that forgot its record cannot get a free close."""
     INSTALL["github_token"] = github_token or ""
-    result = {"closed": False, "seat": seat, "seat_session_id": seat_session_id, "session_start": started_at, "checks": []}
+    result = {"closed": False, "seat": seat, "seat_session_id": seat_session_id, "session_start": started_at, "checks": [], "exploration_only": False}
     miss = [k for k, v in (("started_at", started_at), ("diag_key", diag_key), ("github_token", github_token),
                             ("engine_url", INSTALL["engine_url"]), ("corpus_repo", INSTALL["corpus_repo"]), ("db_path", INSTALL["db_path"])) if not v]
     if miss:
@@ -260,7 +284,16 @@ def run_gate(seat, seat_session_id, started_at, diag_key, github_token, secret_v
         result["checks"].append(_fail("PRECONDITION", f"commits API error: {e}", "CLOSE NOT COMPLETE [PRECONDITION]: could not list this session's commits."))
         INSTALL["github_token"] = ""; return result
     result["session_commits"] = [{"sha": c["sha"][:7], "files": c["files"]} for c in commits]
-    checks = [check_punch_list(commits), check_conversation(commits), check_queue_fold(commits), check_manual_currency(diag_key),
+    if exploration_only:
+        if commits or (contract_items or []):
+            result["checks"].append(_fail("EXPLORATION-ONLY", f"commits_in_window={len(commits)}; contract_items={len(contract_items or [])}",
+                                          "CLOSE NOT COMPLETE [EXPLORATION-ONLY]: this session committed work or registered a contract; close it properly, not as exploration."))
+            INSTALL["github_token"] = ""; return result
+        result["exploration_only"] = True
+        checks = [_ok("EXPLORATION-ONLY", "declared by the seat; verified: zero commits in the window, no contract items — corpus-write checks N/A"),
+                  check_manual_currency(diag_key), check_state_clean(diag_key)]
+        result["checks"] = checks; result["closed"] = all(c["pass"] for c in checks); INSTALL["github_token"] = ""; return result
+    checks = [check_punch_list(commits, contract_items), check_conversation(commits), check_queue_fold(commits), check_manual_currency(diag_key),
               check_contract_doc(commits), check_secrets(commits, secret_values), check_state_clean(diag_key), check_handoff(commits),
               check_orient(seat_session_id, started_at)]
     result["checks"] = checks; result["closed"] = all(c["pass"] for c in checks)
