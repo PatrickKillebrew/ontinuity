@@ -876,9 +876,18 @@ def op_bootstrap_gate():
         except Exception:
             install = {}
         gtoken = (b.get("github_token") or "").strip()
+        # CHECK 7 STAFFING: the gate probes every model role via the vault; the box already holds
+        # the Railway creds for its own deploy hand, so no new secret is introduced.
+        vc = None
+        try:
+            _c = file_server.load_config()
+            if all(_c.get(k) for k in ("railway_token", "railway_project_id", "railway_environment_id", "railway_service_id_main")):
+                vc = (_c["railway_token"], _c["railway_project_id"], _c["railway_environment_id"], _c["railway_service_id_main"])
+        except Exception:
+            vc = None
         result = gate.run_gate(seat, lineage, role=role, diag_key=diag_key,
                                seat_invariants=seat_invariants,
-                               github_token=gtoken, install=install)
+                               github_token=gtoken, install=install, vault_creds=vc)
 
         # KEY ISSUANCE-ON-PASS (stubbed). Structured so real per-identity keys
         # (CALLER-1 + the key build) drop in here without changing the response

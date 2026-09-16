@@ -181,6 +181,63 @@ def _live_allowlist(diag_key):
         return sorted(d.get("allowed") or [])
     return None
 
+
+
+# CHECK 7 STAFFING (2026-09-16, from the first Researcher-seat session on install two): every model role
+# the engine will call must answer a one-token completion BEFORE a contract is frozen. Found the hard way:
+# the Challenger (Cerebras llama-3.3-70b) and Projenius (Novita deepseek-v3-0324) had both been retired by
+# their providers; the engine ran, froze a contract, and could not certify because no review ever happened.
+ROLE_VARS = {
+    "model_a": ("MODEL_A_URL", "MODEL_A_MODEL", "MODEL_A_API_KEY"),
+    "model_b": ("MODEL_B_URL", "MODEL_B_MODEL", "MODEL_B_API_KEY"),
+    "model_c": ("MODEL_C_URL", "MODEL_C_MODEL", "MODEL_C_API_KEY"),
+    "parietal": ("PARIETAL_URL", "PARIETAL_MODEL", "PARIETAL_API_KEY"),
+    "projenius": ("PROJENIUS_URL", "PROJENIUS_MODEL", "PROJENIUS_API_KEY"),
+}
+
+def _vault_vars(railway_token, project_id, environment_id, service_id):
+    q = {"query": 'query { variables(projectId: "%s", environmentId: "%s", serviceId: "%s") }' % (project_id, environment_id, service_id)}
+    # Railway (behind Cloudflare) refuses python-urllib's default User-Agent with 403 (record 2026-09-14a).
+    st, body = _post("https://backboard.railway.app/graphql/v2", q, timeout=30,
+                     headers={"Project-Access-Token": railway_token, "Content-Type": "application/json", "User-Agent": "ontinuity-gate/1.0"})
+    return (json.loads(body).get("data") or {}).get("variables") or {}
+
+def _probe_role(url, model, key):
+    """One-token completion. Returns (alive, detail). Never raises."""
+    body = {"model": model, "messages": [{"role": "user", "content": "Reply with the single word OK."}], "max_tokens": 8, "temperature": 0}
+    try:
+        st, txt = _post(url, body, timeout=40, headers={"Authorization": "Bearer " + key, "Content-Type": "application/json", "User-Agent": "ontinuity-gate/1.0"})
+        return (st == 200), ("200" if st == 200 else "HTTP %s %s" % (st, txt[:80].replace("\n", " ")))
+    except urllib.error.HTTPError as e:
+        return False, "HTTP %s %s" % (e.code, e.read().decode("utf-8", "replace")[:80].replace("\n", " "))
+    except Exception as e:
+        return False, str(e)[:80]
+
+def check_staffing(vault=None):
+    name = "STAFFING"
+    v = vault or {}
+    if not v:
+        return _ok(name, "no vault access for a staffing probe (box config lacks railway_* keys); skipped")
+    configured = {r: (v.get(u, "").strip(), v.get(m, "").strip(), v.get(k, "").strip()) for r, (u, m, k) in ROLE_VARS.items()}
+    if not any(url for (url, _, _) in configured.values()):
+        return _ok(name, "no model roles configured on this install (v1 remembering seat; sessions cannot run here)")
+    facts, dead = [], []
+    for role, (url, model, key) in configured.items():
+        if not url:
+            facts.append("%s: unconfigured" % role); continue
+        if url.lower().startswith("external"):
+            facts.append("%s: external (a seat answers via the mailbox)" % role); continue
+        if not key:
+            facts.append("%s: %s (no key)" % (role, model)); dead.append(role); continue
+        ok, detail = _probe_role(url, model, key)
+        facts.append("%s: %s %s" % (role, model, "alive" if ok else "DEAD " + detail))
+        if not ok:
+            dead.append(role)
+    fact = "; ".join(facts)
+    if dead:
+        return _fail(name, fact, "NOT ORIENTED [CHECK 7 STAFFING]: dead model role(s) %s - a session would freeze a contract that can never be reviewed or distilled. Fix the provider/model string (railway_set_var) before starting." % dead)
+    return _ok(name, fact)
+
 # ---- the six checks --------------------------------------------------------
 def check_manual(diag_key=None):
     name = "MANUAL"
@@ -417,7 +474,7 @@ def check_mechanics(seat_invariants, role):
 
 # ---- the gate --------------------------------------------------------------
 def run_gate(seat, lineage, role="worker", diag_key=None,
-             seat_invariants=None, relay_identity=None, github_token=None, install=None):
+             seat_invariants=None, relay_identity=None, github_token=None, install=None, vault_creds=None):
     """Run the verified bootstrap gate. role in {control, worker}.
     The five STATE checks run for BOTH roles. CHECK 6 MECHANICS runs for
     control always, and for worker too (good practice; refinement). diag_key
@@ -448,6 +505,7 @@ def run_gate(seat, lineage, role="worker", diag_key=None,
         lambda: check_hands(diag_key, seat, relay_identity=relay_identity),
         lambda: check_engine(diag_key),
         lambda: check_mechanics(seat_invariants or {}, role),
+        lambda: check_staffing(_vault_vars(*vault_creds) if vault_creds else None),
     ]
     for step in steps:
         c = step()
