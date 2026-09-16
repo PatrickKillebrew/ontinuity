@@ -4182,7 +4182,7 @@ def diag_relay(endpoint):
 # /op/* allowlist (corpus: scoped-op folds, June 10). Adding a box op = add
 # its name here too. This is a name-gate, NOT a contract relaxation: the box
 # remains the authority on args/tier/ledger.
-OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "new_project", "railway_set_var", "backup_db"}  # seed_tenant: DEPRECATED/unimplemented (no box handler; superseded by new_project 2026-09-13)
+OP_ALLOWED = {"read_journal", "restart_workspace", "register_egress", "mailbox_send", "mailbox_fetch", "mailbox_ack", "mailbox_peek", "mailbox_reclaim", "mailbox_purge", "write_file", "commit_self", "read_file", "commit_file", "you_there", "read_repo", "bootstrap_gate", "deploy", "seed_tenant", "new_project", "railway_set_var", "backup_db", "describe", "orient", "close_gate"}  # ritual lockdown L1/L2/L5 (re-applied 2026-09-16 after the contract-fix merge reverted them)  # seed_tenant: DEPRECATED/unimplemented (no box handler; superseded by new_project 2026-09-13)
 
 @app.route('/diag/op/<name>', methods=['POST'])
 def diag_op_courier(name):
@@ -4213,9 +4213,14 @@ def diag_op_courier(name):
     #    exactly as _register_egress forwards to /register_egress. Return the
     #    box response verbatim so its status/body are not masked by the courier.
     try:
+        fwd_headers = {"X-Diag-Key": diag_key, "Content-Type": "application/json"}
+        # L4 (ritual lockdown): forward the seat's per-identity key unchanged; the box validates it.
+        seat_key = request.headers.get("X-Seat-Key", "")
+        if seat_key:
+            fwd_headers["X-Seat-Key"] = seat_key
         r = http_requests.post(
             f"{WORKSPACE_URL}/op/{name}",
-            headers={"X-Diag-Key": diag_key, "Content-Type": "application/json"},
+            headers=fwd_headers,
             json=body,
             timeout=25,
         )
