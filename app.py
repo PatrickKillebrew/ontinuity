@@ -2544,6 +2544,7 @@ def run_pre_session(objective, orient_context=""):
     if WORKSPACE_BRANCH:
         kwargs["branch"] = WORKSPACE_BRANCH
     response = call_parietal("PRE_SESSION", **kwargs)
+    active_session["_pre_session_raw"] = response or ""
     if not response:
         return objective, False, []
     if "READY:" in response.upper():
@@ -4727,7 +4728,7 @@ def _contract_ok(contract):
 
 def _refuse_start_no_contract(where, raw_reply=""):
     head = (raw_reply or "")[:240].replace("\n", " ")
-    msg = (f"START REFUSED: PRE_SESSION ({where}) produced {0 if not raw_reply else 'an unparseable'} contract "
+    msg = (f"START REFUSED: PRE_SESSION ({where}) did not yield a usable contract "
            f"(fewer than {CONTRACT_MIN_CRITERIA} criteria). The session was not started. Parietal reply head: {head!r}")
     socketio.emit('routing_action', {'type': 'error', 'message': msg})
     active_session["start_error"] = msg
