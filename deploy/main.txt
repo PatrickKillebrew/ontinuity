@@ -1,0 +1,3 @@
+# MAIN deploy marker — committing this file is the deploy (Railway watches /deploy/**).
+# target: 2be8b89 (main head at the time of this deploy)
+# 2026-09-16 DEPLOY: L6.5 receipt (/agent/handoff seat block) + contract op — reviewed by gpt-oss-120b (SIGN), merged 2be8b89 under the operator's standing directive.
