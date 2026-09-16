@@ -4048,6 +4048,18 @@ def agent_handoff():
         out["latest_receipts"] = _rows("SELECT receipt_id, session_id, outcome FROM write_receipts ORDER BY receipt_id DESC LIMIT 3")
     except Exception as e:
         out["corpus_error"] = str(e)[:160]
+    # L6.5 RECEIPT (2026-09-16): the seat-layer state the design door needs to resume or to show a user —
+    # open seat sessions, the last close, each open session's contract items (what was contracted, what
+    # happened, what is left), and the latest close_gate rows. Read-only, same guarded SELECT relay.
+    try:
+        seat = {}
+        seat["open_sessions"] = _rows("SELECT seat_session_id, seat, role, lineage, started_at FROM seat_sessions WHERE closed_at IS NULL ORDER BY started_at")
+        seat["last_closed"] = (_rows("SELECT seat_session_id, seat, lineage, started_at, closed_at, closed_reason FROM seat_sessions WHERE closed_at IS NOT NULL ORDER BY closed_at DESC LIMIT 1") or [None])[0]
+        seat["contract_items"] = _rows("SELECT c.seat_session_id, c.item_id, c.title, c.kind, c.status, c.evidence FROM seat_contracts c JOIN seat_sessions s ON s.seat_session_id=c.seat_session_id WHERE s.closed_at IS NULL ORDER BY c.set_at")
+        seat["latest_closes"] = _rows("SELECT op_id, caller, status, result, started_at FROM operations_ledger WHERE operation='close_gate' ORDER BY op_id DESC LIMIT 3")
+        out["seat"] = seat
+    except Exception as e:
+        out["seat"] = {"error": str(e)[:160]}
     try:
         out["external_mailbox"] = {"waiting": external_mailbox.get("waiting", False), "turn_id": external_mailbox.get("turn_id", 0), "cycle": external_mailbox.get("cycle", 0)}
     except Exception:
