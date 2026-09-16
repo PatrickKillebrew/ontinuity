@@ -26,7 +26,7 @@ from flask import Blueprint, request, jsonify
 box_ops_bp = Blueprint("box_ops", __name__)
 
 _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-GITHUB_REPO_DEFAULT = "PatrickKillebrew/ontinuity"
+GITHUB_REPO_DEFAULT = os.environ.get("CORPUS_REPO", "PatrickKillebrew/ontinuity").strip() or "PatrickKillebrew/ontinuity"  # per-install corpus repo; default = operator install
 GITHUB_BRANCH_DEFAULT = "main"
 
 # Files the box is allowed to commit of its OWN source (allowlist, not arbitrary).
@@ -52,7 +52,10 @@ def _authed_identity():
     {seat:'unattributed', authenticated:False} (back-compat)."""
     try:
         import file_server
-        presented = request.headers.get("X-Diag-Key", "") or request.args.get("diag_key", "")
+        # L4: identity comes from X-Seat-Key (forwarded by the courier); X-Diag-Key is the
+        # relay's own shared key and only ever resolves to 'unattributed'.
+        presented = (request.headers.get("X-Seat-Key", "") or request.headers.get("X-Diag-Key", "")
+                     or request.args.get("diag_key", ""))
         return file_server.authenticate_identity(presented)
     except Exception:
         return None
@@ -86,10 +89,27 @@ def _caller_seat(default="diag-key"):
     except Exception:
         return default
 
+def _current_seat_session_id():
+    """The seat session this call belongs to: from the per-identity key (L4, authoritative),
+    else the body-supplied `seat_session_id` (shared-key mode, self-asserted)."""
+    try:
+        ident = _authed_identity()
+        if ident and ident.get("authenticated") and ident.get("seat_session_id"):
+            return ident["seat_session_id"]
+        b = request.get_json(silent=True) or {}
+        return (b.get("seat_session_id") or "").strip() or None
+    except Exception:
+        return None
+
+
 def _ledger_begin(op, args):
     try:
         import file_server
         # caller = self-asserted seat (trusted-not-authenticated; see _caller_seat)
+        return file_server._ops_begin(op, "REVIEW", _caller_seat(), request.remote_addr, args,
+                                      seat_session_id=_current_seat_session_id())
+    except TypeError:
+        import file_server
         return file_server._ops_begin(op, "REVIEW", _caller_seat(), request.remote_addr, args)
     except Exception:
         return None
@@ -262,11 +282,18 @@ def op_commit_file():
     branch = (b.get("branch") or GITHUB_BRANCH_DEFAULT).strip()
     # repo path defaults to the same relative path the file has on the box
     path_in_repo = (b.get("repo_path") or name).strip().lstrip("/")
-    message = (b.get("message") or f"commit_file: {path_in_repo}").strip()
-    op_id = _ledger_begin("commit_file", {"path": name, "repo_path": path_in_repo, "repo": repo})
+    # L6 (RITUAL LOCKDOWN): message is REQUIRED — a commit is a record; no default text.
+    message = (b.get("message") or "").strip()
+    if not message:
+        return jsonify({"error": "message required (a commit is a record; say what it is)"}), 400
+    dry_run = bool(b.get("dry_run"))
+    op_id = _ledger_begin("commit_file", {"path": name, "repo_path": path_in_repo, "repo": repo, "dry_run": dry_run})
     try:
-        with open(full, "r", encoding="utf-8") as f:
-            content = f.read()
+        with open(full, "rb") as f:
+            raw_bytes = f.read()
+        # L6: git blob sha of the BOX bytes, computed locally — lets us know "unchanged" without downloading.
+        import hashlib as _hl
+        local_blob_sha = _hl.sha1(b"blob %d\0" % len(raw_bytes) + raw_bytes).hexdigest()
         url = f"https://api.github.com/repos/{repo}/contents/{path_in_repo}"
         sha = None
         try:
@@ -276,8 +303,19 @@ def op_commit_file():
                 sha = json.loads(r.read()).get("sha")
         except Exception:
             pass
+        unchanged = (sha is not None and sha == local_blob_sha)
+        if dry_run:
+            _ledger_finish(op_id, "ok", f"dry_run {path_in_repo} {'unchanged' if unchanged else ('update' if sha else 'create')}")
+            return jsonify({"ok": True, "dry_run": True, "repo_path": path_in_repo, "exists_in_repo": sha is not None,
+                            "would": "nothing (unchanged)" if unchanged else ("update" if sha else "create"),
+                            "bytes": len(raw_bytes), "box_blob_sha": local_blob_sha, "repo_blob_sha": sha})
+        if unchanged:
+            # L6: no empty commits (the f86c20d class). Same bytes already at ref -> no-op, logged.
+            _ledger_finish(op_id, "ok", f"unchanged {path_in_repo} {sha[:12]}")
+            return jsonify({"ok": True, "unchanged": True, "repo_path": path_in_repo, "blob_sha": sha,
+                            "note": "box bytes identical to the repo at ref; no commit made"})
         body = {"message": message,
-                "content": base64.b64encode(content.encode("utf-8")).decode("ascii"),
+                "content": base64.b64encode(raw_bytes).decode("ascii"),
                 "branch": branch}
         if sha:
             body["sha"] = sha
@@ -354,6 +392,266 @@ def op_backup_db():
             pass
         _ledger_finish(op_id, "fail", str(e)[:200])
         return jsonify({"error": str(e)[:200]}), 500
+
+
+# ── OP SCHEMAS + describe (RITUAL LOCKDOWN step 1, 2026-09-15) ───────────────────
+# The op IS the manual for op bodies. required/optional come from each route's own
+# validation; tier per OPERATING_MANUAL. A route present on the box but absent here is
+# reported as "undocumented" so drift is visible, not silent.
+OP_SCHEMAS = {
+    "read_file":        {"required": ["path"], "optional": [], "tier": "SAFE",
+                         "desc": "Read a file inside the box project dir (path traversal rejected)."},
+    "write_file":       {"required": ["path", "content"], "optional": ["description"], "tier": "REVIEW",
+                         "desc": "Bounded write to a file inside the box project dir. Repo-commit != box-install: this is the box half."},
+    "read_repo":        {"required": ["path"], "optional": ["repo", "ref", "branch", "github_token"], "tier": "SAFE",
+                         "desc": "Read any repo file. Tokenless path = raw CDN then unauth API (public repos only); pass github_token for the authoritative read or a private repo. repo defaults to CORPUS_REPO."},
+    "commit_file":      {"required": ["path", "github_token", "message"], "optional": ["repo_path", "repo", "branch", "dry_run"], "tier": "REVIEW",
+                         "desc": "Commit a file that EXISTS ON THE BOX to the repo (write_file first). repo_path defaults to the box path. message REQUIRED. Identical bytes at ref -> no commit ({unchanged:true}); dry_run:true reports create/update/unchanged and commits nothing. Token passed per call, never stored."},
+    "commit_self":      {"required": ["github_token"], "optional": ["files", "repo", "branch", "repo_dir"], "tier": "REVIEW",
+                         "desc": "Commit the box's own allowlisted source files (file_server/seat_mailbox/box_ops...) so the repo matches the box."},
+    "backup_db":        {"required": [], "optional": ["out"], "tier": "SAFE",
+                         "desc": "Consistent sqlite .backup of ontinuity.db plus a .sql dump."},
+    "bootstrap_gate":   {"required": ["seat"], "optional": ["role", "lineage", "seat_invariants", "github_token", "takeover"], "tier": "SAFE",
+                         "desc": "Verified boot: six checks -> {oriented, checks[], seat_session{seat_session_id,started_at}}. Booted == oriented:true from this op. Pass github_token on a private corpus (manual/queue reads). Opens a seat_sessions row on pass (L3). L7: role=control is refused (409) while another control session is open on this install unless takeover:true, which closes the stale row as 'takeover by <seat>/<lineage>' and revokes its key; config contention_mode='warn' reports instead of refusing."},
+    "deploy":           {"required": ["target", "signoff_block_id"], "optional": ["block_id", "commit_sha", "dry_run"], "tier": "RISK",
+                         "desc": "Two-party deploy: proposal + signoff rows from DISTINCT seats on the same block_id. dry_run:true runs the full gate with no side effect. See live/specs/signoff_deploychain.md."},
+    "new_project":      {"required": ["name"], "optional": ["description", "branch", "user_id"], "tier": "REVIEW",
+                         "desc": "Create a per-project matter: projects+branch rows + per-project Knowtext/ERL files keyed on name-slug. Idempotent."},
+    "railway_set_var":  {"required": ["name", "value"], "optional": ["project_id", "environment_id", "service_id", "resolved_cause"], "tier": "REVIEW",
+                         "desc": "The first WRAPPED op: box constructs the Railway variableUpsert call; seat supplies only {name,value}. Self-counts failures; refuses after 3 until resolved_cause is given."},
+    "read_journal":     {"required": [], "optional": ["lines"], "tier": "SAFE",
+                         "desc": "Tail the ontinuity-workspace unit's journal."},
+    "restart_workspace":{"required": [], "optional": [], "tier": "REVIEW",
+                         "desc": "systemctl restart ontinuity-workspace (the box-install half of a box code change)."},
+    "restart_burnin":   {"required": [], "optional": [], "tier": "REVIEW", "desc": "Restart the burn-in resident."},
+    "mailbox_send":     {"required": ["from_seat", "to_seat", "body"], "optional": ["kind", "block_id", "reply_to", "corr_id", "ref", "citations", "confidence", "depends_on", "from_lineage", "author_seat", "author_lineage"], "tier": "REVIEW",
+                         "desc": "Post to the seat mailbox (task distribution + the two-party signoff chain). Proposals go to any_worker, never a named seat."},
+    "mailbox_fetch":    {"required": ["seat"], "optional": ["kinds", "roles", "block_id", "reply_to", "newest", "lineage"], "tier": "REVIEW",
+                         "desc": "Atomic claim with lease. reply_to=<task_msg_id> claims that result; newest=true drains newest-first. ACK immediately after."},
+    "mailbox_ack":      {"required": ["msg_id"], "optional": ["seat", "reply", "ref", "lineage", "from_lineage"], "tier": "REVIEW",
+                         "desc": "Mark a claimed message done. Never leave a dangling claim."},
+    "mailbox_peek":     {"required": [], "optional": ["seat", "from_seat", "block_id", "status", "limit"], "tier": "SAFE",
+                         "desc": "Read-only view, newest-first (default limit 20, max 100). Never marks done."},
+    "mailbox_purge":    {"required": ["seat"], "optional": ["kinds", "older_than_secs", "all"], "tier": "REVIEW",
+                         "desc": "Bulk-clear result/note backlog for a seat."},
+    "mailbox_reclaim":  {"required": ["seat"], "optional": ["all", "lineage"], "tier": "REVIEW",
+                         "desc": "Release expired/orphaned claims."},
+    "you_there":        {"required": ["seat"], "optional": ["kinds", "roles", "block_id", "wait_seconds", "lineage"], "tier": "REVIEW",
+                         "desc": "Nudge: a worker self-drains its whole turn on one call. Keep wait_seconds <= 20 (relay read-timeout 25)."},
+    "orient":           {"required": ["topic"], "optional": ["seat", "repo", "ref", "github_token", "max_hits"], "tier": "SAFE",
+                         "desc": "The OPEN ritual as a ledger fact: searches the queue folds (agent_queue.md) and every live/conversations/*.md for the topic; returns hits {file,line,fold,excerpt} or count 0; logs {topic,count}. Run before reasoning about a task. Pass github_token: the conversations directory listing needs the contents API (raw CDN cannot list), and unauthenticated API calls rate-limit."},
+    "close_gate":       {"required": ["github_token"], "optional": ["seat", "seat_session_id", "dry_run"], "tier": "REVIEW",
+                         "desc": "The CLOSE ritual as a ledger fact: nine checks reported all at once (punch list, record citing a commit, fold with one NEXT, manual==live, contract docs derived from the commit list, secrets, state clean, handoff, orient row), window = the seat_sessions row from bootstrap_gate. closed:true closes the session and revokes its key; dry_run:true only reports."},
+    "_common":          {"required": [], "optional": ["seat", "seat_session_id"], "tier": "n/a",
+                         "desc": "Every op: header X-Seat-Key (the per-identity key bootstrap_gate issued) makes the ledger caller AUTHENTICATED and joins the row to its seat session automatically; unknown/revoked keys are refused and the refusal is logged. Without the header: body seat is a self-asserted label and seat_session_id must be passed by hand."},
+    "describe":         {"required": [], "optional": ["op", "allowlist"], "tier": "SAFE",
+                         "desc": "This op. Returns every /op route on the box with its schema; routes without a schema are 'undocumented'; pass the courier allowlist to get the allowed-but-absent / present-but-not-allowed diff."},
+}
+
+
+@box_ops_bp.route("/op/describe", methods=["POST"])
+def op_describe():
+    """RITUAL LOCKDOWN step 1: the op is the manual for op bodies. Introspects the
+    live Flask url_map so a new route without a schema shows up as undocumented
+    (drift made visible). Logs to the ledger like every other op."""
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    from flask import current_app
+    present = sorted({r.rule[len("/op/"):] for r in current_app.url_map.iter_rules()
+                      if r.rule.startswith("/op/") and "POST" in (r.methods or set())})
+    want = (b.get("op") or "").strip()
+    op_id = _ledger_begin("describe", {"op": want or "*", "allowlist_given": bool(b.get("allowlist"))})
+    out = {"ok": True, "box_routes": present, "ops": {}, "undocumented": [], "schema_only": []}
+    for name in present:
+        if name in OP_SCHEMAS:
+            out["ops"][name] = dict(OP_SCHEMAS[name], present_on_box=True)
+        else:
+            out["undocumented"].append(name)
+    out["schema_only"] = sorted(n for n in OP_SCHEMAS if n not in present and not n.startswith("_"))
+    out["common_fields"] = OP_SCHEMAS.get("_common")
+    if want:
+        out = {"ok": want in OP_SCHEMAS or want in present, "op": want,
+               "schema": OP_SCHEMAS.get(want), "present_on_box": want in present}
+        if not out["ok"]:
+            out["error"] = "unknown op"
+    al = b.get("allowlist")
+    if isinstance(al, list):
+        al = sorted(str(x) for x in al)
+        out["allowlist_diff"] = {"allowed_but_absent_on_box": sorted(set(al) - set(present)),
+                                 "present_on_box_but_not_allowed": sorted(set(present) - set(al))}
+    if want and not out["ok"]:
+        _ledger_finish(op_id, "fail", f"unknown op {want}")
+        return jsonify(out), 404
+    _ledger_finish(op_id, "ok", f"routes={len(present)} undocumented={len(out.get('undocumented', []))}")
+    return jsonify(out)
+
+
+# ── orient (RITUAL LOCKDOWN step 2, 2026-09-15) ────────────────────────────────
+# The per-task OPEN ritual (manual: "search the queue folds for the topic; read the
+# relevant conversation records; follow refs") had no primitive, so it was a self-report.
+# This op does the search box-side and logs it. Fetch path = read_repo's (token per call
+# on a private corpus; raw-CDN/unauth API on a public one). No token is stored.
+
+def _repo_fetch_text(repo, path, ref, token):
+    """read_repo's source order, as a helper: api(auth) if token -> raw cachebust -> api(unauth)."""
+    attempts = []
+    def _api(tok):
+        url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
+        hdrs = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+        if tok: hdrs["Authorization"] = f"Bearer {tok}"
+        with urllib.request.urlopen(urllib.request.Request(url, headers=hdrs), timeout=30) as r:
+            data = json.loads(r.read().decode())
+        if isinstance(data, list):
+            return data  # directory listing
+        return base64.b64decode(data["content"]).decode("utf-8", "replace")
+    def _raw():
+        import time as _t
+        url = f"https://raw.githubusercontent.com/{repo}/{ref}/{path}?cb={int(_t.time())}"
+        with urllib.request.urlopen(urllib.request.Request(url), timeout=30) as r:
+            return r.read().decode("utf-8", "replace")
+    if token:
+        try: return _api(token), "github_api_authenticated"
+        except Exception as e: attempts.append(f"api(auth): {str(e)[:60]}")
+    try: return _raw(), "raw_cdn_cachebust"
+    except Exception as e: attempts.append(f"raw: {str(e)[:60]}")
+    try: return _api(""), "github_api_unauthenticated"
+    except Exception as e: attempts.append(f"api(unauth): {str(e)[:60]}")
+    raise RuntimeError("; ".join(attempts))
+
+
+def _repo_list_dir(repo, path, ref, token):
+    """Directory listing via the contents API (the only listing path; raw CDN cannot list)."""
+    url = f"https://api.github.com/repos/{repo}/contents/{path}?ref={ref}"
+    hdrs = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+    if token: hdrs["Authorization"] = f"Bearer {token}"
+    with urllib.request.urlopen(urllib.request.Request(url, headers=hdrs), timeout=30) as r:
+        data = json.loads(r.read().decode())
+    return [d["path"] for d in data if d.get("type") == "file" and d["name"].endswith(".md")]
+
+
+@box_ops_bp.route("/op/orient", methods=["POST"])
+def op_orient():
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    topic = (b.get("topic") or "").strip()
+    if not topic:
+        return jsonify({"error": "topic required"}), 400
+    repo = (b.get("repo") or GITHUB_REPO_DEFAULT).strip()
+    ref = (b.get("ref") or b.get("branch") or GITHUB_BRANCH_DEFAULT).strip()
+    token = (b.get("github_token") or "").strip()
+    try: max_hits = max(1, min(int(b.get("max_hits") or 40), 200))
+    except Exception: max_hits = 40
+    op_id = _ledger_begin("orient", {"topic": topic[:120], "repo": repo, "ref": ref, "auth": bool(token)})
+
+    import re as _re
+    phrase = topic.lower()
+    tokens = [t for t in _re.findall(r"[a-z0-9_\-]{3,}", phrase)]
+    def _match(line):
+        l = line.lower()
+        if phrase in l: return "phrase"
+        if tokens and all(t in l for t in tokens): return "all-tokens"
+        return None
+
+    hits, files_searched, sources, errors = [], [], {}, []
+    # 1) the queue folds
+    try:
+        q, src = _repo_fetch_text(repo, "live/agent_queue.md", ref, token)
+        sources["live/agent_queue.md"] = src; files_searched.append("live/agent_queue.md")
+        fold = None
+        for i, line in enumerate(q.splitlines(), 1):
+            if line.startswith("## CURRENT-STATE TOUCH POINT"): fold = line[3:].strip()[:100]
+            m = _match(line)
+            if m:
+                hits.append({"file": "live/agent_queue.md", "line": i, "fold": fold, "match": m, "excerpt": line.strip()[:220]})
+    except Exception as e:
+        errors.append(f"agent_queue: {str(e)[:100]}")
+    # 2) every conversation record
+    try:
+        for p in _repo_list_dir(repo, "live/conversations", ref, token):
+            try:
+                txt, src = _repo_fetch_text(repo, p, ref, token)
+                sources[p] = src; files_searched.append(p)
+                for i, line in enumerate(txt.splitlines(), 1):
+                    m = _match(line)
+                    if m:
+                        hits.append({"file": p, "line": i, "fold": None, "match": m, "excerpt": line.strip()[:220]})
+            except Exception as e:
+                errors.append(f"{p}: {str(e)[:60]}")
+    except Exception as e:
+        errors.append(f"conversations listing: {str(e)[:100]}")
+
+    truncated = len(hits) > max_hits
+    out = {"ok": True, "topic": topic, "repo": repo, "ref": ref, "count": len(hits),
+           "hits": hits[:max_hits], "truncated": truncated,
+           "files_searched": len(files_searched), "errors": errors, "sources": sources}
+    status = "ok" if not errors or hits else ("ok" if files_searched else "fail")
+    _ledger_finish(op_id, status, f"topic={topic[:60]} hits={len(hits)} files={len(files_searched)} errors={len(errors)}")
+    return jsonify(out), (200 if status == "ok" else 502)
+
+
+# ── close_gate (RITUAL LOCKDOWN L5, 2026-09-15) ─────────────────────────────────
+# The CLOSE ritual as a box op: nine checks (the June spec's eight + ORIENT), reported ALL at
+# once, the session window taken from the seat_sessions row (L3) instead of a seat-typed date.
+# On closed:true the seat session is closed and its per-identity key revoked (L4). The gate's own
+# run is a ledger row. Runnable: close_gate.py beside this file (lineage: staging/close_gate.py).
+_close_gate_mod = None
+
+def _load_close_gate():
+    global _close_gate_mod
+    if _close_gate_mod is None:
+        path = os.path.join(_BASE_DIR, "close_gate.py")
+        spec = _ilu.spec_from_file_location("ontinuity_close_gate", path)
+        mod = _ilu.module_from_spec(spec); spec.loader.exec_module(mod); _close_gate_mod = mod
+    return _close_gate_mod
+
+
+@box_ops_bp.route("/op/close_gate", methods=["POST"])
+def op_close_gate():
+    if not _diag_ok():
+        return jsonify({"error": "unauthorized"}), 401
+    b = request.get_json(silent=True) or {}
+    import file_server
+    ident = _authed_identity() or {}
+    seat_session_id = (ident.get("seat_session_id") if ident.get("authenticated") else None) or (b.get("seat_session_id") or "").strip() or None
+    seat = (ident.get("seat") if ident.get("authenticated") else None) or (b.get("seat") or "").strip() or "control"
+    dry_run = bool(b.get("dry_run"))
+    gtoken = (b.get("github_token") or "").strip()
+    op_id = _ledger_begin("close_gate", {"seat": seat, "seat_session_id": seat_session_id, "dry_run": dry_run, "auth": bool(gtoken)})
+    if not seat_session_id:
+        _ledger_finish(op_id, "fail", "no seat session")
+        return jsonify({"closed": False, "error": "seat_session_id required (from your X-Seat-Key, or pass it) — the session window is not inferred"}), 400
+    row = file_server.seat_session_get(seat_session_id)
+    if not row:
+        _ledger_finish(op_id, "fail", "unknown seat session")
+        return jsonify({"closed": False, "error": "unknown seat_session_id"}), 404
+    if row.get("closed_at"):
+        _ledger_finish(op_id, "fail", "session already closed")
+        return jsonify({"closed": False, "error": "seat session already closed", "closed_at": row["closed_at"]}), 409
+    try:
+        cg = _load_close_gate()
+        cfg = file_server.load_config(); proj = (cfg.get("projects") or [{}])[0]
+        cg.configure(engine_url=(cfg.get("engine_url") or "").strip() or None,
+                     farm_url=(cfg.get("farm_url") or "").strip(),
+                     corpus_repo=(proj.get("github_repo") or os.environ.get("CORPUS_REPO") or "").strip() or None,
+                     db_path=os.environ.get("ONTINUITY_DB_PATH", os.path.join(_BASE_DIR, "ontinuity.db")))
+        diag_key = cfg.get("diag_key", "") or os.environ.get("DIAG_KEY", "")
+        secret_values = [v for v in (diag_key, cfg.get("api_key", ""), cfg.get("railway_token", "")) if v]
+        result = cg.run_gate(seat, seat_session_id, row["started_at"], diag_key, gtoken, secret_values)
+        result["dry_run"] = dry_run
+        if result.get("closed") and not dry_run:
+            ok, ts = file_server.seat_session_close(seat_session_id, "close_gate")
+            n = file_server.revoke_seat_keys_for_session(seat_session_id, "close_gate")
+            result["session_closed"] = {"closed_at": ts, "keys_revoked": n}
+        result["ledger_row_id"] = op_id
+        failed = [c["name"] for c in result.get("checks", []) if not c.get("pass")]
+        _ledger_finish(op_id, "ok" if result.get("closed") else "fail",
+                       (f"CLOSED session={seat_session_id[:8]} dry_run={dry_run}" if result.get("closed") else f"NOT COMPLETE failed={failed}"))
+        return jsonify(result)
+    except Exception as e:
+        _ledger_finish(op_id, "fail", f"gate error: {str(e)[:160]}")
+        return jsonify({"closed": False, "error": f"close_gate error: {str(e)[:200]}"}), 500
 
 
 @box_ops_bp.route("/op/read_repo", methods=["POST"])
@@ -512,7 +810,37 @@ def op_bootstrap_gate():
     lineage = (b.get("lineage") or "").strip()
     seat_invariants = b.get("seat_invariants") or {}
     canonical = b.get("canonical_op_count")
-    op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role})
+    op_id = _ledger_begin("bootstrap_gate", {"seat": seat, "role": role, "takeover": bool(b.get("takeover"))})
+    # ── L7 (RITUAL LOCKDOWN): one CONTROL seat per install, made mechanical. Workers are
+    # many-seats by design and are never gated here. If a control seat_sessions row is
+    # still open, a second control boot is refused with the open session named, unless
+    # the caller passes takeover:true — which closes the stale row with reason 'takeover
+    # by <seat>/<lineage>' (a ledger fact) and proceeds. config contention_mode='warn'
+    # turns the refusal into a warning field on the result (operator's choice).
+    if role == "control":
+        try:
+            import file_server
+            open_rows = file_server.seat_sessions_open(role="control")
+        except Exception:
+            open_rows = []
+        if open_rows:
+            mode = (file_server.load_config().get("contention_mode") or "refuse").strip().lower()
+            summary = [{"seat_session_id": r["seat_session_id"], "seat": r["seat"], "lineage": r.get("lineage"),
+                        "started_at": r["started_at"]} for r in open_rows]
+            if b.get("takeover"):
+                closed = []
+                for r in open_rows:
+                    ok, ts = file_server.seat_session_close(r["seat_session_id"], f"takeover by {seat}/{lineage or 'unknown-lineage'}")
+                    try: file_server.revoke_seat_keys_for_session(r["seat_session_id"], "takeover")
+                    except Exception: pass
+                    if ok: closed.append(r["seat_session_id"])
+                b["_takeover_closed"] = closed
+            elif mode != "warn":
+                _ledger_finish(op_id, "fail", f"contention: open control session(s) {[x['seat_session_id'][:8] for x in summary]}")
+                return jsonify({"oriented": False, "contention": True, "open_control_sessions": summary,
+                                "error": "another control seat session is open on this install; pass takeover:true (with your lineage) to close it and proceed, or wait for it to close"}), 409
+            else:
+                b["_contention_warning"] = summary
     try:
         gate = _load_gate()
         # CHECK-1 canonical count is governed by the gate module's own constant.
@@ -527,21 +855,73 @@ def op_bootstrap_gate():
             diag_key = file_server.load_config().get("diag_key", "") or os.environ.get("DIAG_KEY", "")
         except Exception:
             diag_key = os.environ.get("DIAG_KEY", "")
+        # PORTABLE-1 (L3a): the gate takes THIS install's values from the box config
+        # (written by box_boot from env), never hardcoded; a private corpus needs the
+        # caller's token for the manual/queue reads — passed per call, never stored.
+        # RULE: an install value ABSENT from this box's config means "this install has none",
+        # never "fall back to the operator's" — the gate's module defaults exist only for the
+        # operator box until L9. So every field is passed explicitly here.
+        install = {}
+        try:
+            cfg = file_server.load_config()
+            proj = (cfg.get("projects") or [{}])[0]
+            install = {"engine_url": (cfg.get("engine_url") or "").strip() or None,   # None -> gate default (operator engine) ONLY if unset
+                       "farm_url": (cfg.get("farm_url") or "").strip(),                # "" -> no FARM on this install
+                       "corpus_repo": (proj.get("github_repo") or os.environ.get("CORPUS_REPO") or "").strip() or None,
+                       "session_floor": int(cfg.get("corpus_session_floor") or 0)}
+            if install["engine_url"] is None:
+                install.pop("engine_url")
+            if install["corpus_repo"] is None:
+                install.pop("corpus_repo")
+        except Exception:
+            install = {}
+        gtoken = (b.get("github_token") or "").strip()
+        # CHECK 7 STAFFING: the gate probes every model role via the vault; the box already holds
+        # the Railway creds for its own deploy hand, so no new secret is introduced.
+        vc = None
+        try:
+            _c = file_server.load_config()
+            if all(_c.get(k) for k in ("railway_token", "railway_project_id", "railway_environment_id", "railway_service_id_main")):
+                vc = (_c["railway_token"], _c["railway_project_id"], _c["railway_environment_id"], _c["railway_service_id_main"])
+        except Exception:
+            vc = None
         result = gate.run_gate(seat, lineage, role=role, diag_key=diag_key,
-                               seat_invariants=seat_invariants)
+                               seat_invariants=seat_invariants,
+                               github_token=gtoken, install=install, vault_creds=vc)
 
         # KEY ISSUANCE-ON-PASS (stubbed). Structured so real per-identity keys
         # (CALLER-1 + the key build) drop in here without changing the response
         # shape: oriented seats get an `issued_key` bound to {seat, lineage};
         # today that key IS the shared DIAG_KEY (so nothing changes operationally),
         # but the field + binding exist so callers can start reading it now.
+        if b.get("_takeover_closed") is not None:
+            result["takeover"] = {"closed_sessions": b["_takeover_closed"]}
+        if b.get("_contention_warning"):
+            result["contention_warning"] = b["_contention_warning"]
         if result.get("oriented"):
-            result["key_issuance"] = {
-                "issued": True,
-                "bound_to": {"seat": seat, "lineage": lineage},
-                "key_kind": "shared_diag_key_stub",   # -> 'per_identity' when the key build lands
-                "note": "stubbed to shared DIAG_KEY until per-identity key issuance ships",
-            }
+            # L3: the seat session as a ledger fact. Opened ONLY on oriented:true.
+            try:
+                sid, ts = file_server.seat_session_open(seat, role, lineage)
+            except Exception:
+                sid, ts = None, None
+            result["seat_session"] = {"seat_session_id": sid, "started_at": ts,
+                                      "note": "pass seat_session_id on every later op until per-identity keys (L4) derive it from the key"}
+            # L4: REAL per-identity key, bound to {seat, lineage, seat_session_id}. The box keeps
+            # only its hash (registry + seat_sessions.key_hash); the plaintext is returned ONCE.
+            try:
+                plaintext = secrets.token_urlsafe(32)
+                kh = file_server.register_seat_key(plaintext, seat, lineage, "active",
+                                                   seat_session_id=sid, issued_at=ts, role=role)
+                if sid: file_server.seat_session_set_key_hash(sid, kh)
+                result["key_issuance"] = {
+                    "issued": True, "key_kind": "per_identity", "key": plaintext,
+                    "key_hash_prefix": kh[:12],
+                    "bound_to": {"seat": seat, "lineage": lineage, "seat_session_id": sid},
+                    "use": "send as header X-Seat-Key on every later op (the courier forwards it); "
+                           "it is never stored on the box; close_gate revokes it",
+                }
+            except Exception as e:
+                result["key_issuance"] = {"issued": False, "reason": f"issuance error: {str(e)[:120]}"}
         else:
             result["key_issuance"] = {"issued": False,
                                       "reason": "gate not passed — no key issued"}
@@ -549,7 +929,7 @@ def op_bootstrap_gate():
         status = "ok" if result.get("oriented") else "fail"
         # summarize the failing check (if any) for the ledger
         failed = next((c for c in result.get("checks", []) if not c.get("pass")), None)
-        detail = (f"oriented seat={seat} role={role}" if result.get("oriented")
+        detail = (f"oriented seat={seat} role={role} seat_session={(result.get('seat_session') or {}).get('seat_session_id')} key_hash={(result.get('key_issuance') or {}).get('key_hash_prefix')}" if result.get("oriented")
                   else f"NOT ORIENTED seat={seat} role={role} at "
                        f"{failed.get('name') if failed else '?'}")
         _ledger_finish(op_id, status, detail[:200])

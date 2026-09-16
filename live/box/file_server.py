@@ -1459,9 +1459,12 @@ def authenticate_identity(presented_key):
     if match is not None:
         if match.get("status", "active") != "active":
             return {"seat": match.get("seat"), "lineage": match.get("lineage"),
-                    "status": match.get("status"), "authenticated": False, "mode": "revoked"}
+                    "status": match.get("status"), "authenticated": False, "mode": "revoked",
+                    "seat_session_id": match.get("seat_session_id"), "key_hash": h}
         return {"seat": match.get("seat"), "lineage": match.get("lineage"),
-                "status": "active", "authenticated": True, "mode": "per_identity"}
+                "status": "active", "authenticated": True, "mode": "per_identity",
+                "seat_session_id": match.get("seat_session_id"), "key_hash": h,
+                "role": match.get("role")}
     # shared-key back-compat
     try:
         dk = load_config().get("diag_key", "") or os.environ.get("DIAG_KEY", "")
@@ -1472,11 +1475,62 @@ def authenticate_identity(presented_key):
                 "status": "active", "authenticated": False, "mode": "shared"}
     return None
 
-def register_seat_key(plaintext_key, seat, lineage, status="active"):
-    """Issuance helper (called by the vault / bootstrap-gate issuance-on-pass).
-    Stores ONLY the hash. Returns the hash. Never logs the plaintext."""
+def revoke_seat_key(key_hash, reason="close_gate"):
+    """Mark a key revoked (never deleted — the registry is an audit trail). True if changed."""
     reg = _kr_load()
-    reg[_kr_hash(plaintext_key)] = {"seat": seat, "lineage": lineage, "status": status}
+    ent = reg.get(key_hash)
+    if not ent or ent.get("status") == "revoked":
+        return False
+    ent["status"] = "revoked"; ent["revoked_at"] = datetime.now(timezone.utc).isoformat(); ent["revoked_reason"] = reason
+    os.makedirs(os.path.dirname(_SEAT_KEYS_PATH), exist_ok=True)
+    tmp = _SEAT_KEYS_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(reg, f, indent=2)
+    os.replace(tmp, _SEAT_KEYS_PATH)
+    return True
+
+
+def revoke_seat_keys_for_session(seat_session_id, reason="close_gate"):
+    reg = _kr_load(); n = 0
+    for h, ent in list(reg.items()):
+        if ent.get("seat_session_id") == seat_session_id and ent.get("status") != "revoked":
+            if revoke_seat_key(h, reason): n += 1
+    return n
+
+
+@app.before_request
+def _seat_key_gate():
+    """L4: a caller presenting X-Seat-Key on an /op/ route must hold an ACTIVE per-identity
+    key. Unknown or revoked keys are refused with a named reason, and the refusal is
+    itself a ledger row (auditable). No header -> shared-key mode as before."""
+    try:
+        if not request.path.startswith("/op/"):
+            return None
+        sk = request.headers.get("X-Seat-Key", "")
+        if not sk:
+            return None
+        ident = authenticate_identity(sk)
+        if ident and ident.get("mode") == "per_identity":
+            return None
+        reason = "seat key revoked" if (ident and ident.get("mode") == "revoked") else "seat key unknown"
+        oid = _ops_begin("op_refused", "SAFE", "seat-key", request.remote_addr,
+                         {"path": request.path, "reason": reason, "seat": (ident or {}).get("seat")},
+                         seat_session_id=(ident or {}).get("seat_session_id"))
+        _ops_finish(oid, "fail", reason)
+        return jsonify({"error": reason, "seat": (ident or {}).get("seat")}), 401
+    except Exception:
+        return None
+
+
+def register_seat_key(plaintext_key, seat, lineage, status="active", **extra):
+    """Issuance helper (called by the vault / bootstrap-gate issuance-on-pass).
+    Stores ONLY the hash. Returns the hash. Never logs the plaintext.
+    L4: extra fields (seat_session_id, issued_at, role) ride along so a presented key
+    resolves to its SESSION as well as its identity."""
+    reg = _kr_load()
+    ent = {"seat": seat, "lineage": lineage, "status": status}
+    ent.update({k: v for k, v in extra.items() if v is not None})
+    reg[_kr_hash(plaintext_key)] = ent
     os.makedirs(os.path.dirname(_SEAT_KEYS_PATH), exist_ok=True)
     tmp = _SEAT_KEYS_PATH + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
@@ -1499,11 +1553,81 @@ def _ops_ledger_init():
             status      TEXT NOT NULL,   -- started | ok | fail
             started_at  TEXT NOT NULL,
             finished_at TEXT )""")
+        # RITUAL LOCKDOWN L3 (2026-09-15): a seat's session as a ledger fact. NOT `sessions`
+        # (that is the four-model research session); this is the SEAT's boot->close window.
+        c.execute("""CREATE TABLE IF NOT EXISTS seat_sessions (
+            seat_session_id TEXT PRIMARY KEY,
+            seat            TEXT NOT NULL,
+            role            TEXT NOT NULL,
+            lineage         TEXT,
+            key_hash        TEXT,
+            started_at      TEXT NOT NULL,
+            closed_at       TEXT,
+            closed_reason   TEXT )""")
+        cols = [r[1] for r in c.execute("PRAGMA table_info(operations_ledger)")]
+        if "seat_session_id" not in cols:
+            c.execute("ALTER TABLE operations_ledger ADD COLUMN seat_session_id TEXT")
         c.commit(); c.close()
     except Exception as e:
         print(f"ops_ledger init failed: {e}")
 
-def _ops_begin(operation, tier, caller, source_ip, args):
+
+def seat_session_open(seat, role, lineage="", key_hash=""):
+    """Open a seat session row; returns (seat_session_id, started_at). Never raises."""
+    import uuid as _uuid
+    try:
+        sid = _uuid.uuid4().hex
+        ts = _ops_dt.now(_ops_tz.utc).isoformat()
+        c = _ops_sqlite.connect(_OPS_DB)
+        c.execute("INSERT INTO seat_sessions (seat_session_id,seat,role,lineage,key_hash,started_at) VALUES (?,?,?,?,?,?)",
+                  (sid, seat, role, lineage or "", key_hash or "", ts))
+        c.commit(); c.close()
+        return sid, ts
+    except Exception as e:
+        print(f"seat_session_open failed: {e}"); return None, None
+
+
+def seat_session_set_key_hash(seat_session_id, key_hash):
+    try:
+        c = _ops_sqlite.connect(_OPS_DB)
+        c.execute("UPDATE seat_sessions SET key_hash=? WHERE seat_session_id=?", (key_hash, seat_session_id))
+        c.commit(); c.close(); return True
+    except Exception as e:
+        print(f"seat_session_set_key_hash failed: {e}"); return False
+
+
+def seat_session_close(seat_session_id, reason="close_gate"):
+    try:
+        ts = _ops_dt.now(_ops_tz.utc).isoformat()
+        c = _ops_sqlite.connect(_OPS_DB)
+        cur = c.execute("UPDATE seat_sessions SET closed_at=?, closed_reason=? WHERE seat_session_id=? AND closed_at IS NULL",
+                        (ts, reason, seat_session_id))
+        c.commit(); n = cur.rowcount; c.close()
+        return n == 1, ts
+    except Exception as e:
+        print(f"seat_session_close failed: {e}"); return False, None
+
+
+def seat_session_get(seat_session_id):
+    try:
+        c = _ops_sqlite.connect(_OPS_DB); c.row_factory = _ops_sqlite.Row
+        r = c.execute("SELECT * FROM seat_sessions WHERE seat_session_id=?", (seat_session_id,)).fetchone(); c.close()
+        return dict(r) if r else None
+    except Exception:
+        return None
+
+
+def seat_sessions_open(role=None):
+    """Open (unclosed) seat sessions, optionally for one role — L7 reads this."""
+    try:
+        c = _ops_sqlite.connect(_OPS_DB); c.row_factory = _ops_sqlite.Row
+        q = "SELECT * FROM seat_sessions WHERE closed_at IS NULL" + (" AND role=?" if role else "") + " ORDER BY started_at"
+        rows = c.execute(q, (role,) if role else ()).fetchall(); c.close()
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
+
+def _ops_begin(operation, tier, caller, source_ip, args, seat_session_id=None):
     """Log intent; return op_id (or None on failure — never blocks the op).
     CALLER-1: `caller` is a TRUSTED-NOT-AUTHENTICATED label. For seat ops it is the
     self-asserted seat name ('seat:<name>', threaded by the _ledger wrappers in
@@ -1517,8 +1641,8 @@ def _ops_begin(operation, tier, caller, source_ip, args):
     try:
         c = _ops_sqlite.connect(_OPS_DB)
         cur = c.execute(
-            "INSERT INTO operations_ledger (operation,tier,caller,source_ip,args,status,started_at) VALUES (?,?,?,?,?, 'started', ?)",
-            (operation, tier, caller, source_ip, str(args)[:1000], _ops_dt.now(_ops_tz.utc).isoformat()))
+            "INSERT INTO operations_ledger (operation,tier,caller,source_ip,args,status,started_at,seat_session_id) VALUES (?,?,?,?,?, 'started', ?, ?)",
+            (operation, tier, caller, source_ip, str(args)[:1000], _ops_dt.now(_ops_tz.utc).isoformat(), seat_session_id))
         c.commit(); oid = cur.lastrowid; c.close()
         return oid
     except Exception as e:
