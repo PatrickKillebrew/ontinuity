@@ -4761,7 +4761,7 @@ def staffing_probe(require_parietal=True):
     """Probe every role; returns (all_alive, facts, dead).
     RULE: a CONFIGURED role that does not answer is fatal for EVERY role (a dead configured seat is a
     misconfiguration the operator asked to be caught at start). An UNCONFIGURED role is fatal only for
-    the Challenger and (unless the operator allowed a contract-less run) the Parietal."""
+    the Challenger and the Parietal (operator ruling 2026-09-16: there is no contract-less run)."""
     facts, dead = [], []
     for role in SESSION_ROLES:
         alive, detail = _probe_role_alive(role)
@@ -4814,8 +4814,8 @@ def pre_session_then_start(obj, start_fresh=False, start_token=None):
                     'message': f'Projenius ORIENT error ({type(exc).__name__}) — continuing without project context.'})
 
         # 2026-09-16: staffing probe first — a dead role is a refused start, named.
-        allow_no_contract = bool(os.environ.get("ALLOW_NO_CONTRACT", "").strip())
-        ok_staff, staff_facts, dead_roles = staffing_probe(require_parietal=not allow_no_contract)
+        # 2026-09-16 operator ruling: there is no contract-less run. A gated session needs a Parietal.
+        ok_staff, staff_facts, dead_roles = staffing_probe(require_parietal=True)
         socketio.emit('routing_action', {'type': 'injection', 'message': 'Staffing probe: ' + '; '.join(staff_facts)})
         if not ok_staff:
             msg = f"START REFUSED: dead or missing model role(s) {dead_roles} — a session would freeze a contract that can never be reviewed or distilled. Fix the provider/model string, then start again."
@@ -4825,8 +4825,8 @@ def pre_session_then_start(obj, start_fresh=False, start_token=None):
             return
         parietal_cfg = get_effective_config("parietal")
         has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
-        if not has_parietal and not allow_no_contract:
-            msg = "START REFUSED: no Parietal configured, so no contract can be authored; a gated session cannot run contract-less. Set ALLOW_NO_CONTRACT=1 only for a deliberate ungated run."
+        if not has_parietal:
+            msg = "START REFUSED: no Parietal configured, so no contract can be authored; a gated session cannot run contract-less."
             socketio.emit('routing_action', {'type': 'error', 'message': msg})
             active_session["start_error"] = msg; active_session["running"] = False
             _abort_pre_session_start(start_token, "no_parietal")
