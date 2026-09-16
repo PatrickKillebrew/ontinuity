@@ -4734,6 +4734,41 @@ def _refuse_start_no_contract(where, raw_reply=""):
     active_session["start_error"] = msg
     active_session["running"] = False
 
+
+# ── STAFFING PROBE AT START (2026-09-16): every model role the session will call must answer a
+# one-token completion BEFORE PRE_SESSION runs. A dead role (retired model string, bad key) is a
+# refused start with the role named — not four cycles of unreviewed work and a close that cannot certify.
+SESSION_ROLES = ("model_a", "model_b", "model_c", "parietal", "projenius")
+
+def _probe_role_alive(role):
+    """Returns (alive, detail). External Model A (a seat via the mailbox) counts as alive. Never raises."""
+    cfg = get_effective_config(role) or {}
+    url = (cfg.get("url") or "").strip(); model = (cfg.get("model") or "").strip(); key = (cfg.get("api_key") or "").strip()
+    if role == "model_a" and url.lower().startswith("external"):
+        return True, "external (mailbox seat)"
+    if not url or not key:
+        return False, "unconfigured"
+    try:
+        r = http_requests.post(url, json={"model": model, "messages": [{"role": "user", "content": "Reply with the single word OK."}],
+                                          "max_tokens": 8, "temperature": 0},
+                               headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json",
+                                        "User-Agent": "ontinuity-engine/1.0"}, timeout=40)
+        return (r.status_code == 200), (f"{model} {'alive' if r.status_code == 200 else 'HTTP ' + str(r.status_code) + ' ' + r.text[:80]}")
+    except Exception as e:
+        return False, f"{model} {str(e)[:80]}"
+
+def staffing_probe():
+    """Probe every role; returns (all_alive, facts:list[str], dead:list[str])."""
+    facts, dead = [], []
+    for role in SESSION_ROLES:
+        alive, detail = _probe_role_alive(role)
+        facts.append(f"{role}: {detail}")
+        if not alive and detail != "unconfigured":
+            dead.append(role)
+        elif detail == "unconfigured" and role in ("model_b", "parietal"):
+            dead.append(role)   # the Challenger and the Parietal are required for a gated session
+    return (not dead), facts, dead
+
 def pre_session_then_start(obj, start_fresh=False, start_token=None):
     retain_dashboard_pending = False
     if start_token:
@@ -4775,8 +4810,23 @@ def pre_session_then_start(obj, start_fresh=False, start_token=None):
                 socketio.emit('routing_action', {'type': 'error',
                     'message': f'Projenius ORIENT error ({type(exc).__name__}) — continuing without project context.'})
 
+        # 2026-09-16: staffing probe first — a dead role is a refused start, named.
+        ok_staff, staff_facts, dead_roles = staffing_probe()
+        socketio.emit('routing_action', {'type': 'injection', 'message': 'Staffing probe: ' + '; '.join(staff_facts)})
+        if not ok_staff:
+            msg = f"START REFUSED: dead or missing model role(s) {dead_roles} — a session would freeze a contract that can never be reviewed or distilled. Fix the provider/model string, then start again."
+            socketio.emit('routing_action', {'type': 'error', 'message': msg})
+            active_session["start_error"] = msg; active_session["running"] = False
+            _abort_pre_session_start(start_token, "dead_role")
+            return
         parietal_cfg = get_effective_config("parietal")
         has_parietal = bool(parietal_cfg.get("api_key") and parietal_cfg.get("url"))
+        if not has_parietal and not os.environ.get("ALLOW_NO_CONTRACT", "").strip():
+            msg = "START REFUSED: no Parietal configured, so no contract can be authored; a gated session cannot run contract-less. Set ALLOW_NO_CONTRACT=1 only for a deliberate ungated run."
+            socketio.emit('routing_action', {'type': 'error', 'message': msg})
+            active_session["start_error"] = msg; active_session["running"] = False
+            _abort_pre_session_start(start_token, "no_parietal")
+            return
         if has_parietal:
             refined, needs_answers, contract = run_pre_session(
                 obj, orient_context=orient_context)
