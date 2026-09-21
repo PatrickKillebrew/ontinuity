@@ -1,14 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ontinuity — Persistent Cognitive Infrastructure for AI Research</title>
-<meta name="description" content="Four cooperating models. Persistent memory. Autonomous adversarial sessions. The first AI research infrastructure that gets more trustworthy through its own operation.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Ontinuity — From business problems to checkable software</title><meta name="description" content="An open-source system for persistent AI-assisted work, separate model review, and a traceable path from business problems to tested software."><link rel="canonical" href="https://ontinuity.org/">
+    <meta property="og:type" content="website"><meta property="og:title" content="Ontinuity — From business problems to checkable software"><meta property="og:description" content="An open-source system for persistent AI-assisted work, separate model review, and a traceable path from business problems to tested software."><meta property="og:url" content="https://ontinuity.org/"><meta name="twitter:card" content="summary">
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&amp;family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&amp;family=IBM+Plex+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <style>
 :root {
   --gold:        #c9a84c;
   --gold-bright: #d9b85c;
@@ -20,8 +15,8 @@
   --bg-card:     #121212;
   --bg-card-hover: #161616;
   --text:        #EFEFEF;
-  --text-dim:    #8A8A8A;
-  --text-muted:  #4A4A4A;
+  --text-dim:    #B6B6B6;
+  --text-muted:  #A0A0A0;
   --border:      rgba(201,168,76,0.18);
   --border-subtle: rgba(255,255,255,0.07);
   --max-w: 1000px;
@@ -841,13 +836,55 @@ footer {
 .story-grid a { color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold-deep); }
 @media (max-width:1000px){ .path-grid, .pillar-grid { grid-template-columns:repeat(2,1fr); } }
 @media (max-width:760px){ .path-grid, .pillar-grid, .story-grid { grid-template-columns:1fr; } }
-</style>
-</head>
-<body>
 
-<nav>
-  <div class="nav-inner">
-    <a href="#" class="nav-logo">
+/* September 2026 editorial update: readable content, compact navigation. */
+body {font-size:17px}
+nav {position:relative;display:block}
+.nav-inner {max-width:1200px;min-height:76px;height:auto;padding-top:16px;padding-bottom:16px;gap:20px}
+.nav-links {gap:22px;flex-wrap:wrap}
+.nav-links a {font-size:12px;letter-spacing:.025em}
+.nav-links a,.footer-links a {display:inline-block;padding:8px 0}
+#hero {padding-top:72px;padding-bottom:64px}
+.hero-statement {font-size:18px;margin:20px 0}
+.hero-punch {font-size:clamp(28px,3.4vw,42px);line-height:1.3;margin:16px 0}
+.hero-tagline,.section-sub,.prob-body,.arch-desc,.contrib-body,.try-body {font-size:17px;line-height:1.75}
+.hero-mono,.tag,.prob-num,.status,.path-status {font-size:12px}
+.hero-sublink {opacity:1;animation:none}
+.hero-copy>* {opacity:1;animation:none}
+.section-wrap {padding-top:64px;padding-bottom:64px}
+.section-sub {max-width:760px}
+.prob-title,.arch-name {font-family:'IBM Plex Sans',sans-serif;font-size:23px;line-height:1.35}
+.prob-card {padding:28px}
+.prob-card p+p {margin-top:16px}
+.prob-num {color:var(--gold);letter-spacing:.07em;margin-bottom:18px}
+.story-grid {align-items:stretch}
+.status {color:var(--gold-bright);border-top:1px solid var(--border);padding-top:16px;margin-top:22px;line-height:1.65}
+.text-link {color:var(--gold-bright);text-underline-offset:4px}
+.card-links {margin-top:20px}
+.path-status {font-family:'IBM Plex Sans',sans-serif;font-size:16px;max-width:780px}
+.arch-insight {font-size:15px;line-height:1.65}
+.reveal {opacity:1;transform:none}
+.footer-meta {font-size:14px}
+.footer-links {flex-wrap:wrap}
+.skip-link {position:absolute;left:20px;top:-100px;z-index:100;background:var(--gold);color:#090909;padding:12px 20px}
+.skip-link:focus {top:12px}
+a:focus-visible,summary:focus-visible {outline:2px solid var(--gold-bright);outline-offset:5px}
+[id] {scroll-margin-top:24px}
+.reading-page {max-width:850px;margin:auto;padding:72px var(--pad)}
+.reading-page h1 {font-family:'Orbitron',sans-serif;font-size:clamp(28px,4vw,40px);line-height:1.35;margin:16px 0 28px}
+.reading-page h2 {font-size:25px;margin:40px 0 14px;line-height:1.4}
+.reading-page p {color:var(--text-dim);margin-bottom:20px;line-height:1.8}
+.reading-page .lead {font-size:21px;color:var(--text)}
+.reading-page ul {padding-left:24px;color:var(--text-dim);margin:20px 0}
+.reading-page li {padding-bottom:12px}
+.reading-page .btn-outline {margin-top:12px}
+.evidence-note {border-left:2px solid var(--gold);padding:8px 0 8px 22px;margin:28px 0}
+.evidence-note p:last-child {margin-bottom:0}
+@media(max-width:1000px){.nav-inner{flex-direction:column;align-items:flex-start}.nav-links{gap:6px 22px}.path-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:820px){.hero-markbox{order:0;max-width:200px;justify-self:center}.hero-grid{gap:28px}}
+@media(max-width:760px){nav{display:block}.nav-inner{padding:16px 20px}.nav-links{gap:4px 18px}.nav-links a{font-size:12px;padding:9px 0}#hero{padding-top:38px;padding-bottom:38px}.hero-markbox{display:none}.section-wrap{padding-top:44px;padding-bottom:44px}.path-grid,.story-grid,.arch-grid,.contrib-grid{grid-template-columns:1fr}.prob-card{padding:24px}.hero-actions{display:flex;flex-wrap:wrap;gap:14px}.hero-actions a{text-align:center}.reading-page{padding-top:40px}.section-h{font-size:25px}.footer-links{gap:18px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*::before,*::after{animation:none!important;transition:none!important}.lenscanvas{display:none}}
+</style></head><body><a class="skip-link" href="#main">Skip to content</a><nav aria-label="Main navigation"><div class="nav-inner"><a href="index.html" aria-label="Ontinuity home" class="nav-logo">
       <span class="liveMark" aria-hidden="true"><span class="lm-spin">
   <svg viewBox="0 0 200 200" fill="none">
     <defs>
@@ -859,39 +896,17 @@ footer {
     <circle cx="100" cy="100" r="13" fill="url(#lmCore)"><animate attributeName="opacity" values="0.7;1;0.7" dur="3.8s" repeatCount="indefinite"/></circle>
   </svg>
 </span></span><span class="wordmark"><span class="o">O</span>ntinuity</span>
-    </a>
-    <ul class="nav-links">
-      <li><a href="#path">The Path</a></li>
-      <li><a href="#problems">The Bet</a></li>
-      <li><a href="#results">The Evidence</a></li>
-      <li><a href="#architecture">How It Works</a></li>
-      <li><a href="#tool">The Tool</a></li>
-      <li><a href="/corpus.html">Corpus</a></li>
-      <li><a href="#contribute">Access</a></li>
-      <li><a href="/trust.html">Trust</a></li>
-      <li><a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">GitHub</a></li>
-    </ul>
-  </div>
-</nav>
-
-<!-- HERO -->
-<div id="hero">
-  <div class="hero-grid">
-    <div class="hero-copy">
-  <div class="hero-mono">Problem to software · Open source · Live</div>
-  <p class="hero-statement">
-    Most business owners know exactly where it hurts and have no idea what to ask a developer to build.
-    Ontinuity starts there, with the problem in your own words.
-  </p>
-  <div class="hero-punch">From a problem you can't describe to software you can check.</div>
-  <p class="hero-tagline">A guided conversation captures how your business actually runs. A team of AI seats turns it into a defined problem, a plan you approve, and working software, held to a definition of done that is fixed before the work begins and checked by a second, independent AI before anything ships. Every step leaves a record you can show someone.</p>
-  <div class="hero-actions">
-    <a href="#path" class="btn-gold">See the path &rarr;</a>
-    <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#8997; GitHub</a>
-  </div>
-  <p class="hero-sublink"><a href="/reliability.html">or read why the result can be trusted &rarr;</a></p>
-    </div>
-    <div class="hero-markbox" aria-hidden="true">
+    </a><ul class="nav-links">
+    <li><a href="index.html#examples">Examples</a></li><li><a href="index.html#path">How it works</a></li>
+    <li><a href="https://ontinuity.org/corpus.html">Research</a></li><li><a href="about.html">About the builder</a></li>
+    <li><a href="index.html#contribute">Contact</a></li></ul></div></nav><main id="main"><section id="hero"><div class="hero-grid"><div class="hero-copy">
+<div class="hero-mono">Open source · Multi-model AI · Supervised work</div>
+<h1 class="hero-punch">From business problems to software you can check.</h1>
+<p class="hero-statement">You know where the work gets difficult. You don’t need a technical specification to start.</p>
+<p class="hero-tagline">Ontinuity supports the path from an initial conversation to a defined problem, a buildable plan, and tested software. It combines persistent project records with AI-assisted development and separate model review, so decisions and results can be examined as the work progresses.</p>
+<div class="hero-actions"><a href="#examples" class="btn-gold">Explore the work →</a><a href="#contribute" class="btn-outline">Discuss a problem</a></div>
+<p class="hero-sublink">Available today through supervised working sessions.</p>
+</div><div class="hero-markbox" aria-hidden="true">
       <canvas class="lenscanvas"></canvas>
       <div class="haze"></div>
       <div class="haze2"></div>
@@ -923,292 +938,47 @@ footer {
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</div>
+    </div></div></section>
 
+<section class="section-wrap dark" id="examples"><div class="wrap"><div class="tag">Applied work</div>
+<h2 class="section-h">Two problems. Concrete progress.</h2>
+<p class="section-sub">A business workflow and an engineering question show how clarification, implementation, and adversarial review contribute at different stages.</p>
+<div class="story-grid">
+<article class="prob-card"><div class="prob-num">Home care · Problem definition &amp; development</div><h3 class="prob-title">Making emergency shift coverage easier to coordinate</h3>
+<p class="prob-body">A home-care agency needed a better way to match available caregivers to open shifts. Structured intake became a problem definition, a solution proposal, and a staged build plan covering matching, outreach, acceptance, and schedule updates.</p>
+<p class="prob-body">Protected client records created a development barrier. SantaClean, a local de-identification tool, was built to prepare data for development while keeping original records on the owner’s computer. A deterministic matching prototype has also been built and tested.</p>
+<p class="status">Current stage: SantaClean is working and awaits the owner’s evaluation. The full scheduler remains planned; further integration awaits her export and final input.</p>
+<p class="card-links"><a class="text-link" href="deidentifier.html">Explore SantaClean →</a></p></article>
+<article class="prob-card" id="engineering"><div class="prob-num">Control systems · Technical investigation</div><h3 class="prob-title">Turning a cornering question into a technical specification</h3>
+<p class="prob-body">A vehicle cornering problem, initially described in everyday language, was developed into a control-systems specification through Ontinuity’s adversarial multi-model process.</p>
+<p class="prob-body">Separate model review identified a mathematical defect: a calculation could divide by a value approaching zero. Catching it at the specification stage made it possible to address the issue before implementation. The process made the investigation attainable without outside specialist consultation.</p>
+<p class="status">Result: a technical specification and a review finding. Vehicle implementation and real-world validation are separate stages.</p>
+<p class="card-links"><a class="text-link" href="mailto:contact@ontinuity.org?subject=Ontinuity%20project%20walkthrough">Ask for a project walkthrough →</a></p></article>
+</div></div></section>
 
-<!-- THE BET -->
-<!-- THE PATH -->
-<div class="section-wrap" id="path">
-  <div class="wrap">
-    <div class="tag">The Path</div>
-    <h2 class="section-h">From where it hurts to working software</h2>
-    <p class="section-sub">You don't need to know what to ask for. You need to be able to say what is going wrong. The path below does the translating, and at every step it shows you what it knows, what it is assuming, and what it still needs from you.</p>
-    <div class="path-grid reveal">
-      <div class="prob-card">
-        <div class="prob-num">01 &middot; TELL IT</div>
-        <div class="prob-title">Describe it your way</div>
-        <p class="prob-body">A guided interview, about fifteen minutes, asks how your business runs and where it hurts. No technical vocabulary needed. It reads your answers back to you, and your corrections are final.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">02 &middot; DEFINE IT</div>
-        <div class="prob-title">Name the real problem</div>
-        <p class="prob-body">Your words are worked into a defined problem and a list of what is still unknown. No solutions yet. Every finding is marked confirmed, assumed, or open, so a guess never gets dressed up as a fact.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">03 &middot; PLAN IT</div>
-        <div class="prob-title">A proposal you can approve</div>
-        <p class="prob-body">The problem is broken into buildable pieces with a build order, then written up in plain language. You see what is known, what is assumed, and what still needs an answer from you before anyone builds.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">04 &middot; BUILD IT</div>
-        <div class="prob-title">Software, with a receipt</div>
-        <p class="prob-body">Each piece is built against a written definition of done. A second AI, from a different maker, reviews it, and a gate refuses to close until the work matches. You get working software and a record of how it was checked.</p>
-      </div>
-    </div>
-    <p class="path-status">Where this stands: the interview is live. The full path has been run end to end once, for the home-care agency below, as supervised working sessions. It is not yet a push-button product.</p>
+<section class="section-wrap" id="path"><div class="wrap"><div class="tag">How it works</div><h2 class="section-h">A clear next step at each stage</h2>
+<p class="section-sub">The business owner contributes the context. The process turns that context into decisions, requirements, and work that can be checked.</p>
+<div class="path-grid">
+<article class="prob-card"><div class="prob-num">01 · Understand</div><h3 class="prob-title">Describe the work</h3><p class="prob-body">A guided conversation captures the current process, the difficulty, and what a useful result would look like. The owner corrects and confirms that understanding.</p></article>
+<article class="prob-card"><div class="prob-num">02 · Define</div><h3 class="prob-title">Separate facts from assumptions</h3><p class="prob-body">Record the problem, constraints, and unanswered questions. Keep confirmed information distinct from assumptions that still need checking.</p></article>
+<article class="prob-card"><div class="prob-num">03 · Plan</div><h3 class="prob-title">Agree on the scope</h3><p class="prob-body">Develop a proposal, divide the work into buildable stages, and establish how each stage will be evaluated before implementation begins.</p></article>
+<article class="prob-card"><div class="prob-num">04 · Build &amp; review</div><h3 class="prob-title">Produce and check</h3><p class="prob-body">Implement each stage, test it against the agreed criteria, and have a separate AI seat challenge the result. Preserve the findings and remaining work.</p></article>
+</div><p class="path-status">Current availability: guided intake and supervised project work. The home-care project has reached planning and working components; a self-service product and its complete scheduler remain future work.</p></div></section>
 
-    <div class="path-sub">What the system adds to any AI</div>
-    <p class="path-note">The AI doing the work is replaceable. These four things are not, and they belong to the system, not to the model.</p>
-    <div class="pillar-grid reveal">
-      <div class="prob-card">
-        <div class="prob-num">MEMORY</div>
-        <div class="prob-title">Nothing gets re-explained</div>
-        <p class="prob-body">The record lives in the system, not in the AI. Come back after a month, with a different AI in the seat, and the work resumes where it stopped.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">VERIFICATION</div>
-        <div class="prob-title">Done is defined first</div>
-        <p class="prob-body">What counts as finished is written down before work starts. A second AI challenges the result, and a fixed gate, not an opinion, decides whether it closes.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">RECORD</div>
-        <div class="prob-title">Every action is logged</div>
-        <p class="prob-body">Each thing an AI does is a row in a ledger. No AI signs off on its own work, and the one that ships code is never the one that wrote it.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">INDEPENDENCE</div>
-        <div class="prob-title">Not tied to one vendor</div>
-        <p class="prob-body">Models from three makers have held seats under the same gates. When a provider retired two models, they were replaced and the work carried on.</p>
-      </div>
-    </div>
+<section class="section-wrap dark" id="architecture"><div class="wrap"><div class="tag">The supporting system</div><h2 class="section-h">Continuity, challenge, and a checkable record</h2>
+<div class="arch-grid">
+<article class="arch-card"><h3 class="arch-name">Persistent context</h3><p class="arch-desc">Project records preserve decisions, constraints, and unfinished work across sessions. A new model can read the record before continuing.</p></article>
+<article class="arch-card"><h3 class="arch-name">Adversarial review</h3><p class="arch-desc">Separate AI seats challenge the work and its supporting evidence. Using different models creates opportunities to uncover mistakes and unsupported assumptions.</p></article>
+<article class="arch-card"><h3 class="arch-name">Explicit checks</h3><p class="arch-desc">Written criteria and recorded checks govern completion. The record lets a reviewer trace what was proposed, checked, corrected, and left open.</p></article>
+</div><p class="path-status">Checks are only as useful as the criteria and evidence behind them. Passing a defined check does not establish that every possible defect has been found.</p></div></section>
 
-    <div class="path-sub">Two times it has done this</div>
-    <p class="path-note">One business problem and one engineering problem, both started from a plain description.</p>
-    <div class="story-grid reveal">
-      <div class="prob-card">
-        <div class="prob-num">HOME CARE</div>
-        <div class="prob-title">Emergency shifts that ate the owner's week</div>
-        <p class="prob-body">The owner of a home-care agency was spending one to four hours, once or twice a week, filling emergency caregiver shifts by hand. The interview captured her process in her own words. It became a defined problem, a staged plan, and a proposal she approved.</p>
-        <p class="prob-body">Her client records are protected health information, so the first thing built was a <a href="/deidentifier.html">de-identification tool</a> that works offline, so development can go on without her raw records ever leaving her hands. It is awaiting her evaluation. A shift-matching prototype is built and tested. The full scheduler is the next phase.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">CONTROL SYSTEMS</div>
-        <div class="prob-title">A cornering problem, stated in plain language</div>
-        <p class="prob-body">A cornering problem from a self-driving car project was described in plain language, with no control theory. Three sessions later there was a control-systems specification.</p>
-        <p class="prob-body">Before any code was written, the reviewing AI caught a defect in the math, a division by a number that could approach zero. The model cost of all three sessions was well under a dollar.</p>
-      </div>
-    </div>
-  </div>
-</div>
+<section class="section-wrap" id="results"><div class="wrap"><div class="tag">Evidence &amp; research</div><h2 class="section-h">Examine what the process changed</h2>
+<p class="section-sub">A useful review changes the work: an assumption gets challenged, an unsupported claim needs evidence, or a defect gets caught before implementation. Those outcomes are the evidence to examine.</p>
+<div class="story-grid"><article class="prob-card"><h3 class="prob-title">Recorded review examples</h3><p class="prob-body">The technical account describes sessions in which completion was refused until the work supplied a quotation, a cited mechanism, or an applicable edit. It also discusses the limits of the system.</p><p class="card-links"><a class="text-link" href="https://ontinuity.org/reliability.html">Read the technical account →</a></p></article>
+<article class="prob-card"><h3 class="prob-title">The architecture in the open</h3><p class="prob-body">Explore the source code and the research that informed the design. The corpus provides the longer technical argument, its development, and questions for further investigation.</p><p class="card-links"><a class="text-link" href="https://github.com/PatrickKillebrew/ontinuity">Browse the source →</a></p><p class="card-links"><a class="text-link" href="https://ontinuity.org/corpus.html">Explore the research corpus →</a></p></article></div></div></section>
 
-<div class="section-wrap" id="problems">
-  <div class="wrap">
-    <div class="tag">The Bet</div>
-    <h2 class="section-h">Reliability belongs in the architecture, not the model</h2>
-    <p class="section-sub">The field is racing to make a single AI model capable and aligned enough to be trusted to act on its own &mdash; and managing what it can't guarantee with guardrails and human oversight. Ontinuity takes the opposite bet: that no single model should ever be the thing you trust, and that reliability is therefore a property of the structure around the models, not of the models themselves.</p>
-    <div class="problems reveal">
-      <div class="prob-card">
-        <div class="prob-num">THE FIELD</div>
-        <div class="prob-title">Trust the model</div>
-        <p class="prob-body">Bigger models, better alignment, longer context. When the agent is still unreliable, add a guardrail model or a human in the loop. Every safety mechanism lives inside the same system being checked &mdash; so a confidently wrong agent sails straight through.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">ONTINUITY</div>
-        <div class="prob-title">Structure the boundary</div>
-        <p class="prob-body">Assume no model is trustworthy enough to be a decision gate. Build a team of seats that adversarially review each other, hold them to a contract fixed before the work, and forbid any seat from shipping its own output. Trust is produced by the structure, not placed in a part.</p>
-      </div>
-      <div class="prob-card">
-        <div class="prob-num">THE RESULT</div>
-        <div class="prob-title">Reliable from cheap parts</div>
-        <p class="prob-body">Because reliability comes from the harness, the model in the seat can be swapped, downgraded, or made inexpensive without losing it. Reliable output from interchangeable, often open-weight, models &mdash; because the reliability was never in the models.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- THE EVIDENCE -->
-<div class="section-wrap dark" id="results">
-  <div class="wrap">
-    <div class="live"><span class="live-dot"></span>Live &middot; running now</div>
-    <div class="tag">The Evidence</div>
-    <h2 class="section-h">A gate that won't let bad work close</h2>
-    <p class="section-sub">The core mechanism: a contract is fixed before a session runs, and a gate refuses to let the session close until the output matches it &mdash; indifferent to which model produced the work. This is measured, not asserted.</p>
-    <div class="results-grid reveal">
-      <div class="r-block featured">
-        <div class="r-label">The Behavioral Record</div>
-        <div class="r-big">319 sessions</div>
-        <p class="r-desc">The working seat held by five different models &mdash; most often an inexpensive open-weight one &mdash; with per-cycle measurement and a randomized-signal control that distinguishes a genuine adversarial response from the mere appearance of one. The reliability holds across the model swaps. That is the whole claim, measured.</p>
-      </div>
-      <div class="r-block">
-        <div class="r-label">The Gate in Close-Up</div>
-        <ul class="r-list">
-          <li><span class="k">3 refusals</span><span class="v">one documented session, a three-criterion contract</span></li>
-          <li><span class="k">&rarr;</span><span class="v">forced a paraphrase up to a real quotation</span></li>
-          <li><span class="k">&rarr;</span><span class="v">forced an inference up to a cited mechanism</span></li>
-          <li><span class="k">&rarr;</span><span class="v">forced a description up to an applicable edit</span></li>
-          <li><span class="k">then</span><span class="v">accepted the consolidated deliverable</span></li>
-        </ul>
-      </div>
-      <div class="r-block">
-        <div class="r-label">Separation of Duties</div>
-        <p class="r-desc">The seat that deploys is structurally forbidden from being the seat that authored the deployed bytes. A different seat must review and sign off; a self-deploy writes a violation row. No single judgment &mdash; however confident &mdash; ships unchecked.</p>
-      </div>
-      <div class="r-block featured">
-        <div class="r-label">Caught In The Act</div>
-        <div class="r-big" style="font-size:30px;margin-bottom:14px;">Fabrication,<br>on the record</div>
-        <p class="r-desc">Because every action is logged to an append-only ledger, a seat's claim to have done work can be checked against what was actually done. There is a documented case of the gate catching a model asserting a result the record did not support &mdash; and refusing to close until it was grounded.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- HOW IT WORKS -->
-<div class="section-wrap" id="architecture">
-  <div class="wrap">
-    <div class="tag">How It Works</div>
-    <h2 class="section-h">One architecture, instantiated twice</h2>
-    <p class="section-sub">The same verification-first design runs at two layers: a session engine that produces verified deliverables, and an engineering team of seats that builds and runs that engine. Both governed by the same gate, contract, and grounding discipline &mdash; which is why the system can be said to be built the way it works.</p>
-    <div class="arch-grid reveal">
-      <div class="arch-card">
-        <div class="arch-num">01</div>
-        <div class="arch-name">The Seats</div>
-        <div class="arch-role">A team, not an agent</div>
-        <p class="arch-desc">Peer model instances that build and adversarially review each other's work. The reviewer is always a different seat than the author, structurally forbidden from rubber-stamping. The unit of cognition is a team with a chain of custody &mdash; not one agent with a self-critic whose blind spots are correlated with its own.</p>
-        <div class="arch-insight">A model reviewing its own output shares the framing that produced the error. A genuinely separate seat does not.</div>
-      </div>
-      <div class="arch-card">
-        <div class="arch-num">02</div>
-        <div class="arch-name">The Gate &amp; Contract</div>
-        <div class="arch-role">Reliability boundary</div>
-        <p class="arch-desc">A contract fixes the criteria before the work begins, so it can't be quietly relaxed to fit whatever the model produced. The gate refuses to let the session close until the output meets it, and forbids the author of the bytes from being the one who deploys them. Separation of powers, applied to AI.</p>
-        <div class="arch-insight">Trust is not placed in any seat. It is produced by forcing two independent seats to agree before anything changes.</div>
-      </div>
-      <div class="arch-card">
-        <div class="arch-num">03</div>
-        <div class="arch-name">The Corpus</div>
-        <div class="arch-role">Auditable memory</div>
-        <p class="arch-desc">Every action folds into an append-only record keyed on shared identifiers, so any decision can be walked from conversation to commit to receipt and back. Privileged actions run through a small set of named, bounded, logged operations &mdash; never a general shell. A fresh seat boots by reading the record and inherits the whole system.</p>
-        <div class="arch-insight">Least privilege and a tamper-evident trail &mdash; built as the substrate the system runs on, not bolted on for compliance.</div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- THE TOOL -->
-<div class="section-wrap dark" id="tool">
-  <div class="wrap">
-    <div class="tag">The Principle, Shipped</div>
-    <h2 class="section-h">The Boundary De-Identifier</h2>
-    <p class="section-sub">The same idea applied to a single urgent problem: making regulated data safe to work with by ensuring identity never crosses the line.</p>
-    <div class="try-hero reveal">
-      <div class="try-h">Don't trust the component. Structure the boundary so the sensitive thing cannot leak.</div>
-      <p class="try-body">A regulated home-care agency can use an AI-assisted scheduling tool on its caregiver and client data without any private information ever leaving its own computer. The data is de-identified at the boundary &mdash; on the operator's machine, before a single field crosses &mdash; and an independent verifier re-scans the output for any residual identifier before it is trusted. The service operates entirely in token-space &mdash; nothing identifiable from that dataset is sent, so there is nothing in it for the service to breach. Built and tested; the first shipped instance of this architecture in a regulated domain.</p>
-      <div class="cta-center" style="margin-top:28px;">
-        <a href="/deidentifier.html" class="btn-gold" style="padding:14px 40px;">Read the de-identifier &rarr;</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- VISION -->
-<div class="section-wrap" id="vision">
-  <div class="wrap">
-    <div class="tag">Where This Goes</div>
-    <h2 class="section-h">A bounded future, built on purpose</h2>
-    <blockquote class="vision-quote reveal">
-      "Some predict that a future in which AI dominates will be a dark one. The disagreement is this: if the foundational architecture is built correctly now &mdash; verifiable, bounded, accountable &mdash; the future stops being a wildcard. It becomes a <em>leashed and bounded</em> one."
-    </blockquote>
-    <p class="vision-body reveal">The wager underneath Ontinuity is that the most important thing to get right about autonomous AI is not capability but accountability &mdash; and that the window to set that pattern is open now, while the systems are still small enough to shape. A verification-first architecture is a small demonstration of a large claim: that we can have autonomous systems that are trustworthy not because we believe the model, but because the structure around it makes every action checkable, reversible, and on the record.</p>
-  </div>
-</div>
-
-<!-- CORPUS -->
-<div class="section-wrap dark" id="corpus">
-  <div class="wrap">
-    <div class="tag">Research Corpus</div>
-    <h2 class="section-h">Nine papers, one argument</h2>
-    <p class="section-sub">The theoretical and empirical foundation &mdash; the conceptual ground the working system was built from. Read straight through, or start with whichever thesis pulls you.</p>
-    <div class="cta-center reveal" style="margin:30px 0;">
-      <a href="/corpus.html" class="btn-gold" style="padding:15px 44px;">Read the corpus &rarr;</a>
-      <p class="cta-label">A tiered reading guide &mdash; foundation, implementation, synthesis, evidence.</p>
-    </div>
-    <p class="section-sub" style="opacity:0.7;font-size:14px;">These papers document the architecture's foundation. The system has since matured into the gate-and-contract design described above &mdash; the current research notes track what runs now.</p>
-  </div>
-</div>
-
-<!-- ENGAGE -->
-<div class="section-wrap" id="contribute">
-  <div class="wrap">
-    <div class="tag">Access</div>
-    <h2 class="section-h">Service now, product later</h2>
-    <p class="section-sub">The engine is real and runs. Access today is through direct engagement, not self-serve &mdash; the work is delivered as verified output, not a tool you configure. Hosted self-serve sessions are on the roadmap.</p>
-    <div class="contrib-grid reveal">
-      <div class="contrib-card">
-        <div class="contrib-h">The System</div>
-        <p class="contrib-body">Open-source and forkable. The architecture, the corpus, and the operating record are public. The open questions &mdash; long-horizon autonomy, coherence ceilings, per-identity authentication &mdash; are real engineering problems.</p>
-        <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#8997; GitHub Repository</a>
-      </div>
-      <div class="contrib-card">
-        <div class="contrib-h">Engagement</div>
-        <p class="contrib-body">For research collaboration, regulated-data use cases, or serious technical engagement &mdash; the de-identification work and the verification engine are available through direct conversation.</p>
-        <a href="mailto:contact@ontinuity.org" class="btn-outline">&#9672; Get in touch</a>
-      </div>
-    </div>
-    <div class="contact-bar reveal">
-      <div class="label">Contact</div>
-      <p>For collaboration or serious technical engagement: <a href="mailto:contact@ontinuity.org">contact@ontinuity.org</a></p>
-    </div>
-  </div>
-</div>
-
-<!-- FOOTER -->
-<footer>
-  <div>
-    <div class="footer-logo">
-      <span class="liveMark" aria-hidden="true"><span class="lm-spin">
-  <svg viewBox="0 0 200 200" fill="none">
-    <defs>
-      <linearGradient id="lmShine" x1="100%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="50%" stop-color="var(--gold)"/><stop offset="100%" stop-color="var(--gold-dim)"/></linearGradient>
-      <radialGradient id="lmCore" cx="38%" cy="32%" r="70%"><stop offset="0%" stop-color="var(--gold-bright)"/><stop offset="100%" stop-color="var(--gold)"/></radialGradient>
-    </defs>
-    <g class="lm-outer"><polygon points="100,16 173,58 173,142 100,184 27,142 27,58" fill="none" stroke="url(#lmShine)" stroke-width="3"/></g>
-    <g class="lm-inner"><polygon points="100,52 145,78 145,122 100,148 55,122 55,78" fill="none" stroke="url(#lmShine)" stroke-width="2.4"/></g>
-    <circle cx="100" cy="100" r="13" fill="url(#lmCore)"><animate attributeName="opacity" values="0.7;1;0.7" dur="3.8s" repeatCount="indefinite"/></circle>
-  </svg>
-</span></span><span class="wordmark"><span class="o">O</span>ntinuity</span>
-    </div>
-    <p class="footer-meta">Persistent Cognitive Infrastructure for AI-Assisted Research<br>Patrick Killebrew · April 2026 · MIT License · ontinuity.org</p>
-  </div>
-  <div class="footer-links">
-    <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank">GitHub</a>
-    <span style="opacity:0.5;cursor:not-allowed;" aria-disabled="true">Live System (coming soon)</span>
-    <a href="/corpus.html">The Corpus</a>
-    <a href="mailto:contact@ontinuity.org">Contact</a>
-  </div>
-</footer>
-
-<script>
-const obs = new IntersectionObserver(entries => {
-  entries.forEach(e => {
-    if (e.isIntersecting) {
-      const children = e.target.querySelectorAll ?
-        Array.from(e.target.children) : [];
-      if (children.length > 1) {
-        children.forEach((c, i) => {
-          c.style.transitionDelay = `${i * 0.07}s`;
-        });
-      }
-      e.target.classList.add('in');
-      obs.unobserve(e.target);
-    }
-  });
-}, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
-
-document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
-</script>
-<script>
+<section class="section-wrap dark" id="contribute"><div class="wrap"><div class="tag">Contact</div><h2 class="section-h">Start with the problem you’re working on.</h2><p class="section-sub">For a business workflow, a technical investigation, or research collaboration, describe the situation and what you’re trying to accomplish. You can also arrange a walkthrough of the existing projects and their supporting work.</p>
+<div class="hero-actions"><a href="mailto:contact@ontinuity.org" class="btn-gold">Start a conversation →</a><a href="about.html" class="btn-outline">About the builder</a></div><p class="hero-sublink"><a href="mailto:contact@ontinuity.org">contact@ontinuity.org</a></p></div></section></main><footer><div><div class="footer-logo">Ontinuity</div><p class="footer-meta">Persistent work. Separate review. A record you can examine.<br>Open source · MIT License</p></div><div class="footer-links"><a href="about.html">About the builder</a><a href="https://github.com/PatrickKillebrew/ontinuity">GitHub</a><a href="https://ontinuity.org/corpus.html">Research corpus</a><a href="mailto:contact@ontinuity.org">Contact</a></div></footer><script>
 // hero feeders
 (function(){const cx=100,cy=100,R=82,ns='http://www.w3.org/2000/svg';
   const verts=[];for(let i=0;i<6;i++){const a=(-90+i*60)*Math.PI/180;verts.push([cx+R*Math.cos(a),cy+R*Math.sin(a)]);}
@@ -1243,6 +1013,4 @@ document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
     requestAnimationFrame(draw);}
   size();addEventListener('resize',size);requestAnimationFrame(draw);
 })();
-</script>
-</body>
-</html>
+</script><script>if(matchMedia('(prefers-reduced-motion: reduce)').matches){document.querySelectorAll('svg animate,svg animateMotion').forEach(el=>el.remove());}</script></body></html>
