@@ -78,7 +78,7 @@ GOVERNOR PHASE 1 — build the WORKER STATUS PANEL (the single-pane goal, step 1
 ## BACKGROUND INFRA THREAD (not the next action — do not front-load over the Governor)
 S22 ULTRA local-LLM node — staged at the wireless-ADB connect step, still OPEN as a background thread
 (a future local inference provider / second worker). Resume path if picked up: ten-second cable flip
--> `adb tcpip 5555` over USB (fixed port) -> unplug -> `adb connect 192.168.1.141:5555` -> `adb install
+-> `adb tcpip 5555` over USB (fixed port) -> unplug -> `adb connect [REDACTED-ip]:5555` -> `adb install
 termux.apk` -> push+run build_cpu.sh (staged C:\donkeycar\, pinned llama.cpp b5027, disable Phantom
 Process Killer). Full detail in PUNCH_LIST OPEN (S22 node). Parked in favor of the Governor build.
 
