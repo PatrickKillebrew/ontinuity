@@ -827,6 +827,20 @@ footer {
 .hero-sublink{margin-top:16px;font-size:13px;font-family:'IBM Plex Mono',monospace;opacity:0;animation:fadeUp 0.7s ease forwards 0.75s;}
 .hero-sublink a{color:var(--text-muted);text-decoration:none;letter-spacing:.04em;border-bottom:1px solid transparent;transition:color .15s,border-color .15s;}
 .hero-sublink a:hover{color:var(--gold);border-bottom-color:var(--gold-dim);}
+
+/* THE PATH (added 2026-09) */
+.path-grid, .pillar-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; background:var(--border-subtle); }
+.story-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:1px; background:var(--border-subtle); }
+.path-grid .prob-body, .pillar-grid .prob-body, .story-grid .prob-body { margin-bottom:0; }
+.path-grid .prob-num { color:var(--gold-dim); }
+.path-sub { font-family:'Orbitron',monospace; font-size:14px; font-weight:700; color:var(--text); letter-spacing:0.02em; margin:64px 0 8px; }
+.path-note { font-size:13px; color:var(--text-dim); max-width:640px; line-height:1.7; margin-bottom:28px; }
+.path-status { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); line-height:1.7; border-left:2px solid var(--gold-deep); padding-left:14px; margin-top:28px; max-width:720px; }
+.story-grid .prob-card { padding:36px 32px; }
+.story-grid .prob-body + .prob-body { margin-top:12px; }
+.story-grid a { color:var(--gold); text-decoration:none; border-bottom:1px solid var(--gold-deep); }
+@media (max-width:1000px){ .path-grid, .pillar-grid { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:760px){ .path-grid, .pillar-grid, .story-grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -847,11 +861,11 @@ footer {
 </span></span><span class="wordmark"><span class="o">O</span>ntinuity</span>
     </a>
     <ul class="nav-links">
+      <li><a href="#path">The Path</a></li>
       <li><a href="#problems">The Bet</a></li>
       <li><a href="#results">The Evidence</a></li>
       <li><a href="#architecture">How It Works</a></li>
       <li><a href="#tool">The Tool</a></li>
-      <li><a href="/buckyball.html">Buckyball</a></li>
       <li><a href="/corpus.html">Corpus</a></li>
       <li><a href="#contribute">Access</a></li>
       <li><a href="/trust.html">Trust</a></li>
@@ -864,18 +878,18 @@ footer {
 <div id="hero">
   <div class="hero-grid">
     <div class="hero-copy">
-  <div class="hero-mono">Verification-first AI · Open source · Live</div>
+  <div class="hero-mono">Problem to software · Open source · Live</div>
   <p class="hero-statement">
-    The field is racing to make a single AI model trustworthy enough to act on its own.
-    Ontinuity takes the opposite bet: that no model should ever be the thing you trust.
+    Most business owners know exactly where it hurts and have no idea what to ask a developer to build.
+    Ontinuity starts there, with the problem in your own words.
   </p>
-  <div class="hero-punch">Reliability belongs in the architecture, not the model.</div>
-  <p class="hero-tagline">A team of AI seats, held to a contract fixed before the work begins, by a gate that won't let anything ship until a second, independent seat signs off &mdash; with every step folded into an auditable record. Reliable output from interchangeable, often inexpensive, models. Because the reliability was never in the models.</p>
+  <div class="hero-punch">From a problem you can't describe to software you can check.</div>
+  <p class="hero-tagline">A guided conversation captures how your business actually runs. A team of AI seats turns it into a defined problem, a plan you approve, and working software, held to a definition of done that is fixed before the work begins and checked by a second, independent AI before anything ships. Every step leaves a record you can show someone.</p>
   <div class="hero-actions">
-    <a href="/reliability.html" class="btn-gold">How it works &rarr;</a>
+    <a href="#path" class="btn-gold">See the path &rarr;</a>
     <a href="https://github.com/PatrickKillebrew/ontinuity" target="_blank" class="btn-outline">&#8997; GitHub</a>
   </div>
-  <p class="hero-sublink"><a href="/corpus.html">or read the foundational corpus &rarr;</a></p>
+  <p class="hero-sublink"><a href="/reliability.html">or read why the result can be trusted &rarr;</a></p>
     </div>
     <div class="hero-markbox" aria-hidden="true">
       <canvas class="lenscanvas"></canvas>
@@ -915,6 +929,80 @@ footer {
 
 
 <!-- THE BET -->
+<!-- THE PATH -->
+<div class="section-wrap" id="path">
+  <div class="wrap">
+    <div class="tag">The Path</div>
+    <h2 class="section-h">From where it hurts to working software</h2>
+    <p class="section-sub">You don't need to know what to ask for. You need to be able to say what is going wrong. The path below does the translating, and at every step it shows you what it knows, what it is assuming, and what it still needs from you.</p>
+    <div class="path-grid reveal">
+      <div class="prob-card">
+        <div class="prob-num">01 &middot; TELL IT</div>
+        <div class="prob-title">Describe it your way</div>
+        <p class="prob-body">A guided interview, about fifteen minutes, asks how your business runs and where it hurts. No technical vocabulary needed. It reads your answers back to you, and your corrections are final.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">02 &middot; DEFINE IT</div>
+        <div class="prob-title">Name the real problem</div>
+        <p class="prob-body">Your words are worked into a defined problem and a list of what is still unknown. No solutions yet. Every finding is marked confirmed, assumed, or open, so a guess never gets dressed up as a fact.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">03 &middot; PLAN IT</div>
+        <div class="prob-title">A proposal you can approve</div>
+        <p class="prob-body">The problem is broken into buildable pieces with a build order, then written up in plain language. You see what is known, what is assumed, and what still needs an answer from you before anyone builds.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">04 &middot; BUILD IT</div>
+        <div class="prob-title">Software, with a receipt</div>
+        <p class="prob-body">Each piece is built against a written definition of done. A second AI, from a different maker, reviews it, and a gate refuses to close until the work matches. You get working software and a record of how it was checked.</p>
+      </div>
+    </div>
+    <p class="path-status">Where this stands: the interview is live. The full path has been run end to end once, for the home-care agency below, as supervised working sessions. It is not yet a push-button product.</p>
+
+    <div class="path-sub">What the system adds to any AI</div>
+    <p class="path-note">The AI doing the work is replaceable. These four things are not, and they belong to the system, not to the model.</p>
+    <div class="pillar-grid reveal">
+      <div class="prob-card">
+        <div class="prob-num">MEMORY</div>
+        <div class="prob-title">Nothing gets re-explained</div>
+        <p class="prob-body">The record lives in the system, not in the AI. Come back after a month, with a different AI in the seat, and the work resumes where it stopped.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">VERIFICATION</div>
+        <div class="prob-title">Done is defined first</div>
+        <p class="prob-body">What counts as finished is written down before work starts. A second AI challenges the result, and a fixed gate, not an opinion, decides whether it closes.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">RECORD</div>
+        <div class="prob-title">Every action is logged</div>
+        <p class="prob-body">Each thing an AI does is a row in a ledger. No AI signs off on its own work, and the one that ships code is never the one that wrote it.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">INDEPENDENCE</div>
+        <div class="prob-title">Not tied to one vendor</div>
+        <p class="prob-body">Models from three makers have held seats under the same gates. When a provider retired two models, they were replaced and the work carried on.</p>
+      </div>
+    </div>
+
+    <div class="path-sub">Two times it has done this</div>
+    <p class="path-note">One business problem and one engineering problem, both started from a plain description.</p>
+    <div class="story-grid reveal">
+      <div class="prob-card">
+        <div class="prob-num">HOME CARE</div>
+        <div class="prob-title">Emergency shifts that ate the owner's week</div>
+        <p class="prob-body">The owner of a home-care agency was spending one to four hours, once or twice a week, filling emergency caregiver shifts by hand. The interview captured her process in her own words. It became a defined problem, a staged plan, and a proposal she approved.</p>
+        <p class="prob-body">Her client records are protected health information, so the first thing built was a <a href="/deidentifier.html">de-identification tool</a> that works offline, so development can go on without her raw records ever leaving her hands. It is awaiting her evaluation. A shift-matching prototype is built and tested. The full scheduler is the next phase.</p>
+      </div>
+      <div class="prob-card">
+        <div class="prob-num">CONTROL SYSTEMS</div>
+        <div class="prob-title">A cornering problem, stated in plain language</div>
+        <p class="prob-body">A cornering problem from a self-driving car project was described in plain language, with no control theory. Three sessions later there was a control-systems specification.</p>
+        <p class="prob-body">Before any code was written, the reviewing AI caught a defect in the math, a division by a number that could approach zero. The model cost of all three sessions was well under a dollar.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="section-wrap" id="problems">
   <div class="wrap">
     <div class="tag">The Bet</div>
