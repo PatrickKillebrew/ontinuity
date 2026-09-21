@@ -29,4 +29,7 @@ The operator is answering a job lead (an introduction to a business-network foun
 ## Left open (operator said leave for now)
 intake11.html, extract_to_db.py and the root copy of intake_system_prompt.txt (unreferenced, not moved); two dated inventories (ONTINUITY_COVERAGE_CHECKLIST.txt, ONTINUITY_MASTER_SYSTEM_MAP.md) still list the old root paths of the moved files, as records of their date; the install runbook is private, so the README describes it without a link.
 
+## At close: the gate caught something that predates this session
+First close_gate dry run: CHECK 6 SECRETS failed on three files this session committed (handoff, punch list, queue). The hits were IPv4 literals written months ago: the operator's and a family member's network addresses, provider egress addresses, scanner addresses, and a LAN address. This was the first close on the operator install's full corpus under the portable gate, so it was the first time those lines were scanned. Redacted to [REDACTED-ip] in the three flagged files and in OPERATING_MANUAL.md, which carried the same addresses in its obsolete firewall section (commits 7253dbf, e9a16b4, 926e9d2, 9237f23; 25 literals). The values remain in git history; an address cannot be rotated the way a key can, and whether the history needs rewriting is the operator's call. Second dry run: nine for nine.
+
 Cross-refs: commits 90ec391, e00a3c6, 5efffbd, 766d8c9, fa3a94f; contract items papers-move, prompts-dups, license-agpl, readme, front-door (all DONE); receipt at GET /agent/handoff.
