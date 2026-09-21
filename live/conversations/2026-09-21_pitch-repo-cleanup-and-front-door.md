@@ -19,7 +19,7 @@ The operator is answering a job lead (an introduction to a business-network foun
 
 ## Findings worth keeping
 - The operator asked why citing "more than 300 sessions" feels like fluff. Read: 329 sessions in the DB, of which 185 carry randomized burn-in observations. It is an activity count, mostly unattended test runs; it answers "how much" when the reader asks "so what". Ruling-in-effect: outcomes, not counts, in pitch material.
-- IP framing given to the operator (not legal advice): contract language on pre-existing IP protects most; copyright in AI-written code is thin under the Copyright Office's human-authorship position (cert denied in Thaler v. Perlmutter, 2026-03-02), so the human-authored corpus, specs and arrangement are the solid part; ideas are only patentable, and the repo's first public commit was 2026-04-10, so the US one-year grace period ends 2026-04-10 + 1y; the name has common-law trademark rights from use.
+- IP framing given to the operator (not legal advice): contract language on pre-existing IP protects most; copyright in AI-written code is thin under the Copyright Office's human-authorship position (cert denied in Thaler v. Perlmutter, 2026-03-02), so the human-authored corpus, specs and arrangement are the solid part; ideas are only patentable, and the repo's first public commit was 2026-04-10, so the US one-year grace period ends 2027-04-10; the name has common-law trademark rights from use.
 - The four-stage pipeline spec still reads Stage 1 LIVE / Stages 2-4 DESIGN. The new landing page says so in plain words ("run end to end once... as supervised working sessions. It is not yet a push-button product"). If the spec's status is stale, fix the spec and the page together.
 
 ## Deviations, stated
