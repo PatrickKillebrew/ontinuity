@@ -154,6 +154,14 @@ THE CONVERSATIONAL TRIGGER (how a non-technical user starts a matter — the sea
   directs it ("start this training like the Plant-34 one") — operator-directed retrieval first; tag/topic-
   based auto-retrieval is a later layer. The first training establishes a template the next one begins from.
 
+## LAPTOP HANDS — driving the operator's laptop from the control seat (grounded 2026-10-04)
+The laptop runs `live/box/laptop_seat.py` (C:\donkeycar\laptop_seat.py): a reverse-connection seat that polls the mailbox every 2 s as seat `laptop`, executes inside C:\donkeycar (config.json `project_dir`), and posts results back. No inbound port; the control seat reaches it only through the mailbox ops.
+- SEND a task: `mailbox_send {from_seat:"control", to_seat:"laptop", kind:"task", body:<JSON string>}` where the body is one of `{"op":"ping"}`, `{"op":"read","path":...}`, `{"op":"write","path":...,"content":...}`, `{"op":"run","cmd":...}`. Paths are relative to C:\donkeycar or absolute inside it; anything outside is refused.
+- READ the result: `mailbox_fetch {seat:"control", reply_to:<task msg_id>}` claims that result (kind=result, body JSON `{ok, op, stdout, stderr, rc, error}`), then `mailbox_ack` AT ONCE. A poll that dies between send and fetch leaves the result queued; peek `status:"queued"` and claim it before close.
+- RUN limits: the command must START with a prefix in config.json `safe_commands` (python, pip, dir, type, copy, move, mkdir, git, findstr, where, …; the validation venv's python.exe path is NOT a prefix) and times out at 120 s. So anything long (model loads, PyInstaller, Inno) is a `python C:\donkeycar\<stage>.py` task whose script launches a detached job (`subprocess.Popen` with CREATE_NO_WINDOW) that writes a progress JSON; poll it with `read` tasks. The September 24 SantaClean jobs and the 2026-10-04 run both used this shape.
+- WRITES land in text mode: LF becomes CRLF. Verify a written script by SHA-256 after normalizing CRLF; do not send binary through `write` (send base64 inside a Python script and decode on the laptop).
+- Build roots: `C:\donkeycar\santaclean-build-20260924\<name>` is the allowed root for SantaClean's `review/run_windows_build.py`; make a NEW dated root per run and never write into an existing evidence root.
+
 ## COLD-BOOT ONBOARDING (a fresh control seat with no prior context — run this FIRST)
 You are a control/operator seat booting cold. You are NOT empty of capability — your capabilities are documented; do not conclude one is absent until you have CHECKED for it (concluding "I can't" without checking is the wall-declaring failure the recoherence fold warns about). Run these steps in order:
 
